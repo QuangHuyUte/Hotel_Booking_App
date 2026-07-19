@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Hotel_Booking_App">
+        <activity
+            android:name=".ui.activities.AdminCabinFormActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.AdminBookingsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.AdminSettingsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.PersonalActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.ChatActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.MessagesActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.NotificationsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.ProfileActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.UpdateProfileActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.InvoiceActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.PaymentHistoryActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.CheckoutActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.BookingDetailActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.EditBookingActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.MyWishlistActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.HostDashboardActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.MyBookingsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.BookingActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.CabinDetailActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.CabinListActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.HomeActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.RegisterActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.LoginActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.ForgotPasswordActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

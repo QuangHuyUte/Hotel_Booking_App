@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_screen_serein">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingBottom="112dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:minHeight="700dp"
+            android:orientation="vertical"
+            android:padding="28dp">
+
+            <TextView
+                android:id="@+id/text_profile_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="Guest Profile"
+                android:textColor="@color/primary"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <ImageView
+                android:layout_width="112dp"
+                android:layout_height="112dp"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/ic_guest_avatar" />
+
+            <LinearLayout
+                android:id="@+id/container_guest_actions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="34dp"
+                android:orientation="vertical">
+
+                <Button
+                    android:id="@+id/button_login"
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:layout_marginLeft="54dp"
+                    android:layout_marginRight="54dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="Log In"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/button_signup"
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:layout_marginLeft="54dp"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginRight="54dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="Sign Up"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/text_forgot_password"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:gravity="center"
+                    android:text="Forget password?"
+                    android:textColor="@color/primary_dark"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/container_customer_actions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <Button
+                    android:id="@+id/button_my_bookings"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginLeft="46dp"
+                    android:layout_marginRight="46dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="Manage Booking"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/button_profile"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginLeft="46dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginRight="46dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="Manage Personal Info"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/button_my_wishlist"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginLeft="46dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginRight="46dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="My Wishlist"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/button_payment_history"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginLeft="46dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginRight="46dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="Payment History"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/button_messages"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginLeft="46dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginRight="46dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="Messages"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/button_notifications"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginLeft="46dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginRight="46dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="Notifications"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/button_host_dashboard"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginLeft="46dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginRight="46dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="Host/Admin Dashboard"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/button_admin_settings"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginLeft="46dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginRight="46dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="Admin Settings"
+                    android:textColor="@color/black"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/button_logout"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginLeft="46dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginRight="46dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="Logout"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <include layout="@layout/view_bottom_nav_personal" />
+</FrameLayout>
