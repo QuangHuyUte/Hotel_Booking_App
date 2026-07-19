@@ -65,6 +65,12 @@ public class BookingActivity extends AppCompatActivity {
         bookingService = new BookingService();
         couponService = new CouponService();
         sessionManager = new SessionManager(this);
+        if (!sessionManager.isLoggedIn()) {
+            Toast.makeText(this, "Please log in before booking.", Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
 
         cabinImageView = findViewById(R.id.image_cabin);
         cabinTextView = findViewById(R.id.text_cabin);
@@ -91,6 +97,7 @@ public class BookingActivity extends AppCompatActivity {
         Button backBottomButton = findViewById(R.id.button_back_bottom);
 
         setupDatePickers();
+        applyInitialDatesFromIntent();
         welcomeNameTextView.setText(sessionManager.getFullName().isEmpty() ? "Guest" : sessionManager.getFullName());
         backButton.setOnClickListener(view -> finish());
         backBottomButton.setOnClickListener(view -> finish());
@@ -118,6 +125,22 @@ public class BookingActivity extends AppCompatActivity {
         });
     }
 
+    private void applyInitialDatesFromIntent() {
+        try {
+            String checkIn = getIntent().getStringExtra("checkIn");
+            String checkOut = getIntent().getStringExtra("checkOut");
+            if (checkIn != null && !checkIn.trim().isEmpty()) {
+                selectedStartDate = LocalDate.parse(checkIn);
+                startDateEditText.setText(formatDisplayDate(selectedStartDate));
+            }
+            if (checkOut != null && !checkOut.trim().isEmpty()) {
+                selectedEndDate = LocalDate.parse(checkOut);
+                endDateEditText.setText(formatDisplayDate(selectedEndDate));
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
     private void showStartDatePicker() {
         LocalDate today = LocalDate.now();
         LocalDate initialDate = selectedStartDate != null ? selectedStartDate : today;
@@ -137,14 +160,14 @@ public class BookingActivity extends AppCompatActivity {
                 @Override
                 public void onSuccess(Boolean available) {
                     selectedStartDate = chosenDate;
-                    startDateEditText.setText(chosenDate.toString());
+                    startDateEditText.setText(formatDisplayDate(chosenDate));
                     if (selectedEndDate != null && !selectedEndDate.isAfter(selectedStartDate)) {
                         selectedEndDate = null;
                         endDateEditText.setText("");
                         selectedDatesTextView.setText("Choose a check-out date after check-in.");
                         statusTextView.setText("Please choose a new check-out date after check-in.");
                     } else {
-                        selectedDatesTextView.setText("Check-in: " + selectedStartDate + " | Check-out: Select date");
+                        selectedDatesTextView.setText("Check-in: " + formatDisplayDate(selectedStartDate) + " | Check-out: Chọn ngày");
                         statusTextView.setText("Check-in selected. Continue choosing check-out.");
                     }
                 }
@@ -183,8 +206,8 @@ public class BookingActivity extends AppCompatActivity {
                 @Override
                 public void onSuccess(Boolean available) {
                     selectedEndDate = chosenDate;
-                    endDateEditText.setText(chosenDate.toString());
-                    selectedDatesTextView.setText("Selected stay: " + selectedStartDate + " -> " + selectedEndDate);
+                    endDateEditText.setText(formatDisplayDate(chosenDate));
+                    selectedDatesTextView.setText("Selected stay: " + formatDisplayDate(selectedStartDate) + " -> " + formatDisplayDate(selectedEndDate));
                     statusTextView.setText("Dates selected. You can now reserve this cabin.");
                 }
 
@@ -213,6 +236,10 @@ public class BookingActivity extends AppCompatActivity {
 
     private long toMillis(LocalDate date) {
         return date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
+    }
+
+    private String formatDisplayDate(LocalDate date) {
+        return date.format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy", new java.util.Locale("vi", "VN")));
     }
 
     private void loadCabin() {

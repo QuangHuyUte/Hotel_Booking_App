@@ -9,6 +9,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -66,15 +67,28 @@ public class MyBookingsActivity extends AppCompatActivity {
         filterSpinner = findViewById(R.id.spinner_filter);
         Button backButton = findViewById(R.id.button_back);
         Button backBottomButton = findViewById(R.id.button_back_bottom);
+        LinearLayout searchTab = findViewById(R.id.nav_cabins);
+        LinearLayout wishlistTab = findViewById(R.id.nav_wishlist);
+        LinearLayout messagesTab = findViewById(R.id.nav_messages);
+        LinearLayout profileTab = findViewById(R.id.nav_personal);
         RecyclerView recyclerView = findViewById(R.id.recycler_bookings);
         bookingService = new BookingService();
         cabinService = new CabinService();
         sessionManager = new SessionManager(this);
+        if (!sessionManager.isLoggedIn()) {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
         adapter = new BookingAdapter("", this::openBookingDetail);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
         backButton.setOnClickListener(view -> finish());
         backBottomButton.setOnClickListener(view -> finish());
+        searchTab.setOnClickListener(view -> startActivity(new Intent(this, CabinListActivity.class)));
+        wishlistTab.setOnClickListener(view -> startActivity(new Intent(this, MyWishlistActivity.class)));
+        messagesTab.setOnClickListener(view -> startActivity(new Intent(this, MessagesActivity.class)));
+        profileTab.setOnClickListener(view -> startActivity(new Intent(this, PersonalActivity.class)));
         setupSearch();
         setupFilter();
         loadBookings();
@@ -180,12 +194,43 @@ public class MyBookingsActivity extends AppCompatActivity {
                 filtered.add(booking);
             }
         }
+        filtered.sort((left, right) -> Integer.compare(statusPriority(left), statusPriority(right)));
         adapter.submitList(filtered);
         if (filtered.isEmpty()) {
             statusTextView.setText("No bookings match this search.");
         } else {
-            statusTextView.setText(filtered.size() + " booking" + (filtered.size() == 1 ? "" : "s") + " shown.");
+            int pendingCount = pendingCount(filtered);
+            String pendingText = pendingCount > 0
+                    ? " " + pendingCount + " pending booking" + (pendingCount == 1 ? "" : "s") + " need attention."
+                    : "";
+            statusTextView.setText(filtered.size() + " booking" + (filtered.size() == 1 ? "" : "s") + " shown." + pendingText);
         }
+    }
+
+    private int pendingCount(List<Booking> bookings) {
+        int count = 0;
+        for (Booking booking : bookings) {
+            if (AppConstants.BOOKING_PENDING.equalsIgnoreCase(booking.getStatus())) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private int statusPriority(Booking booking) {
+        if (AppConstants.BOOKING_PENDING.equalsIgnoreCase(booking.getStatus())) {
+            return 0;
+        }
+        if (AppConstants.BOOKING_CONFIRMED.equalsIgnoreCase(booking.getStatus()) && !booking.isPaid()) {
+            return 1;
+        }
+        if (!AppConstants.BOOKING_CANCELLED.equalsIgnoreCase(booking.getStatus()) && isUpcoming(booking)) {
+            return 2;
+        }
+        if (AppConstants.BOOKING_CANCELLED.equalsIgnoreCase(booking.getStatus())) {
+            return 4;
+        }
+        return 3;
     }
 
     private boolean matchesFilter(Booking booking) {

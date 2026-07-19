@@ -47,6 +47,17 @@ public class AuthService {
         authClient.recoverPassword(email.trim(), callback);
     }
 
+    public void loginWithOAuthSession(String fullName, String email, String authUserId, String accessToken, String refreshToken, SupabaseCallback<User> callback) {
+        if (email == null || email.trim().isEmpty() || authUserId == null || authUserId.trim().isEmpty()) {
+            callback.onError("Google login did not return enough account information.");
+            return;
+        }
+        SupabaseAuthSession session = new SupabaseAuthSession(authUserId, email.trim(), accessToken, refreshToken);
+        supabaseClient.setAccessToken(accessToken);
+        String resolvedName = fullName == null || fullName.trim().isEmpty() ? email.trim() : fullName.trim();
+        ensurePublicUser(resolvedName, email.trim(), "GOOGLE_OAUTH", "", AppConstants.ROLE_CUSTOMER, session, callback);
+    }
+
     private void loginWithPublicUsersFallback(String email, String password, SupabaseCallback<User> callback) {
         Map<String, String> filters = new HashMap<>();
         filters.put("email", email.trim());

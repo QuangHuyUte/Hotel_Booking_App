@@ -15,7 +15,15 @@ import com.example.hotel_booking_app.services.AuthService;
 import com.example.hotel_booking_app.utils.SessionManager;
 
 public class ProfileActivity extends AppCompatActivity {
-    private TextView summaryTextView;
+    private TextView avatarTextView;
+    private TextView nameTextView;
+    private TextView emailTextView;
+    private TextView phoneTextView;
+    private TextView nationalIdTextView;
+    private TextView dateOfBirthTextView;
+    private TextView roleTextView;
+    private TextView addressTextView;
+    private TextView nationalityTextView;
     private TextView statusTextView;
     private AuthService authService;
     private SessionManager sessionManager;
@@ -28,7 +36,15 @@ public class ProfileActivity extends AppCompatActivity {
 
         authService = new AuthService();
         sessionManager = new SessionManager(this);
-        summaryTextView = findViewById(R.id.text_profile_summary);
+        avatarTextView = findViewById(R.id.text_profile_avatar);
+        nameTextView = findViewById(R.id.text_profile_name);
+        emailTextView = findViewById(R.id.text_profile_email);
+        phoneTextView = findViewById(R.id.text_profile_phone);
+        nationalIdTextView = findViewById(R.id.text_profile_national_id);
+        dateOfBirthTextView = findViewById(R.id.text_profile_birth);
+        roleTextView = findViewById(R.id.text_profile_role);
+        addressTextView = findViewById(R.id.text_profile_address);
+        nationalityTextView = findViewById(R.id.text_profile_nationality);
         statusTextView = findViewById(R.id.text_status);
         Button backButton = findViewById(R.id.button_back);
         Button backBottomButton = findViewById(R.id.button_back_bottom);
@@ -49,7 +65,7 @@ public class ProfileActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (summaryTextView != null) {
+        if (nameTextView != null) {
             loadProfile();
         }
     }
@@ -73,16 +89,28 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void renderProfile(User user) {
-        summaryTextView.setText(
-                "Full name\n" + safe(user.getFullName())
-                        + "\n\nEmail\n" + safe(user.getEmail())
-                        + "\n\nPhone\n" + safe(user.getPhone())
-                        + "\n\nNational ID\n" + safe(user.getNationalId())
-                        + "\n\nDate of Birth\n" + safe(user.getDateOfBirth())
-        );
+        avatarTextView.setText(initials(user.getFullName()));
+        nameTextView.setText(safe(user.getFullName()));
+        emailTextView.setText(safe(user.getEmail()));
+        phoneTextView.setText("Phone\n" + safe(user.getPhone()));
+        nationalIdTextView.setText("National ID\n" + safe(user.getNationalId()));
+        dateOfBirthTextView.setText("Date of birth\n" + safe(user.getDateOfBirth()));
+        roleTextView.setText("Account type\n" + safe(user.getRole()));
+        addressTextView.setText("Address\n" + safe(user.getAddress()));
+        nationalityTextView.setText("Nationality\n" + safe(user.getNationality()));
     }
 
     private String safe(String value) {
         return value == null || value.trim().isEmpty() ? "-" : value;
+    }
+
+    private String initials(String fullName) {
+        if (fullName == null || fullName.trim().isEmpty()) {
+            return "S";
+        }
+        String[] parts = fullName.trim().split("\\s+");
+        String first = parts[0].substring(0, 1);
+        String last = parts.length > 1 ? parts[parts.length - 1].substring(0, 1) : "";
+        return (first + last).toUpperCase();
     }
 }

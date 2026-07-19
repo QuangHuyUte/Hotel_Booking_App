@@ -77,13 +77,33 @@ public class BookingAdapter extends RecyclerView.Adapter<BookingAdapter.BookingV
         bindCabin(holder, booking.getCabinId());
 
         if (TextUtils.isEmpty(actionText)) {
-            holder.actionButton.setVisibility(View.GONE);
+            String contextualAction = contextualActionText(booking);
+            if (TextUtils.isEmpty(contextualAction)) {
+                holder.actionButton.setVisibility(View.GONE);
+            } else {
+                holder.actionButton.setVisibility(View.VISIBLE);
+                holder.actionButton.setText(contextualAction);
+                holder.actionButton.setOnClickListener(view -> listener.onPrimaryAction(booking));
+            }
         } else {
             holder.actionButton.setVisibility(View.VISIBLE);
             holder.actionButton.setText(actionText);
             holder.actionButton.setOnClickListener(view -> listener.onPrimaryAction(booking));
         }
         holder.itemView.setOnClickListener(view -> listener.onPrimaryAction(booking));
+    }
+
+    private String contextualActionText(Booking booking) {
+        if (AppConstants.BOOKING_CANCELLED.equalsIgnoreCase(booking.getStatus()) || booking.isPaid()) {
+            return "";
+        }
+        if (AppConstants.BOOKING_PENDING.equalsIgnoreCase(booking.getStatus())) {
+            return "Review pending booking";
+        }
+        if (AppConstants.BOOKING_CONFIRMED.equalsIgnoreCase(booking.getStatus())) {
+            return "Payment options";
+        }
+        return "";
     }
 
     private void bindCabin(BookingViewHolder holder, String cabinId) {
@@ -124,6 +144,9 @@ public class BookingAdapter extends RecyclerView.Adapter<BookingAdapter.BookingV
             return "PAID";
         }
         String status = booking.getStatus() == null ? "" : booking.getStatus().toUpperCase(Locale.US);
+        if (AppConstants.BOOKING_PENDING.equalsIgnoreCase(booking.getStatus())) {
+            return "PENDING";
+        }
         if (AppConstants.BOOKING_CONFIRMED.equalsIgnoreCase(booking.getStatus())) {
             return "PAY LATER";
         }
@@ -136,6 +159,9 @@ public class BookingAdapter extends RecyclerView.Adapter<BookingAdapter.BookingV
         }
         if (booking.isPaid()) {
             return R.drawable.bg_booking_badge_green;
+        }
+        if (AppConstants.BOOKING_PENDING.equalsIgnoreCase(booking.getStatus())) {
+            return R.drawable.bg_booking_badge_warm;
         }
         return R.drawable.bg_booking_badge_warm;
     }

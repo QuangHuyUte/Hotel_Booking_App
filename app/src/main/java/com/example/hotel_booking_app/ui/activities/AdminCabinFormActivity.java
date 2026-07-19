@@ -85,7 +85,7 @@ public class AdminCabinFormActivity extends AppCompatActivity {
         if (editMode) {
             loadCabin();
         } else {
-            statusTextView.setText("Create a cabin for Serein Stay.");
+            statusTextView.setText("Create a cabin for Hotel Booking App.");
         }
     }
 

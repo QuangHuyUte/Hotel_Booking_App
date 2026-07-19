@@ -14,4 +14,11 @@
     <color name="night_top">#081126</color>
     <color name="night_mid">#132C55</color>
     <color name="night_bottom">#070B13</color>
+    <color name="booking_blue">#003580</color>
+    <color name="booking_blue_soft">#DCE8FB</color>
+    <color name="booking_yellow">#FEBB02</color>
+    <color name="booking_page">#F5F7FB</color>
+    <color name="booking_text">#1A1A1A</color>
+    <color name="booking_muted">#5C6574</color>
+    <color name="booking_border">#D9E2F0</color>
 </resources>

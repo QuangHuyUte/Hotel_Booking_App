@@ -53,7 +53,8 @@ public class CabinAdapter extends RecyclerView.Adapter<CabinAdapter.CabinViewHol
     public void onBindViewHolder(@NonNull CabinViewHolder holder, int position) {
         Cabin cabin = cabins.get(position);
         holder.nameTextView.setText(cabin.getName());
-        holder.locationTextView.setText("-> Tap to reserve");
+        holder.locationTextView.setText(safe(cabin.getLocation(), "Hotel Booking App retreat"));
+        holder.amenitiesTextView.setText(safe(cabin.getAmenities(), "Private stay, breakfast option, host support"));
         holder.priceTextView.setText(priceLabel(holder, cabin));
         holder.capacityTextView.setText("\uD83D\uDC65  " + cabin.getMaxCapacity() + " guests");
         Glide.with(holder.itemView.getContext())
@@ -75,6 +76,7 @@ public class CabinAdapter extends RecyclerView.Adapter<CabinAdapter.CabinViewHol
         private final TextView locationTextView;
         private final TextView priceTextView;
         private final TextView capacityTextView;
+        private final TextView amenitiesTextView;
 
         CabinViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -83,6 +85,7 @@ public class CabinAdapter extends RecyclerView.Adapter<CabinAdapter.CabinViewHol
             locationTextView = itemView.findViewById(R.id.text_cabin_location);
             priceTextView = itemView.findViewById(R.id.text_cabin_price);
             capacityTextView = itemView.findViewById(R.id.text_cabin_capacity);
+            amenitiesTextView = itemView.findViewById(R.id.text_cabin_amenities);
         }
     }
 
@@ -103,5 +106,9 @@ public class CabinAdapter extends RecyclerView.Adapter<CabinAdapter.CabinViewHol
         spannable.setSpan(new ForegroundColorSpan(holder.itemView.getContext().getColor(R.color.muted)),
                 start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         return spannable;
+    }
+
+    private String safe(String value, String fallback) {
+        return value == null || value.trim().isEmpty() ? fallback : value;
     }
 }

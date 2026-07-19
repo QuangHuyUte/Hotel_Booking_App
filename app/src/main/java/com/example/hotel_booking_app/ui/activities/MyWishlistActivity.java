@@ -3,6 +3,7 @@ package com.example.hotel_booking_app.ui.activities;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -38,10 +39,19 @@ public class MyWishlistActivity extends AppCompatActivity {
         statusTextView = findViewById(R.id.text_status);
         Button backButton = findViewById(R.id.button_back);
         Button bottomBackButton = findViewById(R.id.button_back_bottom);
+        LinearLayout searchTab = findViewById(R.id.nav_cabins);
+        LinearLayout bookingsTab = findViewById(R.id.nav_bookings);
+        LinearLayout messagesTab = findViewById(R.id.nav_messages);
+        LinearLayout profileTab = findViewById(R.id.nav_personal);
         RecyclerView recyclerView = findViewById(R.id.recycler_wishlist);
         wishlistService = new WishlistService();
         cabinService = new CabinService();
         sessionManager = new SessionManager(this);
+        if (!sessionManager.isLoggedIn()) {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
         adapter = new CabinAdapter(cabin -> {
             Intent intent = new Intent(this, CabinDetailActivity.class);
             intent.putExtra(AppConstants.EXTRA_CABIN_ID, cabin.getId());
@@ -52,6 +62,10 @@ public class MyWishlistActivity extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
         backButton.setOnClickListener(view -> finish());
         bottomBackButton.setOnClickListener(view -> finish());
+        searchTab.setOnClickListener(view -> startActivity(new Intent(this, CabinListActivity.class)));
+        bookingsTab.setOnClickListener(view -> startActivity(new Intent(this, MyBookingsActivity.class)));
+        messagesTab.setOnClickListener(view -> startActivity(new Intent(this, MessagesActivity.class)));
+        profileTab.setOnClickListener(view -> startActivity(new Intent(this, PersonalActivity.class)));
         loadWishlist();
     }
 

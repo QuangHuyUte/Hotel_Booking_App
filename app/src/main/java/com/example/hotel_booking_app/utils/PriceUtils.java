@@ -15,4 +15,9 @@ public final class PriceUtils {
         NumberFormat format = NumberFormat.getCurrencyInstance(Locale.US);
         return format.format(price);
     }
+
+    public static String formatVnd(double priceUsd) {
+        NumberFormat format = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+        return format.format(priceUsd * 25000);
+    }
 }

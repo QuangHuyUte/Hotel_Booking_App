@@ -171,8 +171,16 @@ public class BookingDetailActivity extends AppCompatActivity {
             payNowButton.setVisibility(View.GONE);
             return;
         }
+        if (AppConstants.BOOKING_PENDING.equalsIgnoreCase(currentBooking.getStatus())) {
+            paymentStatusTextView.setText("PENDING");
+            paymentStatusTextView.setBackgroundResource(R.drawable.bg_booking_badge_warm);
+            payNowButton.setText("Review payment options");
+            payNowButton.setVisibility(View.VISIBLE);
+            return;
+        }
         paymentStatusTextView.setText("PAYMENT PENDING");
-        paymentStatusTextView.setBackgroundResource(R.drawable.bg_booking_badge_red);
+        paymentStatusTextView.setBackgroundResource(R.drawable.bg_booking_badge_warm);
+        payNowButton.setText("Continue payment");
         payNowButton.setVisibility(View.VISIBLE);
     }
 

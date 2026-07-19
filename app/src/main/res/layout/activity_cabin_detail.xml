@@ -1,272 +1,459 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_screen_serein"
-    android:fillViewport="true">
+    android:background="@drawable/bg_booking_page">
 
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingStart="18dp"
-        android:paddingTop="30dp"
-        android:paddingEnd="18dp"
-        android:paddingBottom="28dp">
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:paddingBottom="132dp">
 
-        <Button
-            android:id="@+id/button_back"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_back_circle"
-            android:elevation="4dp"
-            android:minWidth="0dp"
-            android:minHeight="0dp"
-            android:padding="0dp"
-            android:text="&#8592;"
-            android:textAllCaps="false"
-            android:textColor="@color/black"
-            android:textSize="24sp" />
-
-        <FrameLayout
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="330dp"
-            android:layout_marginTop="14dp">
-
-            <ImageView
-                android:id="@+id/image_cabin"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:contentDescription="@string/app_name"
-                android:scaleType="centerCrop" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/bg_hero_scrim" />
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingTop="18dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="22dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom"
-                android:orientation="vertical"
-                android:padding="18dp">
+                android:layout_height="52dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/button_back"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:background="@drawable/bg_back_circle"
+                    android:drawableTop="@drawable/ic_back_chevron"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:padding="0dp"
+                    android:text=""
+                    android:textAllCaps="false" />
 
                 <TextView
                     android:id="@+id/text_title"
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/primary"
-                    android:textSize="27sp"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/booking_text"
+                    android:textSize="20sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/text_wishlist_count"
                     android:layout_width="wrap_content"
-                    android:layout_height="32dp"
-                    android:layout_marginTop="10dp"
+                    android:layout_height="30dp"
                     android:background="@drawable/bg_booking_badge_warm"
                     android:gravity="center"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
                     android:textColor="@color/white"
-                    android:textSize="13sp"
+                    android:textSize="12sp"
                     android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/button_favorite"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_booking_secondary"
+                    android:drawableTop="@drawable/ic_nav_saved"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:padding="8dp"
+                    android:text=""
+                    android:textAllCaps="false" />
+
+                <Button
+                    android:id="@+id/button_chat"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_booking_secondary"
+                    android:drawableTop="@drawable/ic_nav_messages"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:padding="8dp"
+                    android:text=""
+                    android:textAllCaps="false" />
             </LinearLayout>
-        </FrameLayout>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_panel"
-            android:orientation="vertical"
-            android:padding="0dp">
-
-            <TextView
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="54dp"
-                android:gravity="center_vertical"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:text="Cabin Overview"
-                android:textColor="@color/primary"
-                android:textSize="19sp"
-                android:textStyle="bold" />
+                android:layout_height="310dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_dark_card">
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/line" />
+                <ImageView
+                    android:id="@+id/image_cabin"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@string/app_name"
+                    android:scaleType="centerCrop" />
 
-            <TextView
-                android:id="@+id/text_details"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:lineSpacingExtra="5dp"
-                android:padding="18dp"
-                android:textColor="@color/ink"
-                android:textSize="16sp" />
-        </LinearLayout>
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_hero_scrim" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:background="@drawable/bg_panel"
-            android:orientation="vertical">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-            <TextView
-                android:id="@+id/text_host"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:lineSpacingExtra="4dp"
-                android:text="Host: Loading..."
-                android:textColor="@color/ink"
-                android:textSize="15sp" />
+                    <TextView
+                        android:id="@+id/text_price"
+                        android:layout_width="wrap_content"
+                        android:layout_height="30dp"
+                        android:background="@drawable/bg_booking_badge_warm"
+                        android:gravity="center"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:textColor="@color/white"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/text_amenities"
+                    <TextView
+                        android:id="@+id/text_details"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:textColor="@color/white"
+                        android:textSize="28sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/text_location"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_booking_card"
+                    android:gravity="center_vertical"
+                    android:padding="14dp"
+                    android:textColor="@color/booking_text"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/text_capacity"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_booking_card"
+                    android:gravity="center_vertical"
+                    android:padding="14dp"
+                    android:textColor="@color/booking_text"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/text_description"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_booking_card"
                 android:lineSpacingExtra="4dp"
-                android:text="Amenities: Loading..."
-                android:textColor="@color/muted"
-                android:textSize="15sp" />
+                android:padding="14dp"
+                android:textColor="@color/booking_text"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_booking_card"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Chọn ngày"
+                    android:textColor="@color/booking_blue"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/text_check_in"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_booking_secondary"
+                        android:gravity="center_vertical"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
+                        android:textColor="@color/booking_blue"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/text_check_out"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_booking_secondary"
+                        android:gravity="center_vertical"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
+                        android:textColor="@color/booking_blue"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/text_guest_summary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:textColor="@color/booking_muted"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/text_availability"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_booking_card"
+                android:lineSpacingExtra="4dp"
+                android:padding="14dp"
+                android:textColor="@color/booking_text"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_booking_card"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Bản đồ"
+                    android:textColor="@color/booking_blue"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <FrameLayout
+                    android:id="@+id/map_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="190dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_map_canvas">
+
+                    <TextView
+                        android:id="@+id/text_map_hint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="top|center_horizontal"
+                        android:layout_marginTop="16dp"
+                        android:background="@drawable/bg_booking_badge_warm"
+                        android:paddingStart="12dp"
+                        android:paddingTop="6dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="6dp"
+                        android:text="Tap Bản đồ for full map"
+                        android:textColor="@color/white"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
+
+                <Button
+                    android:id="@+id/button_map"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_booking_secondary"
+                    android:text="Bản đồ"
+                    android:textAllCaps="false"
+                    android:textColor="@color/booking_blue"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_booking_card"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:id="@+id/text_amenities"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Tiện nghi"
+                    android:textColor="@color/booking_blue"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:id="@+id/container_amenities"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="vertical" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_booking_card"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:id="@+id/text_host"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/booking_text"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/text_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_status"
+                    android:padding="10dp"
+                    android:textColor="@color/booking_blue"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="Đánh giá khách"
+                android:textColor="@color/booking_blue"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_reviews"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:nestedScrollingEnabled="false" />
+
+            <LinearLayout
+                android:id="@+id/container_admin_actions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_booking_card"
+                android:orientation="vertical"
+                android:padding="14dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Admin actions"
+                    android:textColor="@color/booking_blue"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/button_admin_edit"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_booking_cta"
+                    android:text="Edit cabin"
+                    android:textAllCaps="false"
+                    android:textColor="@color/booking_text"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/button_admin_duplicate"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_booking_secondary"
+                    android:text="Duplicate cabin"
+                    android:textAllCaps="false"
+                    android:textColor="@color/booking_blue"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/button_admin_delete"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_button_danger"
+                    android:text="Delete cabin"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/panel_booking_cta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_booking_header"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="16dp">
 
         <TextView
-            android:id="@+id/text_availability"
+            android:id="@+id/text_booking_note"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:background="@drawable/bg_panel"
-            android:lineSpacingExtra="4dp"
-            android:text="Loading availability..."
-            android:textColor="@color/ink"
-            android:textSize="14sp" />
+            android:gravity="center"
+            android:text="You will not be charged right away"
+            android:textColor="@color/white"
+            android:textSize="13sp" />
 
         <Button
             android:id="@+id/button_book"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_button_primary"
-            android:text="Reserve this cabin"
-            android:textAllCaps="false"
-            android:textColor="@color/black"
-            android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/button_chat"
-            android:layout_width="match_parent"
             android:layout_height="54dp"
             android:layout_marginTop="10dp"
-            android:background="@drawable/bg_button_secondary"
-            android:text="Message host"
+            android:background="@drawable/bg_booking_cta"
+                android:text="Chọn phòng"
             android:textAllCaps="false"
-            android:textColor="@color/black"
-            android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/button_favorite"
-            android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:layout_marginTop="10dp"
-            android:background="@drawable/bg_button_secondary"
-            android:text="Favorite"
-            android:textAllCaps="false"
-            android:textColor="@color/black"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            android:id="@+id/container_admin_actions"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:background="@drawable/bg_panel"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Admin Actions"
-                android:textColor="@color/primary"
-                android:textSize="19sp"
-                android:textStyle="bold" />
-
-            <Button
-                android:id="@+id/button_admin_edit"
-                android:layout_width="match_parent"
-                android:layout_height="54dp"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_button_primary"
-                android:text="Edit Cabin"
-                android:textAllCaps="false"
-                android:textColor="@color/black"
-                android:textStyle="bold" />
-
-            <Button
-                android:id="@+id/button_admin_duplicate"
-                android:layout_width="match_parent"
-                android:layout_height="54dp"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_button_secondary"
-                android:text="Duplicate Cabin"
-                android:textAllCaps="false"
-                android:textColor="@color/black"
-                android:textStyle="bold" />
-
-            <Button
-                android:id="@+id/button_admin_delete"
-                android:layout_width="match_parent"
-                android:layout_height="54dp"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_button_danger"
-                android:text="Delete Cabin"
-                android:textAllCaps="false"
-                android:textColor="@color/white"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/text_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:background="@drawable/bg_status"
-            android:padding="10dp"
-            android:textColor="@color/muted"
-            android:textSize="14sp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:text="Guest Reviews"
-            android:textColor="@color/primary"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_reviews"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:nestedScrollingEnabled="false" />
-
-        <Button
-            android:id="@+id/button_back_bottom"
-            android:layout_width="116dp"
-            android:layout_height="48dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="22dp"
-            android:background="@drawable/bg_button_secondary"
-            android:text="Back"
-            android:textAllCaps="false"
-            android:textColor="@color/black"
+            android:textColor="@color/booking_text"
             android:textStyle="bold" />
     </LinearLayout>
-</ScrollView>
+
+</FrameLayout>

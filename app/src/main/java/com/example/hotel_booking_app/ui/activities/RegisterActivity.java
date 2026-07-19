@@ -3,6 +3,7 @@ package com.example.hotel_booking_app.ui.activities;
 import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -43,16 +44,20 @@ public class RegisterActivity extends AppCompatActivity {
         birthEditText = findViewById(R.id.edit_birth);
         statusTextView = findViewById(R.id.text_status);
         Button createButton = findViewById(R.id.button_create_account);
-        Button backButton = findViewById(R.id.button_back_login);
+        TextView backButton = findViewById(R.id.button_back_login);
+        TextView closeButton = findViewById(R.id.button_close);
         TextView guestButton = findViewById(R.id.text_guest_link);
 
         createButton.setOnClickListener(view -> register());
         backButton.setOnClickListener(view -> finish());
-        guestButton.setOnClickListener(view -> {
-            startActivity(new Intent(this, HomeActivity.class));
-            finish();
-        });
+        closeButton.setOnClickListener(view -> openGuestSearch());
+        guestButton.setOnClickListener(view -> openGuestSearch());
         setupBirthPicker();
+    }
+
+    private void openGuestSearch() {
+        startActivity(new Intent(this, CabinListActivity.class));
+        finish();
     }
 
     private void setupBirthPicker() {
@@ -81,11 +86,11 @@ public class RegisterActivity extends AppCompatActivity {
         String role = AppConstants.ROLE_CUSTOMER;
 
         if (!ValidationUtils.isNotBlank(name) || !ValidationUtils.isValidEmail(email) || !ValidationUtils.isStrongEnoughPassword(password)) {
-            statusTextView.setText("Name, valid email and a 6+ character password are required.");
+            setStatus("Name, valid email and a 6+ character password are required.");
             return;
         }
 
-        statusTextView.setText("Creating customer account...");
+        setStatus("Creating customer account...");
         authService.register(name, email, password, phone, role, new SupabaseCallback<User>() {
             @Override
             public void onSuccess(User user) {
@@ -113,8 +118,13 @@ public class RegisterActivity extends AppCompatActivity {
 
             @Override
             public void onError(String message) {
-                statusTextView.setText(message);
+                setStatus(message);
             }
         });
+    }
+
+    private void setStatus(String message) {
+        statusTextView.setVisibility(View.VISIBLE);
+        statusTextView.setText(message);
     }
 }

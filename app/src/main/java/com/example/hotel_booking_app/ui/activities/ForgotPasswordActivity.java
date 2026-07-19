@@ -1,6 +1,7 @@
 package com.example.hotel_booking_app.ui.activities;
 
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -36,21 +37,26 @@ public class ForgotPasswordActivity extends AppCompatActivity {
     private void sendResetEmail() {
         String email = emailEditText.getText().toString().trim();
         if (!ValidationUtils.isValidEmail(email)) {
-            statusTextView.setText("Please enter a valid email.");
+            setStatus("Please enter a valid email.");
             return;
         }
-        statusTextView.setText("Sending reset email...");
+        setStatus("Sending reset email...");
         authService.sendPasswordResetEmail(email, new SupabaseCallback<Boolean>() {
             @Override
             public void onSuccess(Boolean data) {
                 Toast.makeText(ForgotPasswordActivity.this, "Reset email sent", Toast.LENGTH_SHORT).show();
-                statusTextView.setText("Password reset email sent. Please check your inbox or spam folder.");
+                setStatus("Password reset email sent. Please check your inbox or spam folder.");
             }
 
             @Override
             public void onError(String message) {
-                statusTextView.setText("Could not send reset email: " + message);
+                setStatus("Could not send reset email: " + message);
             }
         });
+    }
+
+    private void setStatus(String message) {
+        statusTextView.setVisibility(View.VISIBLE);
+        statusTextView.setText(message);
     }
 }

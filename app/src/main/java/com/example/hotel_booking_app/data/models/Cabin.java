@@ -13,6 +13,9 @@ public class Cabin {
     private String image;
     private String description;
     private String location;
+    private double latitude;
+    private double longitude;
+    private String mapPlaceId;
     private String amenities;
     private String hostId;
     private String createdAt;
@@ -80,6 +83,18 @@ public class Cabin {
 
     public String getLocation() {
         return location;
+    }
+
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
+
+    public String getMapPlaceId() {
+        return mapPlaceId;
     }
 
     public void setAmenities(String amenities) {

@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_screen_serein"
+    android:background="@drawable/bg_booking_page"
     android:fillViewport="true">
 
     <LinearLayout
@@ -19,13 +19,14 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="@drawable/bg_back_circle"
+            android:drawableTop="@drawable/ic_back_chevron"
             android:elevation="4dp"
             android:minWidth="0dp"
             android:minHeight="0dp"
             android:padding="0dp"
-            android:text="&#8592;"
+            android:text=""
             android:textAllCaps="false"
-            android:textColor="@color/black"
+            android:textColor="@color/booking_text"
             android:textSize="24sp" />
 
         <TextView
@@ -35,14 +36,14 @@
             android:layout_marginTop="10dp"
             android:background="@drawable/bg_status"
             android:padding="10dp"
-            android:textColor="@color/muted"
+            android:textColor="@color/booking_muted"
             android:textSize="13sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:background="@drawable/bg_panel"
+            android:background="@drawable/bg_booking_card"
             android:orientation="vertical"
             android:padding="0dp">
 
@@ -53,14 +54,14 @@
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
                 android:text="Stay Duration"
-                android:textColor="@color/primary"
+                android:textColor="@color/booking_blue"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/line" />
+                android:background="@color/booking_border" />
 
             <TextView
                 android:id="@+id/text_duration_dates"
@@ -70,7 +71,7 @@
                 android:paddingStart="18dp"
                 android:paddingTop="28dp"
                 android:paddingEnd="18dp"
-                android:textColor="@color/ink"
+                android:textColor="@color/booking_text"
                 android:textSize="18sp" />
 
             <TextView
@@ -83,7 +84,7 @@
                 android:layout_marginBottom="14dp"
                 android:background="@drawable/bg_status"
                 android:gravity="center"
-                android:textColor="@color/primary"
+                android:textColor="@color/booking_blue"
                 android:textSize="16sp"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -92,7 +93,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:background="@drawable/bg_panel"
+            android:background="@drawable/bg_booking_card"
             android:orientation="vertical"
             android:padding="0dp">
 
@@ -103,14 +104,14 @@
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
                 android:text="Guest &amp; Services"
-                android:textColor="@color/primary"
+                android:textColor="@color/booking_blue"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/line" />
+                android:background="@color/booking_border" />
 
             <TextView
                 android:id="@+id/text_guest_count"
@@ -119,7 +120,7 @@
                 android:gravity="center_vertical"
                 android:paddingStart="18dp"
                 android:paddingEnd="18dp"
-                android:textColor="@color/ink"
+                android:textColor="@color/booking_text"
                 android:textSize="16sp" />
 
             <TextView
@@ -129,7 +130,7 @@
                 android:gravity="center_vertical"
                 android:paddingStart="18dp"
                 android:paddingEnd="18dp"
-                android:textColor="@color/ink"
+                android:textColor="@color/booking_text"
                 android:textSize="16sp" />
         </LinearLayout>
 
@@ -137,7 +138,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:background="@drawable/bg_panel"
+            android:background="@drawable/bg_booking_card"
             android:orientation="vertical"
             android:padding="0dp">
 
@@ -148,14 +149,14 @@
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
                 android:text="Financial Summary"
-                android:textColor="@color/primary"
+                android:textColor="@color/booking_blue"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/line" />
+                android:background="@color/booking_border" />
 
             <TextView
                 android:id="@+id/text_cabin_price"
@@ -164,7 +165,7 @@
                 android:gravity="center_vertical"
                 android:paddingStart="18dp"
                 android:paddingEnd="18dp"
-                android:textColor="@color/ink"
+                android:textColor="@color/booking_text"
                 android:textSize="16sp" />
 
             <TextView
@@ -174,7 +175,7 @@
                 android:gravity="center_vertical"
                 android:paddingStart="18dp"
                 android:paddingEnd="18dp"
-                android:textColor="@color/ink"
+                android:textColor="@color/booking_text"
                 android:textSize="16sp" />
 
             <View
@@ -183,7 +184,7 @@
                 android:layout_marginStart="18dp"
                 android:layout_marginTop="8dp"
                 android:layout_marginEnd="18dp"
-                android:background="@color/line" />
+                android:background="@color/booking_border" />
 
             <TextView
                 android:id="@+id/text_total_amount"
@@ -192,7 +193,7 @@
                 android:gravity="center_vertical"
                 android:paddingStart="18dp"
                 android:paddingEnd="18dp"
-                android:textColor="@color/primary"
+                android:textColor="@color/booking_blue"
                 android:textSize="21sp"
                 android:textStyle="bold" />
 
@@ -209,7 +210,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textColor="@color/muted"
+                    android:textColor="@color/booking_muted"
                     android:textSize="13sp" />
 
                 <TextView
@@ -233,10 +234,10 @@
                 android:layout_marginTop="2dp"
                 android:layout_marginEnd="18dp"
                 android:layout_marginBottom="16dp"
-                android:background="@drawable/bg_button_primary"
+                android:background="@drawable/bg_booking_cta"
                 android:text="Continue payment"
                 android:textAllCaps="false"
-                android:textColor="@color/black" />
+                android:textColor="@color/booking_text" />
         </LinearLayout>
 
         <LinearLayout
@@ -250,10 +251,10 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:background="@drawable/bg_button_primary"
+                android:background="@drawable/bg_booking_cta"
                 android:text="Edit Booking"
                 android:textAllCaps="false"
-                android:textColor="@color/black"
+                android:textColor="@color/booking_text"
                 android:textStyle="bold" />
 
             <Button
@@ -273,7 +274,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
-            android:background="@drawable/bg_panel"
+            android:background="@drawable/bg_booking_card"
             android:orientation="vertical">
 
             <TextView
@@ -281,7 +282,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Rate Your Stay"
-                android:textColor="@color/primary"
+                android:textColor="@color/booking_blue"
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
@@ -304,18 +305,18 @@
                 android:gravity="top"
                 android:hint="Share your experience..."
                 android:padding="14dp"
-                android:textColor="@color/ink"
-                android:textColorHint="@color/muted" />
+                android:textColor="@color/booking_text"
+                android:textColorHint="@color/booking_muted" />
 
             <Button
                 android:id="@+id/button_submit_review"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:layout_marginTop="10dp"
-                android:background="@drawable/bg_button_secondary"
+                android:background="@drawable/bg_booking_secondary"
                 android:text="Submit Rating"
                 android:textAllCaps="false"
-                android:textColor="@color/black" />
+                android:textColor="@color/booking_text" />
         </LinearLayout>
 
         <Button
@@ -324,10 +325,11 @@
             android:layout_height="48dp"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="22dp"
-            android:background="@drawable/bg_button_secondary"
+            android:background="@drawable/bg_booking_secondary"
             android:text="Back"
             android:textAllCaps="false"
-            android:textColor="@color/black"
+            android:textColor="@color/booking_text"
             android:textStyle="bold" />
     </LinearLayout>
 </ScrollView>
+

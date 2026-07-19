@@ -74,6 +74,12 @@
             android:name=".ui.activities.CabinListActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.activities.SearchMapActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.activities.OAuthWebActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.activities.HomeActivity"
             android:exported="false" />
         <activity
@@ -81,7 +87,19 @@
             android:exported="false" />
         <activity
             android:name=".ui.activities.LoginActivity"
-            android:exported="false" />
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="auth"
+                    android:path="/callback"
+                    android:scheme="hotelbookingapp" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".ui.activities.ForgotPasswordActivity"
             android:exported="false" />

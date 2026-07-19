@@ -2,182 +2,209 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_screen_serein">
+    android:background="@drawable/bg_booking_page">
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingBottom="112dp">
+        android:clipToPadding="false"
+        android:paddingBottom="104dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp">
-
-            <View
-                android:layout_width="76dp"
-                android:layout_height="5dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="58dp"
-                android:background="@drawable/bg_button_primary" />
+            android:paddingStart="18dp"
+            android:paddingTop="24dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="24dp">
 
             <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="28dp"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:background="@drawable/bg_chip"
                 android:gravity="center"
-                android:text="Serein Stay"
-                android:textColor="@color/white"
-                android:textSize="34sp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="About"
+                android:textColor="@color/booking_blue"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:gravity="center"
-                android:text="Your Perfect Nature Getaway"
-                android:textColor="@color/primary_dark"
-                android:textSize="18sp"
-                android:textStyle="italic" />
+                android:text="Hotel Booking App"
+                android:textColor="@color/booking_text"
+                android:textSize="30sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:lineSpacingExtra="3dp"
+                android:text="Find a calm cabin, review the details, and move straight into search."
+                android:textColor="@color/booking_muted"
+                android:textSize="15sp" />
+
+            <Button
+                android:id="@+id/button_book_now"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_booking_cta"
+                android:text="Book now"
+                android:textAllCaps="false"
+                android:textColor="@color/booking_text"
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="44dp"
-                android:background="@drawable/bg_auth_panel"
+                android:layout_marginTop="18dp"
+                android:background="@drawable/bg_search_panel"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:lineSpacingExtra="5dp"
-                    android:text="Discover serenity in our cozy cabins, crafted for families, couples, or solo travelers seeking peace. Surrounded by nature's beauty, enjoy comfort, warmth, and privacy in a tranquil escape."
-                    android:textColor="@color/ink"
-                    android:textSize="18sp" />
+                    android:text="Why guests choose us"
+                    android:textColor="@color/booking_blue"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="Fast search, direct contact with hosts, and cabin details that are easier to scan."
+                    android:textColor="@color/booking_muted"
+                    android:textSize="14sp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="34dp"
+                    android:layout_marginTop="16dp"
                     android:orientation="horizontal">
 
                     <TextView
-                        android:layout_width="54dp"
-                        android:layout_height="54dp"
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
                         android:background="@drawable/bg_icon_warm_circle"
                         android:gravity="center"
                         android:text="E"
-                        android:textColor="@color/primary_dark"
-                        android:textSize="24sp"
+                        android:textColor="@color/booking_blue"
+                        android:textSize="18sp"
                         android:textStyle="bold" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
+                        android:layout_marginStart="12dp"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Eco-Friendly Design"
-                            android:textColor="@color/primary_dark"
-                            android:textSize="19sp"
+                            android:text="Easy booking flow"
+                            android:textColor="@color/booking_text"
+                            android:textSize="16sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:text="Our cabins are built sustainably with local materials to minimize environmental impact."
-                            android:textColor="@color/muted"
-                            android:textSize="15sp" />
+                            android:layout_marginTop="3dp"
+                            android:text="Shorter steps and clearer choices."
+                            android:textColor="@color/booking_muted"
+                            android:textSize="13sp" />
                     </LinearLayout>
                 </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="26dp"
+                    android:layout_marginTop="14dp"
                     android:orientation="horizontal">
 
                     <TextView
-                        android:layout_width="54dp"
-                        android:layout_height="54dp"
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
                         android:background="@drawable/bg_icon_warm_circle"
                         android:gravity="center"
-                        android:text="N"
-                        android:textColor="@color/primary_dark"
-                        android:textSize="24sp"
+                        android:text="C"
+                        android:textColor="@color/booking_blue"
+                        android:textSize="18sp"
                         android:textStyle="bold" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
+                        android:layout_marginStart="12dp"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Natural Surroundings"
-                            android:textColor="@color/primary_dark"
-                            android:textSize="19sp"
+                            android:text="Clear cabin details"
+                            android:textColor="@color/booking_text"
+                            android:textSize="16sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:text="Located near streams, forests, and wildlife for a truly immersive nature experience."
-                            android:textColor="@color/muted"
-                            android:textSize="15sp" />
+                            android:layout_marginTop="3dp"
+                            android:text="Amenities, capacity, pricing, and map access in one view."
+                            android:textColor="@color/booking_muted"
+                            android:textSize="13sp" />
                     </LinearLayout>
                 </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="26dp"
+                    android:layout_marginTop="14dp"
                     android:orientation="horizontal">
 
                     <TextView
-                        android:layout_width="54dp"
-                        android:layout_height="54dp"
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
                         android:background="@drawable/bg_icon_warm_circle"
                         android:gravity="center"
-                        android:text="P"
-                        android:textColor="@color/primary_dark"
-                        android:textSize="24sp"
+                        android:text="M"
+                        android:textColor="@color/booking_blue"
+                        android:textSize="18sp"
                         android:textStyle="bold" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
+                        android:layout_marginStart="12dp"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Premium Comfort"
-                            android:textColor="@color/primary_dark"
-                            android:textSize="19sp"
+                            android:text="Message before you go"
+                            android:textColor="@color/booking_text"
+                            android:textSize="16sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:text="Handcrafted furniture, luxury bedding, and modern amenities for a comfortable stay."
-                            android:textColor="@color/muted"
-                            android:textSize="15sp" />
+                            android:layout_marginTop="3dp"
+                            android:text="Ask the host about arrival time, extras, or special requests."
+                            android:textColor="@color/booking_muted"
+                            android:textSize="13sp" />
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>

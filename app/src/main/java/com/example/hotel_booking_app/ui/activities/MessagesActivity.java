@@ -36,12 +36,25 @@ public class MessagesActivity extends AppCompatActivity {
         conversationsContainer = findViewById(R.id.container_conversations);
         Button backButton = findViewById(R.id.button_back);
         Button backBottomButton = findViewById(R.id.button_back_bottom);
+        LinearLayout searchTab = findViewById(R.id.nav_cabins);
+        LinearLayout bookingsTab = findViewById(R.id.nav_bookings);
+        LinearLayout wishlistTab = findViewById(R.id.nav_wishlist);
+        LinearLayout profileTab = findViewById(R.id.nav_personal);
         chatService = new ChatService();
         cabinService = new CabinService();
         sessionManager = new SessionManager(this);
+        if (!sessionManager.isLoggedIn()) {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
 
         backButton.setOnClickListener(view -> finish());
         backBottomButton.setOnClickListener(view -> finish());
+        searchTab.setOnClickListener(view -> startActivity(new Intent(this, CabinListActivity.class)));
+        bookingsTab.setOnClickListener(view -> startActivity(new Intent(this, MyBookingsActivity.class)));
+        wishlistTab.setOnClickListener(view -> startActivity(new Intent(this, MyWishlistActivity.class)));
+        profileTab.setOnClickListener(view -> startActivity(new Intent(this, PersonalActivity.class)));
         loadConversations();
     }
 

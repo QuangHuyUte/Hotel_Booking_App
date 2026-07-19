@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -15,11 +15,12 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="@drawable/bg_back_circle"
+            android:drawableTop="@drawable/ic_back_chevron"
             android:elevation="4dp"
             android:minWidth="0dp"
             android:minHeight="0dp"
             android:padding="0dp"
-            android:text="&#8592;"
+            android:text=""
             android:textAllCaps="false"
             android:textColor="@color/black"
             android:textSize="24sp" />

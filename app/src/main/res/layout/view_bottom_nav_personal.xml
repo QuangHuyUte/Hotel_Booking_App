@@ -1,30 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="86dp"
+    android:layout_height="72dp"
     android:layout_gravity="bottom"
-    android:layout_margin="12dp"
     android:background="@drawable/bg_bottom_nav"
+    android:elevation="10dp"
     android:gravity="center"
-    android:orientation="horizontal">
-
-    <LinearLayout
-        android:id="@+id/nav_about"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:orientation="vertical">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="i"
-            android:textColor="#B5C2E4"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-    </LinearLayout>
+    android:orientation="horizontal"
+    android:paddingStart="6dp"
+    android:paddingEnd="6dp">
 
     <LinearLayout
         android:id="@+id/nav_cabins"
@@ -35,10 +19,99 @@
         android:orientation="vertical">
 
         <ImageView
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:contentDescription="@string/app_name"
-            android:src="@drawable/ic_nav_home_muted" />
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:contentDescription="Search"
+            android:src="@drawable/ic_nav_search"
+            android:tint="@color/booking_muted" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:gravity="center"
+            android:text="Search"
+            android:textColor="@color/booking_muted"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/nav_wishlist"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:contentDescription="Saved"
+            android:src="@drawable/ic_nav_saved"
+            android:tint="@color/booking_muted" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:gravity="center"
+            android:text="Saved"
+            android:textColor="@color/booking_muted"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/nav_bookings"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:contentDescription="Trips"
+            android:src="@drawable/ic_nav_trips"
+            android:tint="@color/booking_muted" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:gravity="center"
+            android:text="Trips"
+            android:textColor="@color/booking_muted"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/nav_messages"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:contentDescription="Messages"
+            android:src="@drawable/ic_nav_messages"
+            android:tint="@color/booking_muted" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:gravity="center"
+            android:text="Messages"
+            android:textColor="@color/booking_muted"
+            android:textSize="11sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <LinearLayout
@@ -49,28 +122,27 @@
         android:gravity="center"
         android:orientation="vertical">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="P"
-            android:textColor="@color/black"
-            android:textSize="22sp"
-            android:textStyle="bold" />
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:contentDescription="Profile"
+            android:src="@drawable/ic_nav_profile"
+            android:tint="@color/booking_blue" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
             android:gravity="center"
-            android:text="Personal"
-            android:textColor="@color/black"
-            android:textSize="16sp"
+            android:text="Profile"
+            android:textColor="@color/booking_blue"
+            android:textSize="11sp"
             android:textStyle="bold" />
 
         <View
-            android:layout_width="86dp"
-            android:layout_height="4dp"
-            android:layout_marginTop="8dp"
+            android:layout_width="26dp"
+            android:layout_height="3dp"
+            android:layout_marginTop="5dp"
             android:background="@drawable/bg_bottom_indicator" />
     </LinearLayout>
 </LinearLayout>

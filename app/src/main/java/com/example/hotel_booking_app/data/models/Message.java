@@ -43,4 +43,8 @@ public class Message {
     public boolean isRead() {
         return isRead;
     }
+
+    public String getCreatedAt() {
+        return createdAt;
+    }
 }

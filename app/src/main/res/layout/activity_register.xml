@@ -1,154 +1,202 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_screen_serein">
+    android:background="@color/booking_blue">
 
-    <LinearLayout
+    <com.example.hotel_booking_app.ui.views.AnimatedVietnamBackgroundView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:minHeight="760dp"
-        android:orientation="vertical"
-        android:padding="24dp">
+        android:layout_height="match_parent"
+        android:alpha="0.66" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_auth_panel"
-            android:orientation="vertical">
+            android:gravity="center"
+            android:minHeight="760dp"
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingTop="88dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="34dp">
 
-            <ImageView
-                android:layout_width="match_parent"
-                android:layout_height="54dp"
-                android:contentDescription="@string/app_name"
-                android:src="@drawable/ic_user_plus" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:text="Create Account"
-                android:textColor="@color/white"
-                android:textSize="32sp"
-                android:textStyle="bold" />
-
-            <TextView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="center"
-                android:text="Join the Serein Stay family!"
-                android:textColor="@color/primary_dark"
-                android:textSize="16sp"
-                android:textStyle="italic" />
+                android:background="@drawable/bg_auth_panel_strong"
+                android:orientation="vertical">
 
-            <EditText
-                android:id="@+id/edit_name"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="30dp"
-                android:background="@drawable/bg_input"
-                android:hint="Full Name"
-                android:minHeight="52dp"
-                android:textColor="@color/ink"
-                android:textColorHint="@color/muted" />
+                <ImageView
+                    android:layout_width="104dp"
+                    android:layout_height="118dp"
+                    android:layout_gravity="center_horizontal"
+                    android:contentDescription="@string/app_name"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/vietnam_red_logo" />
 
-            <EditText
-                android:id="@+id/edit_email"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_input"
-                android:hint="Email"
-                android:inputType="textEmailAddress"
-                android:minHeight="52dp"
-                android:textColor="@color/ink"
-                android:textColorHint="@color/muted" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="Tạo tài khoản"
+                    android:textColor="@color/white"
+                    android:textSize="25sp"
+                    android:textStyle="bold" />
 
-            <EditText
-                android:id="@+id/edit_password"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_input"
-                android:hint="Password"
-                android:inputType="textPassword"
-                android:minHeight="52dp"
-                android:textColor="@color/ink"
-                android:textColorHint="@color/muted" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:gravity="center"
+                    android:text="Lưu chỗ nghỉ, chat với chủ nhà và quản lý mọi chuyến đi trong một nơi."
+                    android:textColor="#DDEBFF"
+                    android:textSize="14sp" />
 
-            <EditText
-                android:id="@+id/edit_phone"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_input"
-                android:hint="Phone Number"
-                android:inputType="phone"
-                android:minHeight="52dp"
-                android:textColor="@color/ink"
-                android:textColorHint="@color/muted" />
+                <EditText
+                    android:id="@+id/edit_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:background="@drawable/bg_input"
+                    android:hint="Họ và tên"
+                    android:inputType="textPersonName"
+                    android:minHeight="50dp"
+                    android:textColor="@color/ink"
+                    android:textColorHint="@color/muted" />
 
-            <EditText
-                android:id="@+id/edit_national_id"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_input"
-                android:hint="National ID"
-                android:minHeight="52dp"
-                android:textColor="@color/ink"
-                android:textColorHint="@color/muted" />
+                <EditText
+                    android:id="@+id/edit_email"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_input"
+                    android:hint="Email"
+                    android:inputType="textEmailAddress"
+                    android:minHeight="50dp"
+                    android:textColor="@color/ink"
+                    android:textColorHint="@color/muted" />
 
-            <EditText
-                android:id="@+id/edit_birth"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_input"
-                android:hint="Select Date of Birth"
-                android:minHeight="52dp"
-                android:textColor="@color/ink"
-                android:textColorHint="@color/muted" />
+                <EditText
+                    android:id="@+id/edit_password"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_input"
+                    android:hint="Mật khẩu"
+                    android:inputType="textPassword"
+                    android:minHeight="50dp"
+                    android:textColor="@color/ink"
+                    android:textColorHint="@color/muted" />
 
-            <Button
-                android:id="@+id/button_create_account"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="26dp"
-                android:background="@drawable/bg_button_primary"
-                android:text="Sign Up"
-                android:textColor="@color/black"
-                android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
 
-            <Button
-                android:id="@+id/button_back_login"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@android:color/transparent"
-                android:text="Back to Log In"
-                android:textAllCaps="false"
-                android:textColor="@color/primary_dark" />
+                    <EditText
+                        android:id="@+id/edit_phone"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="5dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_input"
+                        android:hint="Số điện thoại"
+                        android:inputType="phone"
+                        android:minHeight="50dp"
+                        android:textColor="@color/ink"
+                        android:textColorHint="@color/muted" />
 
-            <TextView
-                android:id="@+id/text_guest_link"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:gravity="center"
-                android:text="Continue as guest"
-                android:textColor="@color/primary_dark"
-                android:textSize="15sp" />
+                    <EditText
+                        android:id="@+id/edit_birth"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="5dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_input"
+                        android:hint="Ngày sinh"
+                        android:minHeight="50dp"
+                        android:textColor="@color/ink"
+                        android:textColorHint="@color/muted" />
+                </LinearLayout>
 
-            <TextView
-                android:id="@+id/text_status"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_status"
-                android:textColor="@color/muted" />
+                <EditText
+                    android:id="@+id/edit_national_id"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_input"
+                    android:hint="CCCD / CMND"
+                    android:minHeight="50dp"
+                    android:textColor="@color/ink"
+                    android:textColorHint="@color/muted" />
+
+                <Button
+                    android:id="@+id/button_create_account"
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:layout_marginTop="18dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="Tạo tài khoản"
+                    android:textAllCaps="false"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/text_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_status"
+                    android:padding="12dp"
+                    android:textColor="@color/muted"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/button_back_login"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:gravity="center"
+                    android:text="Quay lại đăng nhập"
+                    android:textColor="@color/ink"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/text_guest_link"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:gravity="center"
+                    android:text="Tiếp tục với vai trò khách"
+                    android:textColor="@color/primary_dark"
+                    android:textSize="14sp" />
+            </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
-</ScrollView>
+    </ScrollView>
+
+    <TextView
+        android:id="@+id/button_close"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="34dp"
+        android:layout_marginEnd="18dp"
+        android:background="@drawable/bg_auth_close"
+        android:clickable="true"
+        android:elevation="20dp"
+        android:focusable="true"
+        android:gravity="center"
+        android:text="X"
+        android:textColor="@color/white"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+</FrameLayout>
