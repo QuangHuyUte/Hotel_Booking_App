@@ -67,6 +67,10 @@ public class AuthService {
     }
 
     public void verifyGmailOtp(String fullName, String email, String otp, SupabaseCallback<User> callback) {
+        verifyGmailOtp(fullName, email, otp, AppConstants.ROLE_CUSTOMER, callback);
+    }
+
+    public void verifyGmailOtp(String fullName, String email, String otp, String requestedRole, SupabaseCallback<User> callback) {
         if (email == null || !email.trim().toLowerCase().endsWith("@gmail.com")) {
             callback.onError("Vui lòng nhập địa chỉ @gmail.com hợp lệ.");
             return;
@@ -83,7 +87,35 @@ public class AuthService {
             @Override
             public void onSuccess(SupabaseAuthSession session) {
                 supabaseClient.setAccessToken(session.getAccessToken());
-                ensurePublicUser(cleanName, cleanEmail, "GMAIL_OTP_ACCOUNT", "", AppConstants.ROLE_CUSTOMER, session, callback);
+                ensurePublicUserForGmailOtp(cleanName, cleanEmail, requestedRole, session, callback);
+            }
+
+            @Override
+            public void onError(String message) {
+                callback.onError(message);
+            }
+        });
+    }
+
+    private void ensurePublicUserForGmailOtp(String fullName, String email, String requestedRole, SupabaseAuthSession session, SupabaseCallback<User> callback) {
+        Map<String, String> filters = new HashMap<>();
+        filters.put("email", email.trim());
+        supabaseClient.getList(AppConstants.TABLE_USERS, "*", 1, null, filters, User[].class, new SupabaseCallback<List<User>>() {
+            @Override
+            public void onSuccess(List<User> users) {
+                if (!users.isEmpty()) {
+                    User existingUser = users.get(0);
+                    attachAuthSession(existingUser, session);
+                    callback.onSuccess(existingUser);
+                    return;
+                }
+
+                if (AppConstants.ROLE_MANAGER.equalsIgnoreCase(requestedRole)) {
+                    callback.onError("Email này chưa được cấp quyền quản lý. Hãy thêm manager trong database trước khi dùng OTP quản lý.");
+                    return;
+                }
+
+                ensurePublicUser(fullName, email, "GMAIL_OTP_ACCOUNT", "", AppConstants.ROLE_CUSTOMER, session, callback);
             }
 
             @Override
