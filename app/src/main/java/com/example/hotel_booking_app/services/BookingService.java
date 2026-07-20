@@ -139,6 +139,47 @@ public class BookingService {
         });
     }
 
+    public void getRoomTypeAvailability(
+            String cabinId,
+            String roomTypeId,
+            String startDate,
+            String endDate,
+            int rooms,
+            SupabaseCallback<AvailabilityStatus> callback
+    ) {
+        checkAvailability(cabinId, roomTypeId, startDate, endDate, Math.max(1, rooms),
+                new SupabaseCallback<AvailabilityResult>() {
+                    @Override
+                    public void onSuccess(AvailabilityResult result) {
+                        callback.onSuccess(new AvailabilityStatus(result.isAvailable(), result.getMessage()));
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        callback.onError(message);
+                    }
+                });
+    }
+
+    public void getCabinAvailability(
+            String cabinId,
+            String startDate,
+            String endDate,
+            SupabaseCallback<AvailabilityStatus> callback
+    ) {
+        checkAvailability(cabinId, null, startDate, endDate, 1, new SupabaseCallback<AvailabilityResult>() {
+            @Override
+            public void onSuccess(AvailabilityResult result) {
+                callback.onSuccess(new AvailabilityStatus(result.isAvailable(), result.getMessage()));
+            }
+
+            @Override
+            public void onError(String message) {
+                callback.onError(message);
+            }
+        });
+    }
+
     public void createBooking(
             Cabin cabin,
             String userId,
@@ -848,6 +889,24 @@ public class BookingService {
         }
 
         String getMessage() {
+            return message;
+        }
+    }
+
+    public static class AvailabilityStatus {
+        private final boolean available;
+        private final String message;
+
+        private AvailabilityStatus(boolean available, String message) {
+            this.available = available;
+            this.message = message == null ? "" : message;
+        }
+
+        public boolean isAvailable() {
+            return available;
+        }
+
+        public String getMessage() {
             return message;
         }
     }
