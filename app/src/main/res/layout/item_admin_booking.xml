@@ -137,7 +137,7 @@
                 android:layout_height="40dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_button_danger"
-                android:text="Cancel"
+                android:text="Hủy"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textStyle="bold" />

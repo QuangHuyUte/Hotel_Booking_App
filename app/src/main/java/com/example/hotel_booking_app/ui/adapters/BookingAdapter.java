@@ -65,11 +65,11 @@ public class BookingAdapter extends RecyclerView.Adapter<BookingAdapter.BookingV
     public void onBindViewHolder(@NonNull BookingViewHolder holder, int position) {
         Booking booking = bookings.get(position);
         holder.boundCabinId = booking.getCabinId();
-        holder.titleTextView.setText("Cabin stay");
-        holder.nightsTextView.setText(booking.getNumNights() + " night" + (booking.getNumNights() == 1 ? "" : "s"));
+        holder.titleTextView.setText("Đặt phòng khách sạn");
+        holder.nightsTextView.setText(booking.getNumNights() + " đêm");
         holder.dateTextView.setText(formatDate(booking.getStartDate()) + "  ->  " + formatDate(booking.getEndDate()));
-        holder.priceTextView.setText("Guests: " + booking.getNumGuests() + "   |   " + PriceUtils.formatUsd(booking.getTotalPrice()) + " /total");
-        holder.createdTextView.setText("Booked: " + formatCreatedDate(booking.getCreatedAt()));
+        holder.priceTextView.setText("Khách: " + booking.getNumGuests() + "   |   " + PriceUtils.formatUsd(booking.getTotalPrice()) + " tổng cộng");
+        holder.createdTextView.setText("Đã đặt: " + formatCreatedDate(booking.getCreatedAt()));
         holder.statusTextView.setText(statusLabel(booking));
         holder.statusTextView.setBackgroundResource(statusBackground(booking));
         holder.imageView.setImageResource(R.drawable.ic_launcher_background);
@@ -98,10 +98,10 @@ public class BookingAdapter extends RecyclerView.Adapter<BookingAdapter.BookingV
             return "";
         }
         if (AppConstants.BOOKING_PENDING.equalsIgnoreCase(booking.getStatus())) {
-            return "Review pending booking";
+            return "Xem đặt phòng đang chờ";
         }
         if (AppConstants.BOOKING_CONFIRMED.equalsIgnoreCase(booking.getStatus())) {
-            return "Payment options";
+            return "Thanh toán";
         }
         return "";
     }
@@ -124,7 +124,7 @@ public class BookingAdapter extends RecyclerView.Adapter<BookingAdapter.BookingV
             @Override
             public void onError(String message) {
                 if (cabinId.equals(holder.boundCabinId)) {
-                    holder.titleTextView.setText("Cabin: " + cabinId);
+                    holder.titleTextView.setText("Khách sạn: " + cabinId);
                 }
             }
         });
@@ -141,16 +141,16 @@ public class BookingAdapter extends RecyclerView.Adapter<BookingAdapter.BookingV
 
     private String statusLabel(Booking booking) {
         if (booking.isPaid()) {
-            return "PAID";
+            return "ĐÃ THANH TOÁN";
         }
         String status = booking.getStatus() == null ? "" : booking.getStatus().toUpperCase(Locale.US);
         if (AppConstants.BOOKING_PENDING.equalsIgnoreCase(booking.getStatus())) {
-            return "PENDING";
+            return "ĐANG CHỜ";
         }
         if (AppConstants.BOOKING_CONFIRMED.equalsIgnoreCase(booking.getStatus())) {
-            return "PAY LATER";
+            return "TRẢ SAU";
         }
-        return status.isEmpty() ? "PENDING" : status;
+        return status.isEmpty() ? "ĐANG CHỜ" : status;
     }
 
     private int statusBackground(Booking booking) {

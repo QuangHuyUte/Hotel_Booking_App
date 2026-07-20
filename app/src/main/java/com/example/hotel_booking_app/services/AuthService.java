@@ -10,14 +10,10 @@ import com.example.hotel_booking_app.utils.AppConstants;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
 
 public class AuthService {
     private final SupabaseClient supabaseClient;
@@ -45,7 +41,7 @@ public class AuthService {
 
     public void sendPasswordResetEmail(String email, SupabaseCallback<Boolean> callback) {
         if (email == null || email.trim().isEmpty()) {
-            callback.onError("Please enter your email.");
+            callback.onError("Vui lòng nhập email.");
             return;
         }
         authClient.recoverPassword(email.trim(), callback);
@@ -62,27 +58,32 @@ public class AuthService {
         ensurePublicUser(resolvedName, email.trim(), "GOOGLE_OAUTH", "", AppConstants.ROLE_CUSTOMER, session, callback);
     }
 
-    public void loginOrCreateGoogleAccount(String fullName, String email, SupabaseCallback<User> callback) {
+    public void requestGmailOtp(String email, SupabaseCallback<Boolean> callback) {
         if (email == null || !email.trim().toLowerCase().endsWith("@gmail.com")) {
-            callback.onError("Please choose a valid Gmail account.");
+            callback.onError("Vui lòng nhập địa chỉ @gmail.com hợp lệ.");
+            return;
+        }
+        authClient.sendEmailOtp(email.trim(), callback);
+    }
+
+    public void verifyGmailOtp(String fullName, String email, String otp, SupabaseCallback<User> callback) {
+        if (email == null || !email.trim().toLowerCase().endsWith("@gmail.com")) {
+            callback.onError("Vui lòng nhập địa chỉ @gmail.com hợp lệ.");
+            return;
+        }
+        if (otp == null || otp.trim().length() < 6) {
+            callback.onError("Vui lòng nhập mã OTP 6 số từ Gmail.");
             return;
         }
         String cleanEmail = email.trim();
         String cleanName = fullName == null || fullName.trim().isEmpty()
                 ? cleanEmail.substring(0, cleanEmail.indexOf("@"))
                 : fullName.trim();
-        Map<String, String> filters = new HashMap<>();
-        filters.put("email", cleanEmail);
-        supabaseClient.getList(AppConstants.TABLE_USERS, "*", 1, null, filters, User[].class, new SupabaseCallback<List<User>>() {
+        authClient.verifyEmailOtp(cleanEmail, otp.trim(), new SupabaseCallback<SupabaseAuthSession>() {
             @Override
-            public void onSuccess(List<User> users) {
-                if (!users.isEmpty()) {
-                    User existing = users.get(0);
-                    attachDemoGoogleSession(existing, cleanEmail);
-                    createOtpThenReturn(existing, callback);
-                    return;
-                }
-                createGooglePublicUser(cleanName, cleanEmail, callback);
+            public void onSuccess(SupabaseAuthSession session) {
+                supabaseClient.setAccessToken(session.getAccessToken());
+                ensurePublicUser(cleanName, cleanEmail, "GMAIL_OTP_ACCOUNT", "", AppConstants.ROLE_CUSTOMER, session, callback);
             }
 
             @Override
@@ -90,56 +91,6 @@ public class AuthService {
                 callback.onError(message);
             }
         });
-    }
-
-    private void createGooglePublicUser(String fullName, String email, SupabaseCallback<User> callback) {
-        User user = new User();
-        user.setFullName(fullName);
-        user.setEmail(email);
-        user.setPassword(BCrypt.hashpw("GOOGLE_ACCOUNT_LINKED", BCrypt.gensalt()));
-        user.setPhone("");
-        user.setNationalId("GOOGLE-" + Math.abs(email.hashCode()));
-        user.setAddress("Google account");
-        user.setNationality("Vietnamese");
-        user.setRole(AppConstants.ROLE_CUSTOMER);
-        attachDemoGoogleSession(user, email);
-        supabaseClient.insert(AppConstants.TABLE_USERS, user, User[].class, new SupabaseCallback<User>() {
-            @Override
-            public void onSuccess(User createdUser) {
-                attachDemoGoogleSession(createdUser, email);
-                callback.onSuccess(createdUser);
-            }
-
-            @Override
-            public void onError(String message) {
-                callback.onError(message);
-            }
-        });
-    }
-
-    private void createOtpThenReturn(User user, SupabaseCallback<User> callback) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("email", user.getEmail());
-        payload.put("otp", String.format("%06d", new Random().nextInt(1_000_000)));
-        payload.put("userId", user.getId());
-        payload.put("expiresAt", LocalDateTime.now().plusMinutes(10).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-        supabaseClient.insertNoReturn(AppConstants.TABLE_OTPS, payload, new SupabaseCallback<Boolean>() {
-            @Override
-            public void onSuccess(Boolean ok) {
-                callback.onSuccess(user);
-            }
-
-            @Override
-            public void onError(String message) {
-                callback.onSuccess(user);
-            }
-        });
-    }
-
-    private void attachDemoGoogleSession(User user, String email) {
-        user.setAuthUserId("google-demo-" + UUID.nameUUIDFromBytes(email.getBytes()).toString());
-        user.setAuthAccessToken("google-demo-token");
-        user.setAuthRefreshToken("google-demo-refresh");
     }
 
     private void loginWithPublicUsersFallback(String email, String password, SupabaseCallback<User> callback) {
@@ -149,7 +100,7 @@ public class AuthService {
             @Override
             public void onSuccess(List<User> users) {
                 if (users.isEmpty()) {
-                    callback.onError("Email chưa tồn tại.");
+                    callback.onError("Email này chưa tồn tại.");
                     return;
                 }
 
@@ -189,7 +140,7 @@ public class AuthService {
 
                     @Override
                     public void onError(String signInError) {
-                        callback.onError("Tài khoản tồn tại trong public.users nhưng chưa đồng bộ được Supabase Auth. Hãy tạo lại tài khoản bằng màn đăng ký hoặc kiểm tra Supabase Auth cho email này.");
+                        callback.onError("Tài khoản có trong public.users nhưng chưa đồng bộ với Supabase Auth. Hãy tạo lại tài khoản từ màn đăng ký hoặc kiểm tra email này trong Supabase Auth.");
                     }
                 });
             }
@@ -233,7 +184,7 @@ public class AuthService {
 
             @Override
             public void onError(String signInError) {
-                callback.onError("Không tạo được Supabase Auth user: " + originalError);
+                callback.onError("Không tạo được tài khoản xác thực Supabase: " + originalError);
             }
         });
     }
@@ -256,6 +207,7 @@ public class AuthService {
                 }
 
                 User user = new User();
+                user.setId(session.getUserId());
                 user.setFullName(fullName.trim());
                 user.setEmail(email.trim());
                 user.setPassword(BCrypt.hashpw(password, BCrypt.gensalt()));
@@ -293,7 +245,7 @@ public class AuthService {
             public void onSuccess(List<User> users) {
                 User user;
                 if (users.isEmpty()) {
-                    callback.onError("Đăng nhập Auth thành công nhưng chưa có profile trong public.users cho email này.");
+                    callback.onError("Đăng nhập Auth thành công nhưng chưa có hồ sơ public.users cho email này.");
                     return;
                 } else {
                     user = users.get(0);
@@ -304,7 +256,7 @@ public class AuthService {
 
             @Override
             public void onError(String message) {
-                callback.onError("Không tải được profile public.users: " + message);
+                callback.onError("Không tải được hồ sơ người dùng: " + message);
             }
         });
     }
@@ -328,17 +280,7 @@ public class AuthService {
     }
 
     public void getSupportUser(SupabaseCallback<User> callback) {
-        getFirstUserByRole(AppConstants.ROLE_ADMIN, new SupabaseCallback<User>() {
-            @Override
-            public void onSuccess(User user) {
-                callback.onSuccess(user);
-            }
-
-            @Override
-            public void onError(String adminError) {
-                getFirstUserByRole(AppConstants.ROLE_HOST, callback);
-            }
-        });
+        getFirstUserByRole(AppConstants.ROLE_MANAGER, callback);
     }
 
     public void updateProfile(User user, SupabaseCallback<User> callback) {
@@ -347,7 +289,7 @@ public class AuthService {
             try {
                 LocalDate.parse(dateOfBirth);
             } catch (DateTimeParseException e) {
-                callback.onError("Date of birth must use YYYY-MM-DD format, for example 2000-05-23.");
+                callback.onError("Ngày sinh phải dùng định dạng YYYY-MM-DD, ví dụ 2000-05-23.");
                 return;
             }
         }
@@ -368,7 +310,7 @@ public class AuthService {
 
     public void updatePassword(String userId, String newPassword, SupabaseCallback<User> callback) {
         if (newPassword == null || newPassword.length() < 6) {
-            callback.onError("Password must be at least 6 characters.");
+            callback.onError("Mật khẩu phải có ít nhất 6 ký tự.");
             return;
         }
         Map<String, String> filters = new HashMap<>();

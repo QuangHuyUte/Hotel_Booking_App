@@ -29,7 +29,7 @@ public class CouponService {
                         return;
                     }
                 }
-                callback.onError("Không thấy mã " + normalizedCode + ". Nếu bạn đã insert rồi, hãy kiểm tra RLS SELECT policy của bảng coupons hoặc đúng project Supabase.");
+                callback.onError("Không tìm thấy mã: " + normalizedCode + ".");
             }
 
             @Override
@@ -70,7 +70,7 @@ public class CouponService {
 
         double discount = calculateDiscount(coupon, bookingAmount);
         if (discount <= 0) {
-            callback.onError("Coupon không tạo ra giá trị giảm.");
+            callback.onError("Mã giảm giá không tạo ra giá trị giảm.");
             return;
         }
         callback.onSuccess(discount);
@@ -78,7 +78,7 @@ public class CouponService {
 
     public void incrementUsedCount(Coupon coupon, SupabaseCallback<Coupon> callback) {
         if (coupon == null) {
-            callback.onError("Không có coupon để cập nhật lượt dùng.");
+            callback.onError("Không có mã giảm giá để cập nhật lượt dùng.");
             return;
         }
 
@@ -96,24 +96,24 @@ public class CouponService {
 
     private String getValidationError(Coupon coupon, double bookingAmount) {
         if (coupon == null) {
-            return "Coupon không tồn tại.";
+            return "Mã giảm giá không tồn tại.";
         }
         if (!coupon.isActive()) {
-            return "Coupon chưa được kích hoạt hoặc đã tắt.";
+            return "Mã giảm giá chưa kích hoạt hoặc đã bị tắt.";
         }
         if (bookingAmount < coupon.getMinBookingAmount()) {
-            return "Booking chưa đạt giá trị tối thiểu " + coupon.getMinBookingAmount() + ".";
+            return "Đặt phòng chưa đạt giá trị tối thiểu " + coupon.getMinBookingAmount() + ".";
         }
         if (coupon.getUsageLimit() != null && coupon.getUsedCount() >= coupon.getUsageLimit()) {
-            return "Coupon đã hết lượt sử dụng.";
+            return "Mã giảm giá đã hết lượt sử dụng.";
         }
 
         LocalDate today = LocalDate.now();
         if (coupon.getStartDate() != null && today.isBefore(LocalDate.parse(coupon.getStartDate()))) {
-            return "Coupon chưa đến ngày bắt đầu.";
+            return "Mã giảm giá chưa bắt đầu.";
         }
         if (coupon.getEndDate() != null && today.isAfter(LocalDate.parse(coupon.getEndDate()))) {
-            return "Coupon đã hết hạn.";
+            return "Mã giảm giá đã hết hạn.";
         }
         return null;
     }

@@ -2,6 +2,9 @@ package com.example.hotel_booking_app.data.models;
 
 import com.google.gson.annotations.SerializedName;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Cabin {
     @SerializedName("_id")
     private String id;
@@ -16,10 +19,19 @@ public class Cabin {
     private double latitude;
     private double longitude;
     private String mapPlaceId;
+    private String address;
+    private String district;
+    private String propertyType;
+    private int starRating;
+    private double reviewScore;
+    private int reviewCount;
+    private String googleMapsUrl;
     private String amenities;
     private String hostId;
     private String createdAt;
     private String updatedAt;
+    private transient List<RoomType> roomTypes = new ArrayList<>();
+    private transient RoomType matchedRoomType;
 
     public void setId(String id) {
         this.id = id;
@@ -97,6 +109,34 @@ public class Cabin {
         return mapPlaceId;
     }
 
+    public String getAddress() {
+        return address;
+    }
+
+    public String getDistrict() {
+        return district;
+    }
+
+    public String getPropertyType() {
+        return propertyType;
+    }
+
+    public int getStarRating() {
+        return starRating;
+    }
+
+    public double getReviewScore() {
+        return reviewScore;
+    }
+
+    public int getReviewCount() {
+        return reviewCount;
+    }
+
+    public String getGoogleMapsUrl() {
+        return googleMapsUrl;
+    }
+
     public void setAmenities(String amenities) {
         this.amenities = amenities;
     }
@@ -119,5 +159,28 @@ public class Cabin {
 
     public String getUpdatedAt() {
         return updatedAt;
+    }
+
+    public List<RoomType> getRoomTypes() {
+        return roomTypes;
+    }
+
+    public void setRoomTypes(List<RoomType> roomTypes) {
+        this.roomTypes = roomTypes == null ? new ArrayList<>() : roomTypes;
+    }
+
+    public RoomType getMatchedRoomType() {
+        return matchedRoomType;
+    }
+
+    public void setMatchedRoomType(RoomType matchedRoomType) {
+        this.matchedRoomType = matchedRoomType;
+    }
+
+    public double displayPrice() {
+        if (matchedRoomType != null && matchedRoomType.getBasePrice() > 0) {
+            return matchedRoomType.getBasePrice();
+        }
+        return Math.max(0, regularPrice - discount);
     }
 }

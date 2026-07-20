@@ -7,6 +7,7 @@ public class BlockedDate {
     private String id;
 
     private String cabinId;
+    private String roomTypeId;
     private String hostId;
     private String startDate;
     private String endDate;
@@ -20,6 +21,10 @@ public class BlockedDate {
 
     public void setHostId(String hostId) {
         this.hostId = hostId;
+    }
+
+    public void setRoomTypeId(String roomTypeId) {
+        this.roomTypeId = roomTypeId;
     }
 
     public void setStartDate(String startDate) {
@@ -44,6 +49,10 @@ public class BlockedDate {
 
     public String getHostId() {
         return hostId;
+    }
+
+    public String getRoomTypeId() {
+        return roomTypeId;
     }
 
     public String getStartDate() {

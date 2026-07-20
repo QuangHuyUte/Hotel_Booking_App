@@ -8,10 +8,12 @@ public class Booking {
 
     private String userId;
     private String cabinId;
+    private String roomTypeId;
     private String startDate;
     private String endDate;
     private int numNights;
     private int numGuests;
+    private int numRooms = 1;
     private double cabinPrice;
     private double extrasPrice;
     private double totalPrice;
@@ -48,6 +50,14 @@ public class Booking {
         return cabinId;
     }
 
+    public void setRoomTypeId(String roomTypeId) {
+        this.roomTypeId = roomTypeId;
+    }
+
+    public String getRoomTypeId() {
+        return roomTypeId;
+    }
+
     public void setStartDate(String startDate) {
         this.startDate = startDate;
     }
@@ -78,6 +88,14 @@ public class Booking {
 
     public int getNumGuests() {
         return numGuests;
+    }
+
+    public void setNumRooms(int numRooms) {
+        this.numRooms = numRooms;
+    }
+
+    public int getNumRooms() {
+        return numRooms;
     }
 
     public void setCabinPrice(double cabinPrice) {

@@ -7,6 +7,9 @@ import com.google.gson.Gson;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -98,6 +101,42 @@ public class SupabaseClient {
             for (Map.Entry<String, String> entry : filters.entrySet()) {
                 urlBuilder.addQueryParameter(entry.getKey(), "eq." + entry.getValue());
             }
+        }
+
+        executeList(baseRequest(urlBuilder.build()).get().build(), responseType, callback, true);
+    }
+
+    public <T> void getListIn(
+            String tableName,
+            String select,
+            String order,
+            String column,
+            Collection<String> values,
+            Class<T[]> responseType,
+            SupabaseCallback<List<T>> callback
+    ) {
+        LinkedHashSet<String> cleanValues = new LinkedHashSet<>();
+        if (values != null) {
+            for (String value : values) {
+                if (value != null && !value.trim().isEmpty()) {
+                    cleanValues.add(value.trim());
+                }
+            }
+        }
+        if (cleanValues.isEmpty()) {
+            callback.onSuccess(Collections.emptyList());
+            return;
+        }
+        if (!SupabaseConfig.hasValidAnonKey()) {
+            callback.onError("Bạn cần dán SUPABASE_ANON_KEY trong gradle.properties trước khi gọi Supabase.");
+            return;
+        }
+
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(SupabaseConfig.BASE_URL + "/rest/v1/" + tableName).newBuilder()
+                .addQueryParameter("select", select)
+                .addQueryParameter(column, "in.(" + String.join(",", cleanValues) + ")");
+        if (order != null) {
+            urlBuilder.addQueryParameter("order", order);
         }
 
         executeList(baseRequest(urlBuilder.build()).get().build(), responseType, callback, true);
@@ -278,7 +317,7 @@ public class SupabaseClient {
                     return;
                 }
                 if ("[]".equals(body.trim())) {
-                    postError(callback, "No row was deleted. Check ownership or Supabase RLS policy.");
+                    postError(callback, "Không có dòng nào được xóa. Hãy kiểm tra quyền sở hữu hoặc chính sách RLS của Supabase.");
                     return;
                 }
                 postSuccess(callback, true);
@@ -396,7 +435,7 @@ public class SupabaseClient {
         if (shouldRefreshToken(statusCode, body)) {
             return "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
         }
-        return "Supabase error " + statusCode + ": " + body;
+        return "Lỗi Supabase " + statusCode + ": " + body;
     }
 
     private <T> void postSuccess(SupabaseCallback<T> callback, T data) {
@@ -409,11 +448,11 @@ public class SupabaseClient {
 
     private String friendlyNetworkError(String message) {
         if (message == null || message.trim().isEmpty()) {
-            return "Cannot connect to Supabase. Please check internet connection and Supabase URL.";
+            return "Không thể kết nối Supabase. Vui lòng kiểm tra internet và Supabase URL.";
         }
         String lower = message.toLowerCase();
         if (lower.contains("unable to resolve host") || lower.contains("no address associated with hostname")) {
-            return "Cannot reach Supabase host. Check emulator internet, DNS, and SUPABASE_URL in gradle.properties.";
+            return "Không thể truy cập máy chủ Supabase. Hãy kiểm tra internet giả lập, DNS và SUPABASE_URL trong gradle.properties.";
         }
         return message;
     }

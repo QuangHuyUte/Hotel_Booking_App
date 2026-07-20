@@ -51,6 +51,42 @@ public class SupabaseAuthClient {
         executeAuthRequest(url, payload, callback);
     }
 
+    public void sendEmailOtp(String email, SupabaseCallback<Boolean> callback) {
+        HttpUrl url = HttpUrl.parse(SupabaseConfig.BASE_URL + "/auth/v1/otp").newBuilder().build();
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("email", email.trim());
+        payload.put("create_user", true);
+
+        Request request = buildAuthRequest(url, payload);
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                postError(callback, e.getMessage());
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                String body = response.body() != null ? response.body().string() : "";
+                if (!response.isSuccessful()) {
+                    postError(callback, buildFriendlyAuthError(response.code(), body));
+                    return;
+                }
+                postSuccess(callback, true);
+            }
+        });
+    }
+
+    public void verifyEmailOtp(String email, String otp, SupabaseCallback<SupabaseAuthSession> callback) {
+        HttpUrl url = HttpUrl.parse(SupabaseConfig.BASE_URL + "/auth/v1/verify").newBuilder().build();
+
+        Map<String, String> payload = new HashMap<>();
+        payload.put("email", email.trim());
+        payload.put("token", otp.trim());
+        payload.put("type", "email");
+        executeAuthRequest(url, payload, callback);
+    }
+
     public void recoverPassword(String email, SupabaseCallback<Boolean> callback) {
         HttpUrl url = HttpUrl.parse(SupabaseConfig.BASE_URL + "/auth/v1/recover").newBuilder().build();
 
@@ -114,7 +150,7 @@ public class SupabaseAuthClient {
                 try {
                     postSuccess(callback, parseAuthSession(body));
                 } catch (Exception e) {
-                    postError(callback, "Không đọc được phản hồi Supabase Auth: " + e.getMessage());
+                    postError(callback, "Không đọc được phản hồi đăng nhập từ Supabase: " + e.getMessage());
                 }
             }
         });
@@ -142,7 +178,7 @@ public class SupabaseAuthClient {
         String email = user != null ? getString(user, "email") : null;
 
         if (userId == null) {
-            throw new IllegalStateException("Supabase Auth không trả user.id.");
+            throw new IllegalStateException("Supabase Auth không trả về user.id.");
         }
 
         return new SupabaseAuthSession(userId, email, accessToken, refreshToken);
@@ -158,15 +194,18 @@ public class SupabaseAuthClient {
     private String buildFriendlyAuthError(int statusCode, String body) {
         String lower = body == null ? "" : body.toLowerCase();
         if (statusCode == 429 || lower.contains("over_email_send_rate_limit") || lower.contains("email rate limit")) {
-            return "Supabase Auth đang giới hạn gửi email xác nhận. Hãy tắt email confirmation trong Supabase Auth Settings khi demo, hoặc đợi vài phút rồi thử lại.";
+            return "Supabase Auth đang giới hạn số email xác nhận. Hãy tắt email confirmation trong Supabase Auth Settings cho demo hoặc chờ vài phút rồi thử lại.";
         }
         if (lower.contains("user_already_exists") || lower.contains("already registered") || lower.contains("already exists")) {
-            return "Email này đã tồn tại trong Supabase Auth. Hãy thử đăng nhập.";
+            return "Email này đã tồn tại trong Supabase Auth. Hãy đăng nhập lại.";
         }
         if (lower.contains("invalid_credentials") || lower.contains("invalid login credentials")) {
             return "Email hoặc mật khẩu Supabase Auth không đúng.";
         }
-        return "Supabase Auth error " + statusCode + ": " + body;
+        if (lower.contains("otp") || lower.contains("token")) {
+            return "OTP không đúng hoặc đã hết hạn. Vui lòng kiểm tra Gmail rồi thử lại.";
+        }
+        return "Lỗi Supabase Auth " + statusCode + ": " + body;
     }
 
     private <T> void postSuccess(SupabaseCallback<T> callback, T data) {
@@ -179,11 +218,11 @@ public class SupabaseAuthClient {
 
     private String friendlyNetworkError(String message) {
         if (message == null || message.trim().isEmpty()) {
-            return "Cannot connect to Supabase Auth. Please check internet connection and Supabase URL.";
+            return "Không thể kết nối Supabase Auth. Vui lòng kiểm tra internet và Supabase URL.";
         }
         String lower = message.toLowerCase();
         if (lower.contains("unable to resolve host") || lower.contains("no address associated with hostname")) {
-            return "Cannot reach Supabase Auth host. Check emulator internet, DNS, and SUPABASE_URL in gradle.properties.";
+            return "Không thể truy cập máy chủ Supabase Auth. Hãy kiểm tra internet giả lập, DNS và SUPABASE_URL trong gradle.properties.";
         }
         return message;
     }

@@ -102,7 +102,6 @@ public class SessionManager {
     }
 
     public boolean isHostOrAdmin() {
-        String role = getRole();
-        return AppConstants.ROLE_HOST.equals(role) || AppConstants.ROLE_ADMIN.equals(role);
+        return AppConstants.ROLE_MANAGER.equals(getRole());
     }
 }

@@ -70,7 +70,7 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
         android:background="@drawable/bg_button_secondary"
-        android:text="View invoice"
+        android:text="Xem hóa đơn"
         android:textAllCaps="false"
         android:textColor="@color/black" />
 </LinearLayout>

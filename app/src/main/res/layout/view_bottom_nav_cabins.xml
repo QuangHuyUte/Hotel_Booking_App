@@ -21,7 +21,7 @@
         <ImageView
             android:layout_width="22dp"
             android:layout_height="22dp"
-            android:contentDescription="Search"
+            android:contentDescription="Tìm kiếm"
             android:src="@drawable/ic_nav_search"
             android:tint="@color/booking_blue" />
 
@@ -30,7 +30,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
             android:gravity="center"
-            android:text="Search"
+            android:text="Tìm kiếm"
             android:textColor="@color/booking_blue"
             android:textSize="11sp"
             android:textStyle="bold" />
@@ -53,7 +53,7 @@
         <ImageView
             android:layout_width="22dp"
             android:layout_height="22dp"
-            android:contentDescription="Saved"
+            android:contentDescription="Đã lưu"
             android:src="@drawable/ic_nav_saved"
             android:tint="@color/booking_muted" />
 
@@ -62,7 +62,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
             android:gravity="center"
-            android:text="Saved"
+            android:text="Đã lưu"
             android:textColor="@color/booking_muted"
             android:textSize="11sp"
             android:textStyle="bold" />
@@ -79,7 +79,7 @@
         <ImageView
             android:layout_width="22dp"
             android:layout_height="22dp"
-            android:contentDescription="Trips"
+            android:contentDescription="Chuyến đi"
             android:src="@drawable/ic_nav_trips"
             android:tint="@color/booking_muted" />
 
@@ -88,7 +88,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
             android:gravity="center"
-            android:text="Trips"
+            android:text="Chuyến đi"
             android:textColor="@color/booking_muted"
             android:textSize="11sp"
             android:textStyle="bold" />
@@ -105,7 +105,7 @@
         <ImageView
             android:layout_width="22dp"
             android:layout_height="22dp"
-            android:contentDescription="Messages"
+            android:contentDescription="Tin nhắn"
             android:src="@drawable/ic_nav_messages"
             android:tint="@color/booking_muted" />
 
@@ -114,7 +114,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
             android:gravity="center"
-            android:text="Messages"
+            android:text="Tin nhắn"
             android:textColor="@color/booking_muted"
             android:textSize="11sp"
             android:textStyle="bold" />
@@ -131,7 +131,7 @@
         <ImageView
             android:layout_width="22dp"
             android:layout_height="22dp"
-            android:contentDescription="Profile"
+            android:contentDescription="Hồ sơ"
             android:src="@drawable/ic_nav_profile"
             android:tint="@color/booking_muted" />
 
@@ -140,7 +140,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
             android:gravity="center"
-            android:text="Profile"
+            android:text="Hồ sơ"
             android:textColor="@color/booking_muted"
             android:textSize="11sp"
             android:textStyle="bold" />

@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.hotel_booking_app.R;
 import com.example.hotel_booking_app.data.models.Cabin;
+import com.example.hotel_booking_app.data.models.RoomType;
 import com.example.hotel_booking_app.utils.PriceUtils;
 
 import java.util.ArrayList;
@@ -88,8 +89,8 @@ public class HostCabinAdapter extends RecyclerView.Adapter<HostCabinAdapter.Host
         holder.locationTextView.setText(cabin.getLocation() == null || cabin.getLocation().trim().isEmpty()
                 ? "Location not updated"
                 : cabin.getLocation());
-        holder.detailTextView.setText("\uD83D\uDC65  " + cabin.getMaxCapacity() + " guests");
-        double finalPrice = PriceUtils.priceAfterDiscount(cabin.getRegularPrice(), cabin.getDiscount());
+        holder.detailTextView.setText(managerRoomSummary(cabin));
+        double finalPrice = cabin.displayPrice();
         holder.priceTextView.setText(priceLabel(holder, cabin, finalPrice));
         if (cabin.getDiscount() > 0) {
             holder.discountBadgeTextView.setVisibility(View.VISIBLE);
@@ -135,13 +136,16 @@ public class HostCabinAdapter extends RecyclerView.Adapter<HostCabinAdapter.Host
     }
 
     private CharSequence priceLabel(HostCabinViewHolder holder, Cabin cabin, double finalPrice) {
+        if (cabin.getMatchedRoomType() != null || (cabin.getRoomTypes() != null && !cabin.getRoomTypes().isEmpty())) {
+            return "Từ " + PriceUtils.formatUsd(finalPrice) + " / đêm";
+        }
         if (cabin.getDiscount() <= 0) {
-            return PriceUtils.formatUsd(finalPrice) + " / night";
+            return PriceUtils.formatUsd(finalPrice) + " / đêm";
         }
 
         String discounted = PriceUtils.formatUsd(finalPrice);
         String original = PriceUtils.formatUsd(cabin.getRegularPrice());
-        String full = discounted + "  " + original + " / night";
+        String full = discounted + "  " + original + " / đêm";
         SpannableString spannable = new SpannableString(full);
         int start = discounted.length() + 2;
         int end = start + original.length();
@@ -150,5 +154,30 @@ public class HostCabinAdapter extends RecyclerView.Adapter<HostCabinAdapter.Host
         spannable.setSpan(new ForegroundColorSpan(holder.itemView.getContext().getColor(R.color.muted)),
                 start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         return spannable;
+    }
+
+    private String managerRoomSummary(Cabin cabin) {
+        if (cabin.getRoomTypes() == null || cabin.getRoomTypes().isEmpty()) {
+            return "\uD83C\uDFE8 Chưa có loại phòng";
+        }
+        int totalRooms = 0;
+        int maxGuests = 0;
+        double minPrice = Double.MAX_VALUE;
+        for (RoomType roomType : cabin.getRoomTypes()) {
+            totalRooms += Math.max(0, roomType.getTotalRooms());
+            maxGuests = Math.max(maxGuests, roomType.effectiveMaxAdults());
+            if (roomType.getBasePrice() > 0) {
+                minPrice = Math.min(minPrice, roomType.getBasePrice());
+            }
+        }
+        RoomType cheapest = cabin.getMatchedRoomType();
+        String base = cabin.getRoomTypes().size() + " room types · " + totalRooms + " rooms";
+        if (cheapest != null) {
+            base += " · from " + cheapest.displayName();
+        }
+        if (maxGuests > 0) {
+            base += " · tối đa " + maxGuests + " người lớn";
+        }
+        return base;
     }
 }

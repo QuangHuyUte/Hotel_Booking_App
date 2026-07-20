@@ -29,7 +29,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="18dp"
         android:gravity="center"
-        android:text="Payment History"
+        android:text="Lịch sử thanh toán"
         android:textColor="@color/primary"
         android:textSize="30sp"
         android:textStyle="bold" />
@@ -67,7 +67,7 @@
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="8dp"
         android:background="@drawable/bg_button_secondary"
-        android:text="Back"
+        android:text="Quay lại"
         android:textAllCaps="false"
         android:textColor="@color/black"
         android:textStyle="bold" />

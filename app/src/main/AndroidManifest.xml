@@ -14,79 +14,79 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Hotel_Booking_App">
         <activity
-            android:name=".ui.activities.AdminCabinFormActivity"
+            android:name=".ui.activities.AdminHotelFormActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.AdminBookingsActivity"
+            android:name=".ui.activities.AdminBookingManagementActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.AdminSettingsActivity"
+            android:name=".ui.activities.AdminAppSettingsActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.PersonalActivity"
+            android:name=".ui.activities.AccountHubActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.ChatActivity"
+            android:name=".ui.activities.ChatThreadActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.MessagesActivity"
+            android:name=".ui.activities.ConversationListActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.NotificationsActivity"
+            android:name=".ui.activities.NotificationCenterActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.ProfileActivity"
+            android:name=".ui.activities.ProfileDetailsActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.UpdateProfileActivity"
+            android:name=".ui.activities.EditProfileActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.InvoiceActivity"
+            android:name=".ui.activities.BookingInvoiceActivity"
             android:exported="false" />
         <activity
             android:name=".ui.activities.PaymentHistoryActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.CheckoutActivity"
+            android:name=".ui.activities.BookingPaymentActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.BookingDetailActivity"
+            android:name=".ui.activities.BookingDetailsActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.EditBookingActivity"
+            android:name=".ui.activities.BookingEditActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.MyWishlistActivity"
+            android:name=".ui.activities.SavedHotelsActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.HostDashboardActivity"
+            android:name=".ui.activities.HostHotelDashboardActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.MyBookingsActivity"
+            android:name=".ui.activities.GuestBookingsActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.BookingActivity"
+            android:name=".ui.activities.BookingCreateActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.CabinDetailActivity"
+            android:name=".ui.activities.HotelDetailActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.CabinListActivity"
+            android:name=".ui.activities.HotelSearchActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.SearchMapActivity"
+            android:name=".ui.activities.HotelMapActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.OAuthWebActivity"
+            android:name=".ui.activities.OAuthBrowserActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.HomeActivity"
+            android:name=".ui.activities.HomeRedirectActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.RegisterActivity"
+            android:name=".ui.activities.SignUpActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.LoginActivity"
+            android:name=".ui.activities.SignInActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -101,10 +101,10 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.activities.ForgotPasswordActivity"
+            android:name=".ui.activities.PasswordResetActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activities.MainActivity"
+            android:name=".ui.activities.SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

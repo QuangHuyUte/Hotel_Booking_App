@@ -1,18 +1,110 @@
--- Supabase seed for Hotel Booking App
--- Safe to rerun: this script upgrades the demo schema columns, clears sample tables,
--- and repopulates them. For a brand-new database, run database/database.sql once first.
+-- Supabase seed for Serein Stay hotel management demo
+-- Safe to rerun after running supabase/database.sql once.
 
 begin;
 
--- create new / schema upgrade for the Hotel Booking App search and map UI
 create extension if not exists "pgcrypto";
 
 alter table public.amenities add column if not exists category varchar default 'General';
 alter table public.users drop constraint if exists users_role_check;
-alter table public.users add constraint users_role_check check (role in ('customer', 'cabinOwner', 'admin'));
+update public.users set role = 'manager' where role in ('cabinOwner', 'admin');
+alter table public.users add constraint users_role_check check (role in ('customer', 'manager'));
+alter table public.users enable row level security;
+drop policy if exists "users_public_read" on public.users;
+create policy "users_public_read"
+on public.users for select
+to anon, authenticated
+using (true);
+drop policy if exists "users_create_own_customer_profile" on public.users;
+create policy "users_create_own_customer_profile"
+on public.users for insert
+to authenticated
+with check (_id = auth.uid() and role = 'customer');
+drop policy if exists "users_update_own_profile" on public.users;
+create policy "users_update_own_profile"
+on public.users for update
+to authenticated
+using (_id = auth.uid())
+with check (_id = auth.uid());
+
 alter table public.cabins add column if not exists latitude numeric;
 alter table public.cabins add column if not exists longitude numeric;
 alter table public.cabins add column if not exists "mapPlaceId" text;
+alter table public.cabins add column if not exists address text;
+alter table public.cabins add column if not exists district varchar;
+alter table public.cabins add column if not exists "propertyType" varchar default 'Hotel';
+alter table public.cabins add column if not exists "starRating" integer default 3;
+alter table public.cabins add column if not exists "reviewScore" numeric default 8.6;
+alter table public.cabins add column if not exists "reviewCount" integer default 0;
+alter table public.cabins add column if not exists "googleMapsUrl" text;
+
+create table if not exists public.room_types (
+  _id uuid primary key default gen_random_uuid(),
+  "cabinId" uuid not null references public.cabins(_id) on delete cascade,
+  name varchar not null,
+  category varchar not null default 'Standard',
+  description text,
+  "maxGuests" integer not null default 2,
+  "maxAdults" integer not null default 2,
+  "totalRooms" integer not null default 1,
+  "basePrice" numeric not null,
+  beds varchar,
+  "bedType" varchar default 'Queen',
+  "bedCount" integer not null default 1,
+  "sleepingCapacity" integer not null default 2,
+  "bedSummary" varchar,
+  "bedConfig" jsonb default '[]'::jsonb,
+  "bedWidthM" numeric default 1.6,
+  "bedLengthM" numeric default 2.0,
+  size varchar,
+  "sizeM2" integer default 24,
+  "hasLivingRoom" boolean default false,
+  amenities text,
+  image text,
+  "isActive" boolean default true,
+  "createdAt" timestamp without time zone default now(),
+  "updatedAt" timestamp without time zone default now(),
+  constraint room_types_valid_guests check ("maxGuests" > 0),
+  constraint room_types_valid_adults check ("maxAdults" > 0),
+  constraint room_types_valid_bed_count check ("bedCount" > 0),
+  constraint room_types_valid_sleeping_capacity check ("sleepingCapacity" >= "maxAdults"),
+  constraint room_types_valid_total check ("totalRooms" >= 0),
+  unique ("cabinId", name)
+);
+alter table public.room_types add column if not exists category varchar not null default 'Standard';
+alter table public.room_types add column if not exists "maxAdults" integer not null default 2;
+alter table public.room_types add column if not exists "bedType" varchar default 'Queen';
+alter table public.room_types add column if not exists "bedCount" integer not null default 1;
+alter table public.room_types add column if not exists "sleepingCapacity" integer not null default 2;
+alter table public.room_types add column if not exists "bedSummary" varchar;
+alter table public.room_types add column if not exists "bedConfig" jsonb default '[]'::jsonb;
+alter table public.room_types add column if not exists "bedWidthM" numeric default 1.6;
+alter table public.room_types add column if not exists "bedLengthM" numeric default 2.0;
+alter table public.room_types add column if not exists "sizeM2" integer default 24;
+alter table public.room_types add column if not exists "hasLivingRoom" boolean default false;
+alter table public.room_types drop constraint if exists room_types_valid_adults;
+alter table public.room_types add constraint room_types_valid_adults check ("maxAdults" > 0);
+alter table public.room_types drop constraint if exists room_types_valid_bed_count;
+alter table public.room_types add constraint room_types_valid_bed_count check ("bedCount" > 0);
+alter table public.room_types drop constraint if exists room_types_valid_sleeping_capacity;
+alter table public.room_types add constraint room_types_valid_sleeping_capacity check ("sleepingCapacity" >= "maxAdults");
+
+create table if not exists public.room_inventory (
+  _id uuid primary key default gen_random_uuid(),
+  "roomTypeId" uuid not null references public.room_types(_id) on delete cascade,
+  date date not null,
+  "availableRooms" integer not null default 0,
+  "priceOverride" numeric,
+  "isClosed" boolean default false,
+  "createdAt" timestamp without time zone default now(),
+  "updatedAt" timestamp without time zone default now(),
+  constraint room_inventory_available_nonnegative check ("availableRooms" >= 0),
+  unique ("roomTypeId", date)
+);
+alter table public.bookings add column if not exists "roomTypeId" uuid references public.room_types(_id);
+alter table public.bookings add column if not exists "numRooms" integer not null default 1;
+alter table public.blocked_dates add column if not exists "roomTypeId" uuid references public.room_types(_id) on delete cascade;
+
 create table if not exists public.destinations (
   _id uuid primary key default gen_random_uuid(),
   name varchar not null unique,
@@ -29,6 +121,7 @@ alter table public.destinations add column if not exists "imageUrl" text;
 alter table public.destinations add column if not exists "stayCount" integer not null default 0;
 alter table public.destinations add column if not exists latitude numeric;
 alter table public.destinations add column if not exists longitude numeric;
+
 create table if not exists public.destination_places (
   _id uuid primary key default gen_random_uuid(),
   "destinationId" uuid references public.destinations(_id) on delete cascade,
@@ -43,6 +136,8 @@ create table if not exists public.destination_places (
   unique (city, name)
 );
 
+drop table if exists public.seed_extra_places;
+
 truncate table
   public.messages,
   public.conversations,
@@ -50,6 +145,7 @@ truncate table
   public.rates,
   public.payments,
   public.bookings,
+  public.room_inventory,
   public.blocked_dates,
   public.promotions,
   public.wishlists,
@@ -61,675 +157,335 @@ truncate table
   public.settings,
   public.destination_places,
   public.destinations,
+  public.room_types,
   public.cabins,
   public.amenities,
   public.users
 restart identity cascade;
 
--- users
 insert into public.users (
-  "_id",
-  "fullName",
-  email,
-  password,
-  phone,
-  "nationalId",
-  "dateOfBirth",
-  gender,
-  address,
-  nationality,
-  role,
-  "createdAt",
-  "updatedAt"
+  "_id", "fullName", email, password, phone, "nationalId", "dateOfBirth",
+  gender, address, nationality, role, "createdAt", "updatedAt"
 ) values
-  ('10000000-0000-4000-8000-000000000001', 'Serein Support', 'support@sereinstay.test', 'Password123!', '+84900000001', 'SUP000001', date '1990-02-12', 'female', 'Ho Chi Minh City, Vietnam', 'Vietnamese', 'admin', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('10000000-0000-4000-8000-000000000002', 'Olivia Tran', 'olivia.owner@sdp1.test', 'Password123!', '+84900000002', 'OWN000002', date '1987-04-12', 'female', 'Da Lat, Lam Dong', 'Vietnamese', 'cabinOwner', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('10000000-0000-4000-8000-000000000003', 'Marcus Nguyen', 'marcus.owner@sdp1.test', 'Password123!', '+84900000003', 'OWN000003', date '1985-09-30', 'male', 'Sa Pa, Lao Cai', 'Vietnamese', 'cabinOwner', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('10000000-0000-4000-8000-000000000004', 'Linh Pham', 'linh.owner@sdp1.test', 'Password123!', '+84900000004', 'OWN000004', date '1991-02-18', 'female', 'Hoi An, Quang Nam', 'Vietnamese', 'cabinOwner', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('10000000-0000-4000-8000-000000000101', 'Alice Nguyen', 'alice.nguyen@sdp1.test', 'Password123!', '+84900000005', 'CUS000101', date '1995-03-20', 'female', 'Thu Duc, Ho Chi Minh City', 'Vietnamese', 'customer', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('10000000-0000-4000-8000-000000000102', 'Bao Tran', 'bao.tran@sdp1.test', 'Password123!', '+84900000006', 'CUS000102', date '1992-08-12', 'male', 'Hai Chau, Da Nang', 'Vietnamese', 'customer', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('10000000-0000-4000-8000-000000000103', 'Chi Pham', 'chi.pham@sdp1.test', 'Password123!', '+84900000007', 'CUS000103', date '1988-11-05', 'female', 'Hoan Kiem, Ha Noi', 'Vietnamese', 'customer', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('10000000-0000-4000-8000-000000000104', 'David Le', 'david.le@sdp1.test', 'Password123!', '+84900000008', 'CUS000104', date '1998-06-22', 'male', 'Nha Trang, Khanh Hoa', 'Vietnamese', 'customer', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('10000000-0000-4000-8000-000000000105', 'Eve Hoang', 'eve.hoang@sdp1.test', 'Password123!', '+84900000009', 'CUS000105', date '1996-12-09', 'female', 'Hue City, Thua Thien Hue', 'Vietnamese', 'customer', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('10000000-0000-4000-8000-000000000106', 'Finn Vo', 'finn.vo@sdp1.test', 'Password123!', '+84900000010', 'CUS000106', date '1993-07-17', 'male', 'Can Tho City, Vietnam', 'Vietnamese', 'customer', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00');
+  ('10000000-0000-4000-8000-000000000001', 'Huy Gia Lai', 'huygialai2005@gmail.com', 'Password123!', '+84900000001', 'MGR000001', date '2005-08-20', 'male', 'Ho Chi Minh City, Vietnam', 'Vietnamese', 'manager', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('10000000-0000-4000-8000-000000000002', 'Cuong Manager', 'cuong72005@gmail.com', 'Password123!', '+84900000002', 'MGR000002', date '2005-07-20', 'male', 'Ho Chi Minh City, Vietnam', 'Vietnamese', 'manager', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('10000000-0000-4000-8000-000000000003', 'Tran Tuan Kha', 'trantuankha030205@gmail.com', 'Password123!', '+84900000003', 'MGR000003', date '2005-02-03', 'male', 'Vung Tau, Vietnam', 'Vietnamese', 'manager', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('10000000-0000-4000-8000-000000000101', 'Alice Nguyen', 'alice.nguyen@sereinstay.test', 'Password123!', '+84900000101', 'CUS000101', date '1995-03-20', 'female', 'Thu Duc, Ho Chi Minh City', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('10000000-0000-4000-8000-000000000102', 'Bao Tran', 'bao.tran@sereinstay.test', 'Password123!', '+84900000102', 'CUS000102', date '1992-08-12', 'male', 'Hai Chau, Da Nang', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('10000000-0000-4000-8000-000000000103', 'Chi Pham', 'chi.pham@sereinstay.test', 'Password123!', '+84900000103', 'CUS000103', date '1988-11-05', 'female', 'Hoan Kiem, Hanoi', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('10000000-0000-4000-8000-000000000104', 'David Le', 'david.le@sereinstay.test', 'Password123!', '+84900000104', 'CUS000104', date '1998-06-22', 'male', 'Nha Trang, Khanh Hoa', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('10000000-0000-4000-8000-000000000105', 'Eve Hoang', 'eve.hoang@sereinstay.test', 'Password123!', '+84900000105', 'CUS000105', date '1996-12-09', 'female', 'Hue City, Vietnam', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
--- amenities
-insert into public.amenities (
-  "_id",
-  name,
-  icon,
-  category,
-  "createdAt",
-  "updatedAt"
-) values
-  ('40000000-0000-4000-8000-000000000001', 'WiFi', 'wifi', 'Comfort', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('40000000-0000-4000-8000-000000000002', 'Breakfast', 'coffee', 'Food', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('40000000-0000-4000-8000-000000000003', 'Parking', 'parking', 'Convenience', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('40000000-0000-4000-8000-000000000004', 'Kitchen', 'kitchen', 'Comfort', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('40000000-0000-4000-8000-000000000005', 'Air conditioning', 'air-conditioner', 'Comfort', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('40000000-0000-4000-8000-000000000006', 'Pool', 'pool', 'Relax', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('40000000-0000-4000-8000-000000000007', 'BBQ', 'bbq', 'Outdoor', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('40000000-0000-4000-8000-000000000008', 'Bathtub', 'bath', 'Relax', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('40000000-0000-4000-8000-000000000009', 'Mountain view', 'mountain', 'View', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('40000000-0000-4000-8000-000000000010', 'Balcony', 'balcony', 'View', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00');
+insert into public.amenities ("_id", name, icon, category, "createdAt", "updatedAt") values
+  ('40000000-0000-4000-8000-000000000001', 'WiFi', 'wifi', 'Comfort', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('40000000-0000-4000-8000-000000000002', 'Breakfast', 'coffee', 'Food', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('40000000-0000-4000-8000-000000000003', 'Parking', 'parking', 'Convenience', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('40000000-0000-4000-8000-000000000004', 'Pool', 'pool', 'Relax', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('40000000-0000-4000-8000-000000000005', 'Air conditioning', 'air-conditioner', 'Comfort', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('40000000-0000-4000-8000-000000000006', 'Private bathroom', 'bath', 'Comfort', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('40000000-0000-4000-8000-000000000007', 'Sea view', 'wave', 'View', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('40000000-0000-4000-8000-000000000008', 'Balcony', 'balcony', 'View', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
--- settings
 insert into public.settings (
-  "_id",
-  "miniBookingLength",
-  "maxBookingLength",
-  "maxNumberOfGuests",
-  "breakfastPrice",
-  "createdAt",
-  "updatedAt"
+  "_id", "miniBookingLength", "maxBookingLength", "maxNumberOfGuests", "breakfastPrice", "createdAt", "updatedAt"
 ) values
-  ('90000000-0000-4000-8000-000000000001', 1, 14, 8, 12, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00');
+  ('90000000-0000-4000-8000-000000000001', 1, 21, 8, 12, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
--- destinations for the home Explore Vietnam carousel
 insert into public.destinations (
-  "_id",
-  name,
-  city,
-  country,
-  "imageUrl",
-  "stayCount",
-  latitude,
-  longitude,
-  "createdAt",
-  "updatedAt"
+  "_id", name, city, country, "imageUrl", "stayCount", latitude, longitude, "createdAt", "updatedAt"
 ) values
-  ('91000000-0000-4000-8000-000000000001', 'TP. Ho Chi Minh', 'Ho Chi Minh City', 'Vietnam', 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&w=1200&q=80', 100, 10.7769, 106.7009, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('91000000-0000-4000-8000-000000000002', 'Vung Tau', 'Vung Tau', 'Vietnam', 'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1200&q=80', 50, 10.4114, 107.1362, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('91000000-0000-4000-8000-000000000003', 'Ha Noi', 'Ha Noi', 'Vietnam', 'https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80', 55, 21.0278, 105.8342, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00');
-
--- cabins
-insert into public.cabins (
-  "_id",
-  name,
-  "maxCapacity",
-  "regularPrice",
-  discount,
-  image,
-  description,
-  location,
-  latitude,
-  longitude,
-  "mapPlaceId",
-  amenities,
-  "hostId",
-  "createdAt",
-  "updatedAt"
-) values
-  ('20000000-0000-4000-8000-000000000001', 'Ben Thanh Market Stay', 2, 120, 10, 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 'A central District 1 stay near Ben Thanh Market, street food, and the metro area.', 'Ben Thanh Market, District 1, Ho Chi Minh City', 10.7721, 106.6983, null, 'WiFi, Parking, Breakfast, Balcony', '10000000-0000-4000-8000-000000000002', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('20000000-0000-4000-8000-000000000002', 'Nguyen Hue City Loft', 3, 150, 15, 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 'A bright city loft near Nguyen Hue Walking Street and the Saigon River.', 'Nguyen Hue Walking Street, District 1, Ho Chi Minh City', 10.7756, 106.7039, null, 'WiFi, Breakfast, Parking, Bathtub', '10000000-0000-4000-8000-000000000002', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('20000000-0000-4000-8000-000000000003', 'Notre-Dame Heritage Room', 2, 95, 0, 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 'A calm room close to Notre-Dame Cathedral, Central Post Office, and book street.', 'Notre-Dame Cathedral Basilica of Saigon, District 1, Ho Chi Minh City', 10.7798, 106.6990, null, 'WiFi, Kitchen, Balcony, Air conditioning', '10000000-0000-4000-8000-000000000004', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('20000000-0000-4000-8000-000000000004', 'Landmark 81 Skyline Suite', 4, 180, 20, 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 'A bigger suite around Vinhomes Central Park with skyline views toward Landmark 81.', 'Landmark 81, Binh Thanh District, Ho Chi Minh City', 10.7940, 106.7218, null, 'WiFi, Breakfast, Parking, Balcony', '10000000-0000-4000-8000-000000000003', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('20000000-0000-4000-8000-000000000005', 'Bui Vien Night Stay', 4, 160, 12, 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 'A lively stay near Bui Vien Walking Street, local restaurants, and backpacker nightlife.', 'Bui Vien Walking Street, District 1, Ho Chi Minh City', 10.7677, 106.6932, null, 'WiFi, Parking, Pool, Balcony', '10000000-0000-4000-8000-000000000004', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('20000000-0000-4000-8000-000000000006', 'Thao Dien Garden Apartment', 3, 130, 8, 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 'A softer apartment stay in Thao Dien with cafes, river views, and quiet streets nearby.', 'Thao Dien, Thu Duc City, Ho Chi Minh City', 10.8022, 106.7334, null, 'WiFi, Breakfast, Air conditioning, Kitchen', '10000000-0000-4000-8000-000000000002', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('20000000-0000-4000-8000-000000000007', 'Tan Dinh Pink House', 2, 110, 5, 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 'A compact stay near Tan Dinh Church, local markets, and cafe streets.', 'Tan Dinh Church, District 3, Ho Chi Minh City', 10.7880, 106.6907, null, 'WiFi, Parking, Balcony, Bathtub', '10000000-0000-4000-8000-000000000003', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('20000000-0000-4000-8000-000000000008', 'Saigon Zoo Family Stay', 5, 140, 0, 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 'A larger family stay near Saigon Zoo, the botanical gardens, and riverside routes.', 'Saigon Zoo and Botanical Gardens, District 1, Ho Chi Minh City', 10.7875, 106.7053, null, 'WiFi, Breakfast, Pool, Balcony', '10000000-0000-4000-8000-000000000004', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('20000000-0000-4000-8000-000000000009', 'Front Beach Vung Tau Studio', 3, 115, 7, 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 'A compact coastal studio near Front Beach, seafood streets, and the ferry pier.', 'Front Beach, Vung Tau, Ba Ria - Vung Tau, Vietnam', 10.3459, 107.0764, null, 'WiFi, Parking, Air conditioning, Balcony', '10000000-0000-4000-8000-000000000002', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('20000000-0000-4000-8000-000000000010', 'Back Beach Family Suite', 5, 150, 12, 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 'A family-friendly Vung Tau stay near Back Beach with easy access to cafes and night markets.', 'Back Beach, Vung Tau, Ba Ria - Vung Tau, Vietnam', 10.3353, 107.0931, null, 'WiFi, Breakfast, Pool, Kitchen', '10000000-0000-4000-8000-000000000003', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('20000000-0000-4000-8000-000000000011', 'Hoan Kiem Old Quarter Room', 2, 105, 5, 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 'A walkable Ha Noi room near Hoan Kiem Lake, the Old Quarter, and weekend night market.', 'Hoan Kiem Lake, Ha Noi, Vietnam', 21.0287, 105.8523, null, 'WiFi, Breakfast, Air conditioning, Bathtub', '10000000-0000-4000-8000-000000000004', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('20000000-0000-4000-8000-000000000012', 'West Lake Hanoi Apartment', 4, 135, 10, 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 'A relaxed apartment near West Lake with balcony space, cafes, and lakeside walking routes.', 'West Lake, Tay Ho, Ha Noi, Vietnam', 21.0580, 105.8188, null, 'WiFi, Parking, Kitchen, Balcony', '10000000-0000-4000-8000-000000000002', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00');
-
-
--- generated destination places and stays: 100 HCMC, 50 Vung Tau, 55 Ha Noi total including the hand-curated rows above
-create table if not exists public.seed_extra_places (
-  city varchar,
-  destination_id uuid,
-  name varchar,
-  address text,
-  image text,
-  latitude numeric,
-  longitude numeric,
-  regular_price numeric,
-  max_capacity integer,
-  discount numeric
-);
-truncate table public.seed_extra_places;
-
-insert into public.seed_extra_places (city, destination_id, name, address, image, latitude, longitude, regular_price, max_capacity, discount) values
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Ben Thanh Market Stay 01', 'Ben Thanh Market, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 10.768700, 106.694900, 75, 2, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Nguyen Hue Walking Street Stay 01', 'Nguyen Hue Walking Street, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 10.773900, 106.700500, 80, 3, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Notre-Dame Cathedral Stay 01', 'Notre-Dame Cathedral Basilica of Saigon, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 10.779800, 106.695600, 85, 4, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Central Post Office Stay 01', 'Saigon Central Post Office, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 10.781600, 106.696400, 90, 5, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Independence Palace Stay 01', 'Independence Palace, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 10.780500, 106.691900, 95, 2, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'War Remnants Museum Stay 01', 'War Remnants Museum, District 3, Ho Chi Minh City', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 10.776100, 106.690300, 100, 3, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Bitexco Financial Tower Stay 01', 'Bitexco Financial Tower, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 10.770000, 106.702700, 105, 4, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Landmark 81 Stay 01', 'Landmark 81, Binh Thanh District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 10.794000, 106.720100, 110, 5, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Bui Vien Walking Street Stay 01', 'Bui Vien Walking Street, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 10.769400, 106.691500, 115, 2, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Tan Dinh Church Stay 01', 'Tan Dinh Church, District 3, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 10.791400, 106.689000, 75, 3, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Saigon Zoo Stay 01', 'Saigon Zoo and Botanical Gardens, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 10.784100, 106.705300, 80, 4, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Thao Dien Stay 01', 'Thao Dien, Thu Duc City, Ho Chi Minh City', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 10.800500, 106.733400, 85, 5, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Turtle Lake Stay 01', 'Turtle Lake, District 3, Ho Chi Minh City', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 10.783000, 106.695700, 90, 2, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Pham Ngu Lao Stay 01', 'Pham Ngu Lao, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 10.768700, 106.693000, 95, 3, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Cholon Chinatown Stay 01', 'Cholon, District 5, Ho Chi Minh City', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 10.757100, 106.664700, 100, 4, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Binh Tay Market Stay 01', 'Binh Tay Market, District 6, Ho Chi Minh City', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 10.746500, 106.653500, 105, 5, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Ho Thi Ky Flower Market Stay 01', 'Ho Thi Ky Flower Market, District 10, Ho Chi Minh City', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 10.762400, 106.676400, 110, 2, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Van Hanh Mall Stay 01', 'Van Hanh Mall, District 10, Ho Chi Minh City', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 10.770700, 106.671200, 115, 3, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Saigon Exhibition Center Stay 01', 'SECC, District 7, Ho Chi Minh City', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 10.731900, 106.723400, 75, 4, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Phu My Hung Stay 01', 'Phu My Hung, District 7, Ho Chi Minh City', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 10.732900, 106.705300, 80, 5, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Crescent Mall Stay 01', 'Crescent Mall, District 7, Ho Chi Minh City', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 10.725600, 106.721400, 85, 2, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Dam Sen Park Stay 01', 'Dam Sen Cultural Park, District 11, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 10.761800, 106.644400, 90, 3, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Giac Lam Pagoda Stay 01', 'Giac Lam Pagoda, Tan Binh District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 10.783800, 106.655300, 95, 4, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Tan Son Nhat Airport Stay 01', 'Tan Son Nhat Airport, Tan Binh District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 10.820500, 106.655300, 100, 5, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Gia Dinh Park Stay 01', 'Gia Dinh Park, Go Vap District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 10.816200, 106.681100, 105, 2, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Vinhomes Central Park Stay 01', 'Vinhomes Central Park, Binh Thanh District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 10.791200, 106.717000, 110, 3, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Bach Dang Wharf Stay 01', 'Bach Dang Wharf, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 10.771600, 106.703000, 115, 4, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Saigon Opera House Stay 01', 'Saigon Opera House, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 10.776600, 106.699600, 75, 5, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Japanese Town Le Thanh Ton Stay 01', 'Le Thanh Ton Japanese Town, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 10.783100, 106.701000, 80, 2, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Book Street Stay 01', 'Nguyen Van Binh Book Street, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 10.783700, 106.695800, 85, 3, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Ben Thanh Market Stay 02', 'Ben Thanh Market, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 10.768700, 106.696600, 90, 4, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Nguyen Hue Walking Street Stay 02', 'Nguyen Hue Walking Street, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 10.773900, 106.702200, 95, 5, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Notre-Dame Cathedral Stay 02', 'Notre-Dame Cathedral Basilica of Saigon, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 10.779800, 106.697300, 100, 2, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Central Post Office Stay 02', 'Saigon Central Post Office, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 10.781600, 106.698100, 105, 3, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Independence Palace Stay 02', 'Independence Palace, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 10.780500, 106.693600, 110, 4, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'War Remnants Museum Stay 02', 'War Remnants Museum, District 3, Ho Chi Minh City', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 10.776100, 106.692000, 115, 5, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Bitexco Financial Tower Stay 02', 'Bitexco Financial Tower, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 10.770000, 106.704400, 75, 2, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Landmark 81 Stay 02', 'Landmark 81, Binh Thanh District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 10.794000, 106.721800, 80, 3, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Bui Vien Walking Street Stay 02', 'Bui Vien Walking Street, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 10.769400, 106.693200, 85, 4, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Tan Dinh Church Stay 02', 'Tan Dinh Church, District 3, Ho Chi Minh City', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 10.791400, 106.690700, 90, 5, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Saigon Zoo Stay 02', 'Saigon Zoo and Botanical Gardens, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 10.784100, 106.707000, 95, 2, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Thao Dien Stay 02', 'Thao Dien, Thu Duc City, Ho Chi Minh City', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 10.800500, 106.735100, 100, 3, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Turtle Lake Stay 02', 'Turtle Lake, District 3, Ho Chi Minh City', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 10.783000, 106.697400, 105, 4, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Pham Ngu Lao Stay 02', 'Pham Ngu Lao, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 10.768700, 106.694700, 110, 5, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Cholon Chinatown Stay 02', 'Cholon, District 5, Ho Chi Minh City', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 10.757100, 106.666400, 115, 2, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Binh Tay Market Stay 02', 'Binh Tay Market, District 6, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 10.746500, 106.655200, 75, 3, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Ho Thi Ky Flower Market Stay 02', 'Ho Thi Ky Flower Market, District 10, Ho Chi Minh City', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 10.762400, 106.678100, 80, 4, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Van Hanh Mall Stay 02', 'Van Hanh Mall, District 10, Ho Chi Minh City', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 10.770700, 106.672900, 85, 5, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Saigon Exhibition Center Stay 02', 'SECC, District 7, Ho Chi Minh City', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 10.731900, 106.725100, 90, 2, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Phu My Hung Stay 02', 'Phu My Hung, District 7, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 10.732900, 106.707000, 95, 3, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Crescent Mall Stay 02', 'Crescent Mall, District 7, Ho Chi Minh City', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 10.725600, 106.714600, 100, 4, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Dam Sen Park Stay 02', 'Dam Sen Cultural Park, District 11, Ho Chi Minh City', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 10.761800, 106.637600, 105, 5, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Giac Lam Pagoda Stay 02', 'Giac Lam Pagoda, Tan Binh District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 10.783800, 106.648500, 110, 2, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Tan Son Nhat Airport Stay 02', 'Tan Son Nhat Airport, Tan Binh District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 10.820500, 106.648500, 115, 3, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Gia Dinh Park Stay 02', 'Gia Dinh Park, Go Vap District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 10.816200, 106.674300, 75, 4, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Vinhomes Central Park Stay 02', 'Vinhomes Central Park, Binh Thanh District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 10.791200, 106.718700, 80, 5, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Bach Dang Wharf Stay 02', 'Bach Dang Wharf, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 10.771600, 106.704700, 85, 2, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Saigon Opera House Stay 02', 'Saigon Opera House, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 10.776600, 106.701300, 90, 3, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Japanese Town Le Thanh Ton Stay 02', 'Le Thanh Ton Japanese Town, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 10.783100, 106.702700, 95, 4, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Book Street Stay 02', 'Nguyen Van Binh Book Street, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 10.783700, 106.697500, 100, 5, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Ben Thanh Market Stay 03', 'Ben Thanh Market, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 10.768700, 106.698300, 105, 2, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Nguyen Hue Walking Street Stay 03', 'Nguyen Hue Walking Street, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 10.773900, 106.703900, 110, 3, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Notre-Dame Cathedral Stay 03', 'Notre-Dame Cathedral Basilica of Saigon, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 10.779800, 106.699000, 115, 4, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Central Post Office Stay 03', 'Saigon Central Post Office, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 10.781600, 106.699800, 75, 5, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Independence Palace Stay 03', 'Independence Palace, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 10.780500, 106.695300, 80, 2, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'War Remnants Museum Stay 03', 'War Remnants Museum, District 3, Ho Chi Minh City', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 10.776100, 106.693700, 85, 3, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Bitexco Financial Tower Stay 03', 'Bitexco Financial Tower, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 10.770000, 106.706100, 90, 4, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Landmark 81 Stay 03', 'Landmark 81, Binh Thanh District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 10.794000, 106.723500, 95, 5, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Bui Vien Walking Street Stay 03', 'Bui Vien Walking Street, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 10.769400, 106.694900, 100, 2, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Tan Dinh Church Stay 03', 'Tan Dinh Church, District 3, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 10.791400, 106.692400, 105, 3, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Saigon Zoo Stay 03', 'Saigon Zoo and Botanical Gardens, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 10.784100, 106.708700, 110, 4, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Thao Dien Stay 03', 'Thao Dien, Thu Duc City, Ho Chi Minh City', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 10.800500, 106.736800, 115, 5, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Turtle Lake Stay 03', 'Turtle Lake, District 3, Ho Chi Minh City', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 10.783000, 106.699100, 75, 2, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Pham Ngu Lao Stay 03', 'Pham Ngu Lao, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 10.768700, 106.696400, 80, 3, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Cholon Chinatown Stay 03', 'Cholon, District 5, Ho Chi Minh City', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 10.757100, 106.668100, 85, 4, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Binh Tay Market Stay 03', 'Binh Tay Market, District 6, Ho Chi Minh City', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 10.746500, 106.648400, 90, 5, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Ho Thi Ky Flower Market Stay 03', 'Ho Thi Ky Flower Market, District 10, Ho Chi Minh City', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 10.762400, 106.671300, 95, 2, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Van Hanh Mall Stay 03', 'Van Hanh Mall, District 10, Ho Chi Minh City', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 10.770700, 106.666100, 100, 3, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Saigon Exhibition Center Stay 03', 'SECC, District 7, Ho Chi Minh City', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 10.731900, 106.718300, 105, 4, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Phu My Hung Stay 03', 'Phu My Hung, District 7, Ho Chi Minh City', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 10.732900, 106.700200, 110, 5, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Crescent Mall Stay 03', 'Crescent Mall, District 7, Ho Chi Minh City', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 10.725600, 106.716300, 115, 2, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Dam Sen Park Stay 03', 'Dam Sen Cultural Park, District 11, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 10.761800, 106.639300, 75, 3, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Giac Lam Pagoda Stay 03', 'Giac Lam Pagoda, Tan Binh District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 10.783800, 106.650200, 80, 4, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Tan Son Nhat Airport Stay 03', 'Tan Son Nhat Airport, Tan Binh District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 10.820500, 106.650200, 85, 5, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Gia Dinh Park Stay 03', 'Gia Dinh Park, Go Vap District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 10.816200, 106.676000, 90, 2, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Vinhomes Central Park Stay 03', 'Vinhomes Central Park, Binh Thanh District, Ho Chi Minh City', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 10.791200, 106.720400, 95, 3, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Bach Dang Wharf Stay 03', 'Bach Dang Wharf, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 10.771600, 106.706400, 100, 4, 2),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Saigon Opera House Stay 03', 'Saigon Opera House, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 10.776600, 106.703000, 105, 5, 4),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Japanese Town Le Thanh Ton Stay 03', 'Le Thanh Ton Japanese Town, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 10.783100, 106.704400, 110, 2, 6),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Book Street Stay 03', 'Nguyen Van Binh Book Street, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 10.783700, 106.699200, 115, 3, 8),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Ben Thanh Market Stay 04', 'Ben Thanh Market, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 10.768700, 106.700000, 75, 4, 0),
-  ('Ho Chi Minh City', '91000000-0000-4000-8000-000000000001', 'Nguyen Hue Walking Street Stay 04', 'Nguyen Hue Walking Street, District 1, Ho Chi Minh City', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 10.773900, 106.705600, 80, 5, 2),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Front Beach Stay 01', 'Front Beach, Vung Tau, Ba Ria - Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 10.342500, 107.073000, 65, 2, 0),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Back Beach Stay 01', 'Back Beach, Vung Tau, Ba Ria - Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 10.333600, 107.089700, 70, 3, 2),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Christ the King Statue Stay 01', 'Christ the King Statue, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 10.331500, 107.081200, 75, 4, 4),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Vung Tau Lighthouse Stay 01', 'Vung Tau Lighthouse, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 10.338900, 107.075300, 80, 5, 6),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Nghinh Phong Cape Stay 01', 'Nghinh Phong Cape, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 10.327900, 107.080600, 85, 2, 8),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Hon Ba Island Stay 01', 'Hon Ba Island, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 10.325800, 107.085700, 90, 3, 0),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Bach Dinh White Palace Stay 01', 'Bach Dinh, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 10.349700, 107.071100, 95, 4, 2),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Ho May Park Stay 01', 'Ho May Park, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 10.365000, 107.074500, 100, 5, 4),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Marina Vung Tau Stay 01', 'Vung Tau Marina, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 10.410900, 107.112600, 105, 2, 6),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Long Hai Beach Stay 01', 'Long Hai Beach, Ba Ria - Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 10.389600, 107.238900, 65, 3, 8),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Doi Con Heo Stay 01', 'Doi Con Heo, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 10.340600, 107.091000, 70, 4, 0),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Bai Dau Beach Stay 01', 'Bai Dau Beach, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 10.371900, 107.065300, 75, 5, 2),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Niet Ban Tinh Xa Stay 01', 'Niet Ban Tinh Xa, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 10.331200, 107.082500, 80, 2, 4),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Thich Ca Phat Dai Stay 01', 'Thich Ca Phat Dai, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 10.373200, 107.070600, 85, 3, 6),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Lam Son Stadium Stay 01', 'Lam Son Stadium, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 10.354600, 107.080100, 90, 4, 8),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Front Beach Stay 02', 'Front Beach, Vung Tau, Ba Ria - Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 10.342500, 107.078100, 95, 5, 0),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Back Beach Stay 02', 'Back Beach, Vung Tau, Ba Ria - Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 10.333600, 107.094800, 100, 2, 2),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Christ the King Statue Stay 02', 'Christ the King Statue, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 10.331500, 107.086300, 105, 3, 4),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Vung Tau Lighthouse Stay 02', 'Vung Tau Lighthouse, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 10.338900, 107.080400, 65, 4, 6),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Nghinh Phong Cape Stay 02', 'Nghinh Phong Cape, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 10.327900, 107.085700, 70, 5, 8),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Hon Ba Island Stay 02', 'Hon Ba Island, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 10.325800, 107.090800, 75, 2, 0),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Bach Dinh White Palace Stay 02', 'Bach Dinh, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 10.349700, 107.076200, 80, 3, 2),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Ho May Park Stay 02', 'Ho May Park, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 10.365000, 107.079600, 85, 4, 4),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Marina Vung Tau Stay 02', 'Vung Tau Marina, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 10.410900, 107.117700, 90, 5, 6),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Long Hai Beach Stay 02', 'Long Hai Beach, Ba Ria - Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 10.389600, 107.244000, 95, 2, 8),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Doi Con Heo Stay 02', 'Doi Con Heo, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 10.340600, 107.087600, 100, 3, 0),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Bai Dau Beach Stay 02', 'Bai Dau Beach, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 10.371900, 107.061900, 105, 4, 2),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Niet Ban Tinh Xa Stay 02', 'Niet Ban Tinh Xa, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 10.331200, 107.079100, 65, 5, 4),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Thich Ca Phat Dai Stay 02', 'Thich Ca Phat Dai, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 10.373200, 107.067200, 70, 2, 6),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Lam Son Stadium Stay 02', 'Lam Son Stadium, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 10.354600, 107.076700, 75, 3, 8),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Front Beach Stay 03', 'Front Beach, Vung Tau, Ba Ria - Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 10.342500, 107.074700, 80, 4, 0),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Back Beach Stay 03', 'Back Beach, Vung Tau, Ba Ria - Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 10.333600, 107.091400, 85, 5, 2),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Christ the King Statue Stay 03', 'Christ the King Statue, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 10.331500, 107.082900, 90, 2, 4),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Vung Tau Lighthouse Stay 03', 'Vung Tau Lighthouse, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 10.338900, 107.077000, 95, 3, 6),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Nghinh Phong Cape Stay 03', 'Nghinh Phong Cape, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 10.327900, 107.082300, 100, 4, 8),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Hon Ba Island Stay 03', 'Hon Ba Island, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 10.325800, 107.087400, 105, 5, 0),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Bach Dinh White Palace Stay 03', 'Bach Dinh, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 10.349700, 107.072800, 65, 2, 2),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Ho May Park Stay 03', 'Ho May Park, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 10.365000, 107.076200, 70, 3, 4),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Marina Vung Tau Stay 03', 'Vung Tau Marina, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 10.410900, 107.114300, 75, 4, 6),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Long Hai Beach Stay 03', 'Long Hai Beach, Ba Ria - Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 10.389600, 107.240600, 80, 5, 8),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Doi Con Heo Stay 03', 'Doi Con Heo, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 10.340600, 107.092700, 85, 2, 0),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Bai Dau Beach Stay 03', 'Bai Dau Beach, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 10.371900, 107.067000, 90, 3, 2),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Niet Ban Tinh Xa Stay 03', 'Niet Ban Tinh Xa, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 10.331200, 107.084200, 95, 4, 4),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Thich Ca Phat Dai Stay 03', 'Thich Ca Phat Dai, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 10.373200, 107.072300, 100, 5, 6),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Lam Son Stadium Stay 03', 'Lam Son Stadium, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 10.354600, 107.081800, 105, 2, 8),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Front Beach Stay 04', 'Front Beach, Vung Tau, Ba Ria - Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 10.342500, 107.079800, 65, 3, 0),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Back Beach Stay 04', 'Back Beach, Vung Tau, Ba Ria - Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 10.333600, 107.096500, 70, 4, 2),
-  ('Vung Tau', '91000000-0000-4000-8000-000000000002', 'Christ the King Statue Stay 04', 'Christ the King Statue, Vung Tau, Vietnam', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 10.331500, 107.088000, 75, 5, 4),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Hoan Kiem Lake Stay 01', 'Hoan Kiem Lake, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 21.025300, 105.848900, 70, 2, 0),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Old Quarter Stay 01', 'Old Quarter, Hoan Kiem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 21.032100, 105.846600, 75, 3, 2),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'West Lake Stay 01', 'West Lake, Tay Ho, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 21.058000, 105.815400, 80, 4, 4),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Temple of Literature Stay 01', 'Temple of Literature, Dong Da, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 21.029700, 105.832200, 85, 5, 6),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Ho Chi Minh Mausoleum Stay 01', 'Ho Chi Minh Mausoleum, Ba Dinh, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 21.040100, 105.831200, 90, 2, 8),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'One Pillar Pagoda Stay 01', 'One Pillar Pagoda, Ba Dinh, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 21.032500, 105.831900, 95, 3, 0),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Hanoi Opera House Stay 01', 'Hanoi Opera House, Hoan Kiem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 21.022600, 105.855300, 100, 4, 2),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Long Bien Bridge Stay 01', 'Long Bien Bridge, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 21.042200, 105.856500, 105, 5, 4),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'St Joseph Cathedral Stay 01', 'St Joseph Cathedral, Hoan Kiem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 21.030400, 105.847700, 110, 2, 6),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Tran Quoc Pagoda Stay 01', 'Tran Quoc Pagoda, Tay Ho, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 21.051300, 105.834300, 70, 3, 8),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Vietnam Museum of Ethnology Stay 01', 'Vietnam Museum of Ethnology, Cau Giay, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 21.037100, 105.798000, 75, 4, 0),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Lotte Center Hanoi Stay 01', 'Lotte Center Hanoi, Ba Dinh, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 21.030500, 105.812800, 80, 5, 2),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Keangnam Landmark 72 Stay 01', 'Keangnam Landmark 72, Nam Tu Liem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 21.016900, 105.783300, 85, 2, 4),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Dong Xuan Market Stay 01', 'Dong Xuan Market, Hoan Kiem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 21.039800, 105.850200, 90, 3, 6),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Hanoi Train Street Stay 01', 'Hanoi Train Street, Hoan Kiem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 21.034200, 105.843100, 95, 4, 8),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Imperial Citadel Stay 01', 'Imperial Citadel of Thang Long, Ba Dinh, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 21.031800, 105.842000, 100, 5, 0),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Truc Bach Lake Stay 01', 'Truc Bach Lake, Ba Dinh, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 21.043300, 105.840900, 105, 2, 2),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Quang Ba Flower Market Stay 01', 'Quang Ba Flower Market, Tay Ho, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 21.068900, 105.828600, 110, 3, 4),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Aeon Mall Long Bien Stay 01', 'Aeon Mall Long Bien, Long Bien, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 21.029200, 105.901200, 70, 4, 6),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Vincom Ba Trieu Stay 01', 'Vincom Center Ba Trieu, Hai Ba Trung, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 21.015100, 105.851500, 75, 5, 8),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Hoan Kiem Lake Stay 02', 'Hoan Kiem Lake, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 21.025300, 105.855700, 80, 2, 0),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Old Quarter Stay 02', 'Old Quarter, Hoan Kiem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 21.032100, 105.853400, 85, 3, 2),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'West Lake Stay 02', 'West Lake, Tay Ho, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 21.058000, 105.822200, 90, 4, 4),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Temple of Literature Stay 02', 'Temple of Literature, Dong Da, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 21.029700, 105.839000, 95, 5, 6),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Ho Chi Minh Mausoleum Stay 02', 'Ho Chi Minh Mausoleum, Ba Dinh, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 21.040100, 105.838000, 100, 2, 8),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'One Pillar Pagoda Stay 02', 'One Pillar Pagoda, Ba Dinh, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 21.032500, 105.830200, 105, 3, 0),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Hanoi Opera House Stay 02', 'Hanoi Opera House, Hoan Kiem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 21.022600, 105.853600, 110, 4, 2),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Long Bien Bridge Stay 02', 'Long Bien Bridge, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 21.042200, 105.854800, 70, 5, 4),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'St Joseph Cathedral Stay 02', 'St Joseph Cathedral, Hoan Kiem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 21.030400, 105.846000, 75, 2, 6),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Tran Quoc Pagoda Stay 02', 'Tran Quoc Pagoda, Tay Ho, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 21.051300, 105.832600, 80, 3, 8),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Vietnam Museum of Ethnology Stay 02', 'Vietnam Museum of Ethnology, Cau Giay, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 21.037100, 105.796300, 85, 4, 0),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Lotte Center Hanoi Stay 02', 'Lotte Center Hanoi, Ba Dinh, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 21.030500, 105.811100, 90, 5, 2),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Keangnam Landmark 72 Stay 02', 'Keangnam Landmark 72, Nam Tu Liem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 21.016900, 105.781600, 95, 2, 4),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Dong Xuan Market Stay 02', 'Dong Xuan Market, Hoan Kiem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 21.039800, 105.848500, 100, 3, 6),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Hanoi Train Street Stay 02', 'Hanoi Train Street, Hoan Kiem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 21.034200, 105.841400, 105, 4, 8),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Imperial Citadel Stay 02', 'Imperial Citadel of Thang Long, Ba Dinh, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 21.031800, 105.840300, 110, 5, 0),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Truc Bach Lake Stay 02', 'Truc Bach Lake, Ba Dinh, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 21.043300, 105.839200, 70, 2, 2),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Quang Ba Flower Market Stay 02', 'Quang Ba Flower Market, Tay Ho, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 21.068900, 105.826900, 75, 3, 4),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Aeon Mall Long Bien Stay 02', 'Aeon Mall Long Bien, Long Bien, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 21.029200, 105.899500, 80, 4, 6),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Vincom Ba Trieu Stay 02', 'Vincom Center Ba Trieu, Hai Ba Trung, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 21.015100, 105.849800, 85, 5, 8),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Hoan Kiem Lake Stay 03', 'Hoan Kiem Lake, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 21.025300, 105.854000, 90, 2, 0),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Old Quarter Stay 03', 'Old Quarter, Hoan Kiem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 21.032100, 105.851700, 95, 3, 2),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'West Lake Stay 03', 'West Lake, Tay Ho, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 21.058000, 105.820500, 100, 4, 4),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Temple of Literature Stay 03', 'Temple of Literature, Dong Da, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 21.029700, 105.837300, 105, 5, 6),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Ho Chi Minh Mausoleum Stay 03', 'Ho Chi Minh Mausoleum, Ba Dinh, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 21.040100, 105.836300, 110, 2, 8),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'One Pillar Pagoda Stay 03', 'One Pillar Pagoda, Ba Dinh, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 21.032500, 105.837000, 70, 3, 0),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Hanoi Opera House Stay 03', 'Hanoi Opera House, Hoan Kiem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 21.022600, 105.860400, 75, 4, 2),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Long Bien Bridge Stay 03', 'Long Bien Bridge, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 21.042200, 105.861600, 80, 5, 4),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'St Joseph Cathedral Stay 03', 'St Joseph Cathedral, Hoan Kiem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 21.030400, 105.852800, 85, 2, 6),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Tran Quoc Pagoda Stay 03', 'Tran Quoc Pagoda, Tay Ho, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 21.051300, 105.839400, 90, 3, 8),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Vietnam Museum of Ethnology Stay 03', 'Vietnam Museum of Ethnology, Cau Giay, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 21.037100, 105.794600, 95, 4, 0),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Lotte Center Hanoi Stay 03', 'Lotte Center Hanoi, Ba Dinh, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 21.030500, 105.809400, 100, 5, 2),
-  ('Ha Noi', '91000000-0000-4000-8000-000000000003', 'Keangnam Landmark 72 Stay 03', 'Keangnam Landmark 72, Nam Tu Liem, Ha Noi, Vietnam', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 21.016900, 105.779900, 105, 2, 4);
-
-insert into public.destination_places (
-  "_id", "destinationId", city, name, address, image, latitude, longitude, "createdAt", "updatedAt"
-)
-select gen_random_uuid(), destination_id, city, name, address, image, latitude, longitude,
-       timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'
-from public.seed_extra_places;
+  ('91000000-0000-4000-8000-000000000001', 'Ho Chi Minh City', 'Ho Chi Minh City', 'Vietnam', 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&w=1200&q=80', 15, 10.7769, 106.7009, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('91000000-0000-4000-8000-000000000002', 'Vung Tau', 'Vung Tau', 'Vietnam', 'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1200&q=80', 15, 10.4114, 107.1362, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('91000000-0000-4000-8000-000000000003', 'Hanoi', 'Hanoi', 'Vietnam', 'https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80', 15, 21.0278, 105.8342, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('91000000-0000-4000-8000-000000000004', 'Da Nang', 'Da Nang', 'Vietnam', 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?auto=format&fit=crop&w=1200&q=80', 15, 16.0471, 108.2068, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('91000000-0000-4000-8000-000000000005', 'Da Lat', 'Da Lat', 'Vietnam', 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80', 15, 11.9404, 108.4583, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
 insert into public.cabins (
   "_id", name, "maxCapacity", "regularPrice", discount, image, description, location,
-  latitude, longitude, "mapPlaceId", amenities, "hostId", "createdAt", "updatedAt"
+  latitude, longitude, "mapPlaceId", amenities, "hostId", address, district, "propertyType",
+  "starRating", "reviewScore", "reviewCount", "googleMapsUrl", "createdAt", "updatedAt"
+) values
+  ('20000000-0000-4000-8000-000000000001', 'Hotel Majestic Saigon', 4, 118, 8, 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80', 'A heritage riverside hotel on Dong Khoi with classic rooms, balcony options, and quick access to Nguyen Hue Walking Street.', 'District 1, Ho Chi Minh City, Vietnam', 10.7756, 106.7039, null, 'WiFi, Breakfast, Parking, Air conditioning, Private bathroom, Balcony', '10000000-0000-4000-8000-000000000002', '01 Dong Khoi Street, Saigon Ward, Ho Chi Minh City, Vietnam', 'District 1', 'Hotel', 5, 8.9, 936, 'https://www.google.com/maps/search/?api=1&query=10.7756,106.7039', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('20000000-0000-4000-8000-000000000002', 'The Imperial Vung Tau Hotel', 5, 126, 12, 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&w=1200&q=80', 'A beachfront Vung Tau stay near Back Beach with larger rooms, pool access, and sea-view choices.', 'Back Beach, Vung Tau, Vietnam', 10.3353, 107.0931, null, 'WiFi, Breakfast, Parking, Pool, Sea view, Balcony', '10000000-0000-4000-8000-000000000003', '159 Thuy Van Street, Vung Tau, Vietnam', 'Vung Tau', 'Hotel', 5, 8.8, 742, 'https://www.google.com/maps/search/?api=1&query=10.3353,107.0931', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('20000000-0000-4000-8000-000000000003', 'Sofitel Legend Metropole Hanoi', 4, 148, 5, 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 'A landmark Hoan Kiem hotel near the Opera House with heritage rooms, quiet suites, and walkable Old Quarter access.', 'Hoan Kiem, Hanoi, Vietnam', 21.0256, 105.8561, null, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony', '10000000-0000-4000-8000-000000000001', '15 Ngo Quyen Street, Hoan Kiem Ward, Hanoi, Vietnam', 'Hoan Kiem', 'Hotel', 5, 9.2, 4691, 'https://www.google.com/maps/search/?api=1&query=21.0256,105.8561', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('20000000-0000-4000-8000-000000000004', 'Furama Resort Danang', 5, 142, 10, 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80', 'A beach resort on Vo Nguyen Giap Street with spacious rooms, family suites, pools, and ocean-facing options.', 'My Khe Beach, Da Nang, Vietnam', 16.0394, 108.2492, null, 'WiFi, Breakfast, Parking, Pool, Sea view, Air conditioning', '10000000-0000-4000-8000-000000000001', '103 - 105 Vo Nguyen Giap Street, Khue My Ward, Da Nang, Vietnam', 'My Khe', 'Resort', 5, 9.0, 1294, 'https://www.google.com/maps/search/?api=1&query=16.0394,108.2492', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('20000000-0000-4000-8000-000000000005', 'Dalat Palace Heritage Hotel', 4, 112, 6, 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 'A heritage Da Lat hotel by Xuan Huong Lake with classic rooms, garden views, and larger suite options.', 'Ward 3, Da Lat, Vietnam', 11.9391, 108.4444, null, 'WiFi, Breakfast, Parking, Air conditioning, Private bathroom, Balcony', '10000000-0000-4000-8000-000000000001', '02 Tran Phu, Ward 3, Da Lat, Lam Dong, Vietnam', 'Ward 3', 'Hotel', 5, 8.7, 531, 'https://www.google.com/maps/search/?api=1&query=11.9391,108.4444', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
+
+-- real-world hotel names: 15 hotels per city including the curated rows above
+with city_templates as (
+  select *
+  from (values
+    ('Ho Chi Minh City', 'District 1', 10.7756::numeric, 106.7039::numeric, 'WiFi, Breakfast, Parking, Air conditioning, Private bathroom, Balcony',
+      array['Caravelle Saigon','Rex Hotel Saigon','The Reverie Saigon','Liberty Central Saigon Riverside Hotel','Fusion Original Saigon Centre','Park Hyatt Saigon','New World Saigon Hotel','Pullman Saigon Centre','Hotel Nikko Saigon','La Vela Saigon Hotel','Mai House Saigon Hotel','Bay Hotel Ho Chi Minh','Silverland Ben Thanh Hotel','Norfolk Mansion']::text[],
+      array['19-23 Lam Son Square, Saigon Ward, Ho Chi Minh City, Vietnam','141 Nguyen Hue Boulevard, Saigon Ward, Ho Chi Minh City, Vietnam','22-36 Nguyen Hue Boulevard, Saigon Ward, Ho Chi Minh City, Vietnam','17 Ton Duc Thang Street, Saigon Ward, Ho Chi Minh City, Vietnam','65 Le Loi Boulevard, Saigon Ward, Ho Chi Minh City, Vietnam','2 Lam Son Square, Saigon Ward, Ho Chi Minh City, Vietnam','76 Le Lai Street, Ben Thanh Ward, Ho Chi Minh City, Vietnam','148 Tran Hung Dao Boulevard, Ho Chi Minh City, Vietnam','235 Nguyen Van Cu Street, District 1, Ho Chi Minh City, Vietnam','280 Nam Ky Khoi Nghia Street, District 3, Ho Chi Minh City, Vietnam','157 Nam Ky Khoi Nghia Street, District 3, Ho Chi Minh City, Vietnam','7 Ngo Van Nam Street, District 1, Ho Chi Minh City, Vietnam','14-16 Le Lai Street, District 1, Ho Chi Minh City, Vietnam','17-19-21 Ly Tu Trong Street, District 1, Ho Chi Minh City, Vietnam']::text[]),
+    ('Vung Tau', 'Back Beach', 10.3353::numeric, 107.0931::numeric, 'WiFi, Breakfast, Parking, Pool, Sea view, Balcony',
+      array['Pullman Vung Tau','Malibu Hotel','ibis Styles Vung Tau','Mercure Vung Tau','Fusion Suites Vung Tau','Marina Bay Vung Tau Resort & Spa','Vias Hotel Vung Tau','Premier Pearl Hotel Vung Tau','The Cap Hotel','Palace Hotel Vung Tau','Muong Thanh Vung Tau Hotel','Seaside Resort Vung Tau','Petro House Hotel','Grand Hotel Vung Tau']::text[],
+      array['15 Thi Sach Street, Vung Tau, Vietnam','263 Le Hong Phong Street, Vung Tau, Vietnam','117 Thuy Van Street, Vung Tau, Vietnam','03 Ha Long Street, Vung Tau, Vietnam','02 Truong Cong Dinh Street, Vung Tau, Vietnam','115 Tran Phu Street, Vung Tau, Vietnam','179 Thuy Van Street, Vung Tau, Vietnam','69-69A Thuy Van Street, Vung Tau, Vietnam','01 Thi Sach Street, Vung Tau, Vietnam','01 Nguyen Trai Street, Vung Tau, Vietnam','09 Thong Nhat Street, Vung Tau, Vietnam','28 Tran Phu Street, Vung Tau, Vietnam','63 Tran Hung Dao Street, Vung Tau, Vietnam','02 Nguyen Du Street, Vung Tau, Vietnam']::text[]),
+    ('Hanoi', 'Hoan Kiem', 21.0287::numeric, 105.8523::numeric, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony',
+      array['Apricot Hotel','Peridot Grand Luxury Boutique Hotel','La Siesta Premium Hang Be','Hotel de l''Opera Hanoi','Melia Hanoi','InterContinental Hanoi Westlake','Lotte Hotel Hanoi','Pan Pacific Hanoi','The Oriental Jade Hotel','Silk Path Boutique Hanoi','Hanoi La Siesta Hotel & Spa','O''Gallery Premier Hotel & Spa','Grand Hotel du Lac Hanoi','JM Marvel Hotel & Spa']::text[],
+      array['136 Hang Trong Street, Hoan Kiem, Hanoi, Vietnam','33 Duong Thanh Street, Hoan Kiem, Hanoi, Vietnam','27 Hang Be Street, Hoan Kiem, Hanoi, Vietnam','29 Trang Tien Street, Hoan Kiem, Hanoi, Vietnam','44B Ly Thuong Kiet Street, Hoan Kiem, Hanoi, Vietnam','05 Tu Hoa Street, Tay Ho, Hanoi, Vietnam','54 Lieu Giai Street, Ba Dinh, Hanoi, Vietnam','01 Thanh Nien Road, Ba Dinh, Hanoi, Vietnam','92-94 Hang Trong Street, Hoan Kiem, Hanoi, Vietnam','21 Hang Khay Street, Hoan Kiem, Hanoi, Vietnam','94 Ma May Street, Hoan Kiem, Hanoi, Vietnam','122 Hang Bong Street, Hoan Kiem, Hanoi, Vietnam','18-20 Nha Chung Street, Hoan Kiem, Hanoi, Vietnam','16 Hang Da Street, Hoan Kiem, Hanoi, Vietnam']::text[]),
+    ('Da Nang', 'My Khe', 16.0544::numeric, 108.2475::numeric, 'WiFi, Breakfast, Parking, Pool, Sea view, Air conditioning',
+      array['Pullman Danang Beach Resort','TMS Hotel Da Nang Beach','Sala Danang Beach Hotel','Novotel Danang Premier Han River','Hilton Da Nang','Melia Vinpearl Danang Riverfront','Naman Retreat','InterContinental Danang Sun Peninsula Resort','Hyatt Regency Danang Resort and Spa','Fusion Suites Da Nang','A La Carte Da Nang Beach','Muong Thanh Luxury Da Nang Hotel','Grand Mercure Danang','Wink Hotel Danang Centre']::text[],
+      array['101 Vo Nguyen Giap Street, Da Nang, Vietnam','292 Vo Nguyen Giap Street, Da Nang, Vietnam','36-38 Lam Hoanh Street, Da Nang, Vietnam','36 Bach Dang Street, Da Nang, Vietnam','50 Bach Dang Street, Da Nang, Vietnam','341 Tran Hung Dao Street, Da Nang, Vietnam','Truong Sa Road, Da Nang, Vietnam','Bai Bac, Son Tra Peninsula, Da Nang, Vietnam','05 Truong Sa Street, Da Nang, Vietnam','An Cu 5 Residential, Da Nang, Vietnam','200 Vo Nguyen Giap Street, Da Nang, Vietnam','270 Vo Nguyen Giap Street, Da Nang, Vietnam','Lot A1 Zone of Villas of Green Island, Da Nang, Vietnam','178 Tran Phu Street, Da Nang, Vietnam']::text[]),
+    ('Da Lat', 'Ward 3', 11.9365::numeric, 108.4370::numeric, 'WiFi, Breakfast, Parking, Air conditioning, Private bathroom, Balcony',
+      array['Ana Mandara Villas Dalat Resort & Spa','Mercure Dalat Resort','Hotel Colline','Swiss-Belresort Tuyen Lam Dalat','Terracotta Hotel & Resort Dalat','Dalat Edensee Lake Resort & Spa','Golf Valley Hotel','Ladalat Hotel','TTC Hotel Premium Ngoc Lan','Kings Hotel Dalat','Sammy Dalat Hotel','Du Parc Hotel Dalat','La Sapinette Hotel Dalat','Zen Valley Dalat']::text[],
+      array['Le Lai Street, Ward 5, Da Lat, Lam Dong, Vietnam','03 Nguyen Du Street, Da Lat, Lam Dong, Vietnam','10 Phan Boi Chau Street, Da Lat, Lam Dong, Vietnam','Zone 7 and 8, Tuyen Lam Lake, Da Lat, Vietnam','Tuyen Lam Lake Tourist Area, Da Lat, Vietnam','Tuyen Lam Lake Zone VII.2, Da Lat, Vietnam','94 Bui Thi Xuan Street, Da Lat, Vietnam','106A Mai Anh Dao Street, Da Lat, Vietnam','42 Nguyen Chi Thanh Street, Da Lat, Vietnam','10 Bui Thi Xuan Street, Da Lat, Vietnam','01 Le Hong Phong Street, Da Lat, Vietnam','15 Tran Phu Street, Da Lat, Vietnam','01 Phan Chu Trinh Street, Da Lat, Vietnam','38 Khe Sanh Street, Da Lat, Vietnam']::text[])
+  ) as t(city, district, base_lat, base_lng, amenities, hotel_names, hotel_addresses)
+),
+generated_hotels as (
+  select
+    gen_random_uuid() as id,
+    city,
+    district,
+    amenities,
+    hotel_names[n - 1] as hotel_name,
+    hotel_addresses[n - 1] as address_text,
+    n,
+    base_lat + ((n % 7) - 3) * 0.0035 as latitude,
+    base_lng + ((n % 5) - 2) * 0.0038 as longitude,
+    case n % 5
+      when 0 then 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
+      when 1 then 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80'
+      when 2 then 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=1200&q=80'
+      when 3 then 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=1200&q=80'
+      else 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80'
+    end as image
+  from city_templates
+  cross join generate_series(2, 15) as n
 )
-select gen_random_uuid(), name, max_capacity, regular_price, discount, image,
-       'A verified demo stay near ' || address || ' with map-ready location data.', address,
-       latitude, longitude, null,
-       case when city = 'Vung Tau' then 'WiFi, Parking, Air conditioning, Balcony'
-            when city = 'Ha Noi' then 'WiFi, Breakfast, Air conditioning, Bathtub'
-            else 'WiFi, Breakfast, Parking, Air conditioning' end,
-       case when city = 'Ho Chi Minh City' then '10000000-0000-4000-8000-000000000002'::uuid
-            when city = 'Vung Tau' then '10000000-0000-4000-8000-000000000003'::uuid
-            else '10000000-0000-4000-8000-000000000004'::uuid end,
-       timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'
-from public.seed_extra_places;
+insert into public.cabins (
+  "_id", name, "maxCapacity", "regularPrice", discount, image, description, location,
+  latitude, longitude, "mapPlaceId", amenities, "hostId", address, district, "propertyType",
+  "starRating", "reviewScore", "reviewCount", "googleMapsUrl", "createdAt", "updatedAt"
+)
+select
+  id,
+  hotel_name,
+  case when n % 4 = 0 then 5 when n % 3 = 0 then 4 else 3 end,
+  74 + (n * 6) + case when city in ('Vung Tau', 'Da Nang') then 18 when city = 'Hanoi' then 12 else 0 end,
+  case when n % 5 = 0 then 12 when n % 3 = 0 then 8 else 0 end,
+  image,
+  'A real-world hotel reference in ' || city || ' with practical room inventory for booking, map, and manager testing.',
+  address_text,
+  latitude,
+  longitude,
+  null,
+  amenities,
+  case
+    when city = 'Ho Chi Minh City' then '10000000-0000-4000-8000-000000000002'::uuid
+    when city = 'Vung Tau' then '10000000-0000-4000-8000-000000000003'::uuid
+    else '10000000-0000-4000-8000-000000000001'::uuid
+  end,
+  address_text,
+  district,
+  case when city in ('Vung Tau', 'Da Nang') and n % 2 = 0 then 'Resort' else 'Hotel' end,
+  case when n % 5 = 0 then 5 when n % 2 = 0 then 4 else 3 end,
+  round((8.1 + (n % 8) * 0.1)::numeric, 1),
+  24 + n * 3,
+  'https://www.google.com/maps/search/?api=1&query=' || latitude || ',' || longitude,
+  timestamp '2026-07-20 08:00:00',
+  timestamp '2026-07-20 08:00:00'
+from generated_hotels;
 
 insert into public.destination_places (
   "_id", "destinationId", city, name, address, image, latitude, longitude, "createdAt", "updatedAt"
 )
 select gen_random_uuid(),
-       case when location ilike '%Ho Chi Minh%' then '91000000-0000-4000-8000-000000000001'::uuid
-            when location ilike '%Vung Tau%' then '91000000-0000-4000-8000-000000000002'::uuid
-            when location ilike '%Ha Noi%' then '91000000-0000-4000-8000-000000000003'::uuid
-            else null end,
-       case when location ilike '%Ho Chi Minh%' then 'Ho Chi Minh City'
-            when location ilike '%Vung Tau%' then 'Vung Tau'
-            when location ilike '%Ha Noi%' then 'Ha Noi'
-            else 'Vietnam' end,
-       name, location, image, latitude, longitude,
-       timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'
-from public.cabins
-where latitude is not null
-  and not exists (
-    select 1 from public.destination_places p
-    where p.city = case when public.cabins.location ilike '%Ho Chi Minh%' then 'Ho Chi Minh City'
-                        when public.cabins.location ilike '%Vung Tau%' then 'Vung Tau'
-                        when public.cabins.location ilike '%Ha Noi%' then 'Ha Noi'
-                        else 'Vietnam' end
-      and p.name = public.cabins.name
-  );
+       case
+         when c.location ilike '%Ho Chi Minh%' then '91000000-0000-4000-8000-000000000001'::uuid
+         when c.location ilike '%Vung Tau%' then '91000000-0000-4000-8000-000000000002'::uuid
+         when c.location ilike '%Hanoi%' then '91000000-0000-4000-8000-000000000003'::uuid
+         when c.location ilike '%Da Nang%' then '91000000-0000-4000-8000-000000000004'::uuid
+         else '91000000-0000-4000-8000-000000000005'::uuid
+       end,
+       case
+         when c.location ilike '%Ho Chi Minh%' then 'Ho Chi Minh City'
+         when c.location ilike '%Vung Tau%' then 'Vung Tau'
+         when c.location ilike '%Hanoi%' then 'Hanoi'
+         when c.location ilike '%Da Nang%' then 'Da Nang'
+         else 'Da Lat'
+       end,
+       c.name, c.location, c.image, c.latitude, c.longitude,
+       timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'
+from public.cabins c;
 
--- booking policies
-insert into public.booking_policies (
-  "_id",
-  "cabinId",
-  "breakfastPrice",
-  "miniBookingLength",
-  "maxBookingLength",
-  "createdAt",
-  "updatedAt"
+insert into public.room_types (
+  "_id", "cabinId", name, category, description, "maxGuests", "maxAdults", "totalRooms", "basePrice",
+  beds, "bedType", "bedCount", "sleepingCapacity", "bedSummary", "bedConfig",
+  "bedWidthM", "bedLengthM", size, "sizeM2", "hasLivingRoom",
+  amenities, image, "isActive", "createdAt", "updatedAt"
 ) values
-  ('50000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 12, 1, 10, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('50000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002', 14, 1, 14, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('50000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000003', 10, 1, 14, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('50000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000004', 15, 1, 14, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('50000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000005', 13, 1, 12, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('50000000-0000-4000-8000-000000000006', '20000000-0000-4000-8000-000000000006', 12, 1, 14, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('50000000-0000-4000-8000-000000000007', '20000000-0000-4000-8000-000000000007', 11, 1, 10, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('50000000-0000-4000-8000-000000000008', '20000000-0000-4000-8000-000000000008', 12, 1, 14, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('50000000-0000-4000-8000-000000000009', '20000000-0000-4000-8000-000000000009', 10, 1, 10, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('50000000-0000-4000-8000-000000000010', '20000000-0000-4000-8000-000000000010', 12, 1, 14, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('50000000-0000-4000-8000-000000000011', '20000000-0000-4000-8000-000000000011', 11, 1, 12, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('50000000-0000-4000-8000-000000000012', '20000000-0000-4000-8000-000000000012', 12, 1, 14, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00');
+  ('30000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'Saigon Standard Queen', 'Standard', '20-25 m2 room for short city stays.', 2, 2, 12, 84, '1 Queen bed', 'Queen', 1, 2, '1 Queen bed', '[{"type":"Queen","quantity":1,"adultCapacity":2}]'::jsonb, 1.6, 2.0, '24 m2', 24, false, 'WiFi, Air conditioning, Private bathroom', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('30000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', 'Saigon Superior Double', 'Superior', '25-30 m2 room with extra desk space.', 2, 2, 8, 96, '1 Double bed', 'Double', 1, 2, '1 Double bed', '[{"type":"Double","quantity":1,"adultCapacity":2}]'::jsonb, 1.5, 2.0, '29 m2', 29, false, 'WiFi, Breakfast, Air conditioning, Private bathroom', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('30000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', 'Saigon Deluxe Balcony', 'Deluxe', '30-45 m2 room with balcony.', 3, 3, 6, 118, '1 King bed and 1 sofa bed', 'King', 2, 3, '1 King bed and 1 sofa bed', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Sofa Single","quantity":1,"adultCapacity":1}]'::jsonb, 1.8, 2.0, '38 m2', 38, false, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('30000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000001', 'Saigon Suite Living Room', 'Suite', '50 m2+ suite with separate living room.', 4, 4, 3, 168, '1 King bed and 1 sofa double', 'King', 2, 4, '1 King bed and 1 sofa double', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Sofa Double","quantity":1,"adultCapacity":2}]'::jsonb, 1.8, 2.0, '55 m2', 55, true, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+
+  ('30000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000002', 'Vung Tau Standard Twin', 'Standard', 'Beachside 23 m2 room for two guests.', 2, 2, 10, 92, '2 Single beds', 'Single', 2, 2, '2 Single beds', '[{"type":"Single","quantity":2,"adultCapacity":1}]'::jsonb, 1.0, 2.0, '23 m2', 23, false, 'WiFi, Air conditioning, Private bathroom', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('30000000-0000-4000-8000-000000000006', '20000000-0000-4000-8000-000000000002', 'Vung Tau Deluxe Sea View', 'Deluxe', '39 m2 sea-view room with balcony.', 3, 3, 7, 134, '1 Queen bed and 1 sofa bed', 'Queen', 2, 3, '1 Queen bed and 1 sofa bed', '[{"type":"Queen","quantity":1,"adultCapacity":2},{"type":"Sofa Single","quantity":1,"adultCapacity":1}]'::jsonb, 1.6, 2.0, '39 m2', 39, false, 'WiFi, Breakfast, Pool, Sea view, Balcony', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('30000000-0000-4000-8000-000000000007', '20000000-0000-4000-8000-000000000002', 'Vung Tau Family Suite', 'Suite', '62 m2 suite with living room for families.', 5, 5, 4, 188, '1 King bed, 1 Double bed and 1 sofa bed', 'King', 3, 5, '1 King bed, 1 Double bed and 1 sofa bed', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Double","quantity":1,"adultCapacity":2},{"type":"Sofa Single","quantity":1,"adultCapacity":1}]'::jsonb, 1.8, 2.0, '62 m2', 62, true, 'WiFi, Breakfast, Pool, Sea view, Balcony', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+
+  ('30000000-0000-4000-8000-000000000008', '20000000-0000-4000-8000-000000000003', 'Hanoi Standard Double', 'Standard', '22 m2 Old Quarter room.', 2, 2, 11, 78, '1 Double bed', 'Double', 1, 2, '1 Double bed', '[{"type":"Double","quantity":1,"adultCapacity":2}]'::jsonb, 1.5, 2.0, '22 m2', 22, false, 'WiFi, Air conditioning, Private bathroom', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('30000000-0000-4000-8000-000000000009', '20000000-0000-4000-8000-000000000003', 'Hanoi Superior Queen', 'Superior', '28 m2 room with city window.', 2, 2, 8, 92, '1 Queen bed', 'Queen', 1, 2, '1 Queen bed', '[{"type":"Queen","quantity":1,"adultCapacity":2}]'::jsonb, 1.6, 2.0, '28 m2', 28, false, 'WiFi, Breakfast, Air conditioning, Private bathroom', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('30000000-0000-4000-8000-000000000010', '20000000-0000-4000-8000-000000000003', 'Hanoi Deluxe Family', 'Deluxe', '42 m2 family room near Hoan Kiem.', 4, 4, 5, 126, '2 Queen beds', 'Queen', 2, 4, '2 Queen beds', '[{"type":"Queen","quantity":2,"adultCapacity":2}]'::jsonb, 1.6, 2.0, '42 m2', 42, false, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+
+  ('30000000-0000-4000-8000-000000000011', '20000000-0000-4000-8000-000000000004', 'Da Nang Superior Ocean', 'Superior', '30 m2 room near My Khe Beach.', 2, 2, 9, 102, '1 Queen bed', 'Queen', 1, 2, '1 Queen bed', '[{"type":"Queen","quantity":1,"adultCapacity":2}]'::jsonb, 1.6, 2.0, '30 m2', 30, false, 'WiFi, Breakfast, Pool, Sea view', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('30000000-0000-4000-8000-000000000012', '20000000-0000-4000-8000-000000000004', 'Da Nang Deluxe King', 'Deluxe', '43 m2 deluxe room with king bed.', 3, 3, 7, 138, '1 King bed and 1 sofa bed', 'King', 2, 3, '1 King bed and 1 sofa bed', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Sofa Single","quantity":1,"adultCapacity":1}]'::jsonb, 1.8, 2.0, '43 m2', 43, false, 'WiFi, Breakfast, Pool, Sea view, Balcony', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('30000000-0000-4000-8000-000000000013', '20000000-0000-4000-8000-000000000004', 'Da Nang Ocean Suite', 'Suite', '70 m2 ocean suite with living room.', 5, 5, 3, 210, '1 King bed, 1 Double bed and 1 sofa bed', 'King', 3, 5, '1 King bed, 1 Double bed and 1 sofa bed', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Double","quantity":1,"adultCapacity":2},{"type":"Sofa Single","quantity":1,"adultCapacity":1}]'::jsonb, 1.8, 2.0, '70 m2', 70, true, 'WiFi, Breakfast, Pool, Sea view, Balcony', 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+
+  ('30000000-0000-4000-8000-000000000014', '20000000-0000-4000-8000-000000000005', 'Da Lat Standard Garden', 'Standard', '21 m2 garden-facing room.', 2, 2, 10, 72, '1 Double bed', 'Double', 1, 2, '1 Double bed', '[{"type":"Double","quantity":1,"adultCapacity":2}]'::jsonb, 1.5, 2.0, '21 m2', 21, false, 'WiFi, Air conditioning, Private bathroom', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('30000000-0000-4000-8000-000000000015', '20000000-0000-4000-8000-000000000005', 'Da Lat Superior Queen', 'Superior', '27 m2 room with balcony.', 2, 2, 6, 86, '1 Queen bed', 'Queen', 1, 2, '1 Queen bed', '[{"type":"Queen","quantity":1,"adultCapacity":2}]'::jsonb, 1.6, 2.0, '27 m2', 27, false, 'WiFi, Breakfast, Private bathroom, Balcony', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('30000000-0000-4000-8000-000000000016', '20000000-0000-4000-8000-000000000005', 'Da Lat Deluxe Family', 'Deluxe', '36 m2 room for small families.', 4, 4, 4, 112, '2 Queen beds', 'Queen', 2, 4, '2 Queen beds', '[{"type":"Queen","quantity":2,"adultCapacity":2}]'::jsonb, 1.6, 2.0, '36 m2', 36, false, 'WiFi, Breakfast, Private bathroom, Balcony', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
+
+-- generated room types for every generated hotel
+insert into public.room_types (
+  "_id", "cabinId", name, category, description, "maxGuests", "maxAdults", "totalRooms", "basePrice",
+  beds, "bedType", "bedCount", "sleepingCapacity", "bedSummary", "bedConfig",
+  "bedWidthM", "bedLengthM", size, "sizeM2", "hasLivingRoom",
+  amenities, image, "isActive", "createdAt", "updatedAt"
+)
+select
+  gen_random_uuid(),
+  c."_id",
+  c.name || ' ' || room.category,
+  room.category,
+  room.description || ' at ' || c.name || '.',
+  room.max_guests,
+  room.max_adults,
+  greatest(2, room.total_rooms + (length(c.name) % 4)),
+  round((c."regularPrice" * room.price_multiplier)::numeric, 2),
+  room.beds,
+  room.bed_type,
+  room.bed_count,
+  room.sleeping_capacity,
+  room.bed_summary,
+  room.bed_config::jsonb,
+  room.bed_width,
+  2.0,
+  room.size_m2 || ' m2',
+  room.size_m2,
+  room.has_living_room,
+  room.amenities,
+  c.image,
+  true,
+  timestamp '2026-07-20 08:00:00',
+  timestamp '2026-07-20 08:00:00'
+from public.cabins c
+cross join lateral (
+  values
+    ('Standard', '20-25 m2 room for quick stays', 2, 2, 7, 0.88, '1 Queen bed', 'Queen', 1, 2, '1 Queen bed', '[{"type":"Queen","quantity":1,"adultCapacity":2}]', 1.6, 24, false, 'WiFi, Air conditioning, Private bathroom'),
+    ('Superior', '25-30 m2 room with extra comfort', 2, 2, 5, 1.00, '2 Single beds', 'Single', 2, 2, '2 Single beds', '[{"type":"Single","quantity":2,"adultCapacity":1}]', 1.0, 29, false, 'WiFi, Breakfast, Air conditioning, Private bathroom'),
+    ('Deluxe', '30-45 m2 room for couples or small groups', 3, 3, 4, 1.24, '1 King bed and 1 sofa bed', 'King', 2, 3, '1 King bed and 1 sofa bed', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Sofa Single","quantity":1,"adultCapacity":1}]', 1.8, 38, false, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony'),
+    ('Suite', '50 m2+ suite with separate living room', 5, 5, 2, 1.72, '1 King bed, 1 Double bed and 1 sofa bed', 'King', 3, 5, '1 King bed, 1 Double bed and 1 sofa bed', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Double","quantity":1,"adultCapacity":2},{"type":"Sofa Single","quantity":1,"adultCapacity":1}]', 1.8, 58, true, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony')
+) as room(category, description, max_guests, max_adults, total_rooms, price_multiplier, beds, bed_type, bed_count, sleeping_capacity, bed_summary, bed_config, bed_width, size_m2, has_living_room, amenities)
+where not exists (
+  select 1
+  from public.room_types rt
+  where rt."cabinId" = c."_id"
+)
+  and (room.category <> 'Suite' or c."maxCapacity" >= 4);
+
+insert into public.room_inventory (
+  "_id", "roomTypeId", date, "availableRooms", "priceOverride", "isClosed", "createdAt", "updatedAt"
+)
+select gen_random_uuid(), rt."_id", day::date,
+       greatest(0, rt."totalRooms" - case when extract(dow from day) in (5, 6) then 1 else 0 end),
+       case when extract(dow from day) in (5, 6) then round((rt."basePrice" * 1.12)::numeric, 2) else null end,
+       false, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'
+from public.room_types rt
+cross join generate_series(date '2026-07-20', date '2026-10-31', interval '1 day') as dates(day);
+
+update public.room_inventory
+set "availableRooms" = 0,
+    "updatedAt" = timestamp '2026-07-20 08:00:00'
+where "roomTypeId" = '30000000-0000-4000-8000-000000000001'
+  and date = date '2026-07-25';
 
 insert into public.booking_policies (
   "_id", "cabinId", "breakfastPrice", "miniBookingLength", "maxBookingLength", "createdAt", "updatedAt"
 )
-select gen_random_uuid(), c."_id", 12, 1, 14,
-       timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'
+select gen_random_uuid(), c."_id", 12, 1, 21, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'
+from public.cabins c;
+
+insert into public.cabin_amenities ("_id", "cabinId", "amenityId", "createdAt")
+select gen_random_uuid(), c."_id", a."_id", timestamp '2026-07-20 08:00:00'
 from public.cabins c
-where not exists (
-  select 1 from public.booking_policies p where p."cabinId" = c."_id"
-);
+join public.amenities a on c.amenities ilike '%' || a.name || '%';
 
--- cabin amenities
-insert into public.cabin_amenities (
-  "_id",
-  "cabinId",
-  "amenityId",
-  "createdAt"
-) values
-  ('61000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000003', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000009', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000010', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000001', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000006', '20000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000007', '20000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000003', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000008', '20000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000008', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000009', '20000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000001', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000010', '20000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000004', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000011', '20000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000007', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000012', '20000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000010', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000013', '20000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000001', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000014', '20000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000002', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000015', '20000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000003', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000016', '20000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000009', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000017', '20000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000001', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000018', '20000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000003', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000019', '20000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000006', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000020', '20000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000010', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000021', '20000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000001', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000022', '20000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000002', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000023', '20000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000005', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000024', '20000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000009', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000025', '20000000-0000-4000-8000-000000000007', '40000000-0000-4000-8000-000000000001', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000026', '20000000-0000-4000-8000-000000000007', '40000000-0000-4000-8000-000000000003', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000027', '20000000-0000-4000-8000-000000000007', '40000000-0000-4000-8000-000000000010', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000028', '20000000-0000-4000-8000-000000000007', '40000000-0000-4000-8000-000000000008', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000029', '20000000-0000-4000-8000-000000000008', '40000000-0000-4000-8000-000000000001', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000030', '20000000-0000-4000-8000-000000000008', '40000000-0000-4000-8000-000000000002', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000031', '20000000-0000-4000-8000-000000000008', '40000000-0000-4000-8000-000000000006', timestamp '2026-07-19 08:00:00'),
-  ('61000000-0000-4000-8000-000000000032', '20000000-0000-4000-8000-000000000008', '40000000-0000-4000-8000-000000000010', timestamp '2026-07-19 08:00:00');
+insert into public.images ("_id", "cabinId", "imageUrl", name, "isCover", "createdAt")
+select gen_random_uuid(), c."_id", c.image, 'Cover', true, timestamp '2026-07-20 08:00:00'
+from public.cabins c;
 
--- images
-insert into public.images (
-  "_id",
-  "cabinId",
-  "imageUrl",
-  name,
-  "isCover",
-  "createdAt"
-) values
-  ('60000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 'Cover', true, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 'Living room', false, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000002', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 'Cover', true, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000002', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 'Bedroom', false, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000003', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 'Cover', true, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000006', '20000000-0000-4000-8000-000000000003', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 'Interior', false, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000007', '20000000-0000-4000-8000-000000000004', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 'Cover', true, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000008', '20000000-0000-4000-8000-000000000004', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 'Bedroom', false, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000009', '20000000-0000-4000-8000-000000000005', 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80', 'Cover', true, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000010', '20000000-0000-4000-8000-000000000005', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 'Bedroom', false, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000011', '20000000-0000-4000-8000-000000000006', 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80', 'Cover', true, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000012', '20000000-0000-4000-8000-000000000006', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 'Lounge', false, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000013', '20000000-0000-4000-8000-000000000007', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80', 'Cover', true, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000014', '20000000-0000-4000-8000-000000000007', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80', 'Terrace', false, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000015', '20000000-0000-4000-8000-000000000008', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80', 'Cover', true, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000016', '20000000-0000-4000-8000-000000000008', 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80', 'Balcony', false, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000017', '20000000-0000-4000-8000-000000000009', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', 'Cover', true, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000018', '20000000-0000-4000-8000-000000000010', 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80', 'Cover', true, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000019', '20000000-0000-4000-8000-000000000011', 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80', 'Cover', true, timestamp '2026-07-19 08:00:00'),
-  ('60000000-0000-4000-8000-000000000020', '20000000-0000-4000-8000-000000000012', 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80', 'Cover', true, timestamp '2026-07-19 08:00:00');
-
-insert into public.images (
-  "_id", "cabinId", "imageUrl", name, "isCover", "createdAt"
-)
-select gen_random_uuid(), c."_id", c.image, 'Cover', true, timestamp '2026-07-19 08:00:00'
-from public.cabins c
-where not exists (
-  select 1 from public.images i where i."cabinId" = c."_id" and i."isCover" = true
-);
-
--- coupons
 insert into public.coupons (
-  "_id",
-  code,
-  description,
-  "discountType",
-  "discountValue",
-  "maxDiscountAmount",
-  "minBookingAmount",
-  "startDate",
-  "endDate",
-  "usageLimit",
-  "usedCount",
-  "isActive",
-  "createdAt",
-  "updatedAt"
+  "_id", code, description, "discountType", "discountValue", "maxDiscountAmount",
+  "minBookingAmount", "startDate", "endDate", "usageLimit", "usedCount", "isActive", "createdAt", "updatedAt"
 ) values
-  ('70000000-0000-4000-8000-000000000001', 'WELCOME10', 'Ten percent off for first bookings', 'percent', 10, 50, 120, date '2026-07-01', date '2026-12-31', 100, 12, true, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('70000000-0000-4000-8000-000000000002', 'FIXED25', 'Flat discount for bigger stays', 'fixed', 25, 25, 200, date '2026-07-01', date '2026-11-30', 60, 7, true, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('70000000-0000-4000-8000-000000000003', 'EXPIRED15', 'Expired coupon used for testing', 'percent', 15, 100, 80, date '2026-05-01', date '2026-06-30', 25, 25, false, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00');
+  ('70000000-0000-4000-8000-000000000001', 'WELCOME10', 'Ten percent off first bookings', 'percent', 10, 50, 120, date '2026-07-01', date '2026-12-31', 100, 8, true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('70000000-0000-4000-8000-000000000002', 'ROOM25', 'Flat room discount for bigger stays', 'fixed', 25, 25, 200, date '2026-07-01', date '2026-11-30', 60, 3, true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
--- promotions
 insert into public.promotions (
-  "_id",
-  "cabinId",
-  "discountPercent",
-  "startDate",
-  "endDate",
-  "isActive",
-  "createdAt",
-  "updatedAt"
+  "_id", "cabinId", "discountPercent", "startDate", "endDate", "isActive", "createdAt", "updatedAt"
 ) values
-  ('71000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 10, date '2026-07-01', date '2026-09-30', true, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('71000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002', 15, date '2026-07-05', date '2026-08-31', true, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('71000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000005', 12, date '2026-07-10', date '2026-08-20', true, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('71000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000007', 8, date '2026-07-19', date '2026-10-01', true, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00');
+  ('71000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000002', 12, date '2026-07-20', date '2026-09-30', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('71000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000004', 10, date '2026-07-20', date '2026-08-31', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
--- blocked dates
 insert into public.blocked_dates (
-  "_id",
-  "cabinId",
-  "hostId",
-  "startDate",
-  "endDate",
-  reason,
-  "createdAt",
-  "updatedAt"
+  "_id", "cabinId", "roomTypeId", "hostId", "startDate", "endDate", reason, "createdAt", "updatedAt"
 ) values
-  ('88000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000003', date '2026-08-12', date '2026-08-15', 'Host maintenance', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('88000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000004', date '2026-07-25', date '2026-07-28', 'Private event', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('88000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000004', date '2026-08-18', date '2026-08-19', 'Deep cleaning', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00');
+  ('88000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000003', date '2026-08-12', date '2026-08-15', 'Room refresh and deep cleaning', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('88000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000004', '30000000-0000-4000-8000-000000000013', '10000000-0000-4000-8000-000000000001', date '2026-08-20', date '2026-08-22', 'Suite maintenance', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('88000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000002', date '2026-07-25', date '2026-07-26', 'Demo booking: Standard Queen sold out for this night', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
--- bookings
 insert into public.bookings (
-  "_id",
-  "userId",
-  "cabinId",
-  "startDate",
-  "endDate",
-  "numNights",
-  "numGuests",
-  "cabinPrice",
-  "extrasPrice",
-  "totalPrice",
-  status,
-  "hasBreakfast",
-  "isPaid",
-  observations,
-  "couponId",
-  "discountAmount",
-  "createdAt",
-  "updatedAt"
+  "_id", "userId", "cabinId", "roomTypeId", "numRooms", "startDate", "endDate", "numNights",
+  "numGuests", "cabinPrice", "extrasPrice", "totalPrice", status, "hasBreakfast", "isPaid",
+  observations, "couponId", "discountAmount", "createdAt", "updatedAt"
 ) values
-  ('80000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000001', date '2026-08-04', date '2026-08-07', 3, 2, 324.00, 72.00, 396.00, 'pending', true, false, 'Anniversary trip', null, 0.00, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('80000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000002', date '2026-08-10', date '2026-08-13', 3, 2, 405.00, 0.00, 405.00, 'confirmed', false, false, 'Late arrival', null, 0.00, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('80000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000103', '20000000-0000-4000-8000-000000000004', date '2026-07-18', date '2026-07-21', 3, 4, 480.00, 180.00, 660.00, 'checked-in', true, true, 'Family mountain trip', null, 0.00, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('80000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000104', '20000000-0000-4000-8000-000000000003', date '2026-07-01', date '2026-07-04', 3, 2, 285.00, 0.00, 285.00, 'checked-out', false, true, 'Quiet river stay', null, 0.00, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('80000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000105', '20000000-0000-4000-8000-000000000005', date '2026-06-15', date '2026-06-18', 3, 3, 444.00, 0.00, 444.00, 'cancelled', false, false, 'Cancelled due to weather', null, 0.00, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('80000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000106', '20000000-0000-4000-8000-000000000006', date '2026-07-08', date '2026-07-10', 2, 2, 244.00, 0.00, 219.60, 'checked-out', false, true, 'Need quiet room', '70000000-0000-4000-8000-000000000001', 24.40, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('80000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000007', date '2026-08-20', date '2026-08-23', 3, 2, 315.00, 0.00, 315.00, 'pending', false, false, 'Work retreat', null, 0.00, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('80000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000008', date '2026-08-02', date '2026-08-04', 2, 5, 280.00, 120.00, 400.00, 'confirmed', true, true, 'Family beach break', null, 0.00, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00');
+  ('80000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000003', 1, date '2026-08-04', date '2026-08-07', 3, 2, 354.00, 72.00, 426.00, 'pending', true, false, 'Anniversary city trip', null, 0.00, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('80000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000007', 1, date '2026-08-10', date '2026-08-13', 3, 5, 564.00, 0.00, 539.00, 'confirmed', false, false, 'Family beach break', '70000000-0000-4000-8000-000000000002', 25.00, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('80000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000103', '20000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000009', 1, date '2026-07-24', date '2026-07-26', 2, 2, 184.00, 48.00, 232.00, 'checked-in', true, true, 'Weekend in the Old Quarter', null, 0.00, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('80000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000104', '20000000-0000-4000-8000-000000000004', '30000000-0000-4000-8000-000000000012', 1, date '2026-07-05', date '2026-07-08', 3, 3, 414.00, 0.00, 414.00, 'checked-out', false, true, 'Ocean room was clean', null, 0.00, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('80000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000105', '20000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', 1, date '2026-07-25', date '2026-07-26', 1, 2, 84.00, 0.00, 84.00, 'confirmed', false, true, 'Demo booking for Standard Queen sold-out test', null, 0.00, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
--- payments
 insert into public.payments (
-  "_id",
-  "bookingId",
-  "userId",
-  amount,
-  method,
-  provider,
-  "transactionId",
-  status,
-  "paidAt",
-  "createdAt",
-  "updatedAt"
+  "_id", "bookingId", "userId", amount, method, provider, "transactionId", status, "paidAt", "createdAt", "updatedAt"
 ) values
-  ('81000000-0000-4000-8000-000000000001', '80000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', 396.00, 'app', 'mock', 'TXN-0001', 'pending', null, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('81000000-0000-4000-8000-000000000002', '80000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000102', 405.00, 'app', 'mock', 'TXN-0002', 'pending', null, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('81000000-0000-4000-8000-000000000003', '80000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000103', 660.00, 'card', 'stripe', 'TXN-0003', 'paid', timestamp '2026-07-21 09:00:00', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('81000000-0000-4000-8000-000000000004', '80000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000104', 285.00, 'card', 'stripe', 'TXN-0004', 'paid', timestamp '2026-07-04 09:00:00', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('81000000-0000-4000-8000-000000000005', '80000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000106', 219.60, 'card', 'stripe', 'TXN-0005', 'paid', timestamp '2026-07-10 09:00:00', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('81000000-0000-4000-8000-000000000006', '80000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000101', 315.00, 'app', 'mock', 'TXN-0006', 'pending', null, timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('81000000-0000-4000-8000-000000000007', '80000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000102', 400.00, 'card', 'stripe', 'TXN-0007', 'paid', timestamp '2026-08-04 10:00:00', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00');
+  ('81000000-0000-4000-8000-000000000001', '80000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', 426.00, 'app', 'mock', 'TXN-0001', 'pending', null, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('81000000-0000-4000-8000-000000000002', '80000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000102', 539.00, 'app', 'mock', 'TXN-0002', 'pending', null, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('81000000-0000-4000-8000-000000000003', '80000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000103', 232.00, 'card', 'stripe', 'TXN-0003', 'paid', timestamp '2026-07-24 09:00:00', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('81000000-0000-4000-8000-000000000004', '80000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000104', 414.00, 'card', 'stripe', 'TXN-0004', 'paid', timestamp '2026-07-08 09:00:00', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('81000000-0000-4000-8000-000000000005', '80000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000105', 84.00, 'card', 'stripe', 'TXN-0005', 'paid', timestamp '2026-07-25 09:00:00', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
--- rates
 insert into public.rates (
-  "_id",
-  "userId",
-  "cabinId",
-  "bookingId",
-  rating,
-  comment,
-  "createdAt",
-  "updatedAt"
+  "_id", "userId", "cabinId", "bookingId", rating, comment, "createdAt", "updatedAt"
 ) values
-  ('82000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000104', '20000000-0000-4000-8000-000000000003', '80000000-0000-4000-8000-000000000004', 5, 'Quiet river stay with kind service.', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('82000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000106', '20000000-0000-4000-8000-000000000006', '80000000-0000-4000-8000-000000000006', 4, 'Great balcony and easy check-in.', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('82000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000103', '20000000-0000-4000-8000-000000000004', '80000000-0000-4000-8000-000000000003', 4, 'Comfortable mountain cabin for a bigger group.', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('82000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000008', '80000000-0000-4000-8000-000000000008', 5, 'Sunset view and pool area were excellent.', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00');
+  ('82000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000104', '20000000-0000-4000-8000-000000000004', '80000000-0000-4000-8000-000000000004', 5, 'Clean deluxe room and easy beach access.', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('82000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000103', '20000000-0000-4000-8000-000000000003', '80000000-0000-4000-8000-000000000003', 4, 'Good location and quick check-in.', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
--- wishlists
-insert into public.wishlists (
-  "_id",
-  "userId",
-  "cabinId",
-  "createdAt"
-) values
-  ('83000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000001', timestamp '2026-07-19 08:00:00'),
-  ('83000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000005', timestamp '2026-07-19 08:00:00'),
-  ('83000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000002', timestamp '2026-07-19 08:00:00'),
-  ('83000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000103', '20000000-0000-4000-8000-000000000004', timestamp '2026-07-19 08:00:00'),
-  ('83000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000104', '20000000-0000-4000-8000-000000000007', timestamp '2026-07-19 08:00:00');
+insert into public.wishlists ("_id", "userId", "cabinId", "createdAt") values
+  ('83000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000002', timestamp '2026-07-20 08:00:00'),
+  ('83000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000004', timestamp '2026-07-20 08:00:00');
 
--- conversations
 insert into public.conversations (
-  "_id",
-  "guestId",
-  "hostId",
-  "cabinId",
-  "bookingId",
-  "createdAt",
-  "updatedAt"
+  "_id", "guestId", "hostId", "cabinId", "bookingId", "createdAt", "updatedAt"
 ) values
-  ('84000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', '10000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', '80000000-0000-4000-8000-000000000001', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00'),
-  ('84000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000102', '10000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000002', '80000000-0000-4000-8000-000000000002', timestamp '2026-07-19 08:00:00', timestamp '2026-07-19 08:00:00');
+  ('84000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', '10000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', '80000000-0000-4000-8000-000000000001', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
--- messages
 insert into public.messages (
-  "_id",
-  "conversationId",
-  "senderId",
-  message,
-  "isRead",
-  "createdAt"
+  "_id", "conversationId", "senderId", message, "isRead", "createdAt"
 ) values
-  ('85000000-0000-4000-8000-000000000001', '84000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', 'Hi, is the cabin still available for the first week of August?', true, timestamp '2026-07-19 08:00:00'),
-  ('85000000-0000-4000-8000-000000000002', '84000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000002', 'Yes, the dates are still open and the cabin is ready.', true, timestamp '2026-07-19 08:00:00'),
-  ('85000000-0000-4000-8000-000000000003', '84000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000102', 'Does this loft have breakfast included?', false, timestamp '2026-07-19 08:00:00'),
-  ('85000000-0000-4000-8000-000000000004', '84000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000003', 'Breakfast can be added during checkout.', false, timestamp '2026-07-19 08:00:00');
+  ('85000000-0000-4000-8000-000000000001', '84000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', 'Hi, is the Deluxe Balcony room available for August 4?', true, timestamp '2026-07-20 08:00:00'),
+  ('85000000-0000-4000-8000-000000000002', '84000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000002', 'Yes, the room is available and breakfast can be added.', false, timestamp '2026-07-20 08:05:00');
 
--- notifications
 insert into public.notifications (
-  "_id",
-  title,
-  "userId",
-  "isRead",
-  data,
-  "createdAt",
-  type,
-  message
+  "_id", title, "userId", "isRead", data, "createdAt", type, message
 ) values
-  ('86000000-0000-4000-8000-000000000001', 'Booking pending', '10000000-0000-4000-8000-000000000101', false, '{"bookingId":"80000000-0000-4000-8000-000000000001","status":"pending"}'::jsonb, timestamp '2026-07-19 08:00:00', 'booking', 'Your booking is waiting for host confirmation.'),
-  ('86000000-0000-4000-8000-000000000002', 'Payment reminder', '10000000-0000-4000-8000-000000000102', false, '{"bookingId":"80000000-0000-4000-8000-000000000002","status":"confirmed"}'::jsonb, timestamp '2026-07-19 08:00:00', 'payment', 'Please finish the payment for your confirmed stay.'),
-  ('86000000-0000-4000-8000-000000000003', 'New review', '10000000-0000-4000-8000-000000000003', true, '{"bookingId":"80000000-0000-4000-8000-000000000004"}'::jsonb, timestamp '2026-07-19 08:00:00', 'review', 'You received a new review on Landmark 81 Skyline Suite.'),
-  ('86000000-0000-4000-8000-000000000004', 'Favorite deal', '10000000-0000-4000-8000-000000000104', false, '{"cabinId":"20000000-0000-4000-8000-000000000007"}'::jsonb, timestamp '2026-07-19 08:00:00', 'promotion', 'Tan Dinh Pink House now has an active discount.');
+  ('86000000-0000-4000-8000-000000000001', 'Booking pending', '10000000-0000-4000-8000-000000000002', false, '{"bookingId":"80000000-0000-4000-8000-000000000001","status":"pending"}'::jsonb, timestamp '2026-07-20 08:00:00', 'booking', 'A guest booked Saigon Deluxe Balcony.'),
+  ('86000000-0000-4000-8000-000000000002', 'Payment reminder', '10000000-0000-4000-8000-000000000102', false, '{"bookingId":"80000000-0000-4000-8000-000000000002","status":"confirmed"}'::jsonb, timestamp '2026-07-20 08:00:00', 'payment', 'Please finish payment for your Vung Tau suite.');
 
--- otps
-insert into public.otps (
-  "_id",
-  email,
-  otp,
-  "expiresAt",
-  "userId",
-  "createdAt"
-) values
-  ('87000000-0000-4000-8000-000000000001', 'alice.nguyen@sdp1.test', '482159', timestamp '2026-07-19 08:20:00', '10000000-0000-4000-8000-000000000101', timestamp '2026-07-19 08:00:00'),
-  ('87000000-0000-4000-8000-000000000002', 'support@sereinstay.test', '119844', timestamp '2026-07-19 07:30:00', '10000000-0000-4000-8000-000000000001', timestamp '2026-07-19 08:00:00');
+insert into public.otps ("_id", email, otp, "expiresAt", "userId", "createdAt") values
+  ('87000000-0000-4000-8000-000000000001', 'alice.nguyen@sereinstay.test', '482159', timestamp '2026-07-20 08:20:00', '10000000-0000-4000-8000-000000000101', timestamp '2026-07-20 08:00:00'),
+  ('87000000-0000-4000-8000-000000000002', 'huygialai2005@gmail.com', '119844', timestamp '2026-07-20 08:20:00', '10000000-0000-4000-8000-000000000001', timestamp '2026-07-20 08:00:00'),
+  ('87000000-0000-4000-8000-000000000003', 'cuong72005@gmail.com', '720050', timestamp '2026-07-20 08:20:00', '10000000-0000-4000-8000-000000000002', timestamp '2026-07-20 08:00:00'),
+  ('87000000-0000-4000-8000-000000000004', 'trantuankha030205@gmail.com', '302050', timestamp '2026-07-20 08:20:00', '10000000-0000-4000-8000-000000000003', timestamp '2026-07-20 08:00:00');
 
 commit;

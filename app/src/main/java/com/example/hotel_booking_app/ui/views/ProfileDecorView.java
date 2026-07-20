@@ -56,7 +56,7 @@ public class ProfileDecorView extends View {
     private void drawSoftGreenWash(Canvas canvas) {
         paint.setShader(new LinearGradient(
                 0, 0, getWidth(), getHeight(),
-                new int[]{0x33114536, 0x221B8065, 0x11308A75},
+                new int[]{0x442C7FB8, 0x2214789E, 0x110A3D62},
                 new float[]{0f, 0.5f, 1f},
                 Shader.TileMode.CLAMP
         ));
@@ -65,9 +65,47 @@ public class ProfileDecorView extends View {
     }
 
     private void drawVines(Canvas canvas, float progress) {
-        drawVine(canvas, -0.02f, 0.18f, 0.30f, 0.30f, 0.18f, 0.55f, progress, 0f);
-        drawVine(canvas, 1.02f, 0.12f, 0.76f, 0.30f, 0.88f, 0.58f, progress, 0.35f);
-        drawVine(canvas, 0.08f, 0.86f, 0.34f, 0.76f, 0.52f, 0.94f, progress, 0.68f);
+        drawWave(canvas, 0.20f, progress, 0f, 0x55E0F7FA);
+        drawWave(canvas, 0.34f, progress, 0.28f, 0x38FFFFFF);
+        drawWave(canvas, 0.58f, progress, 0.56f, 0x30B3E5FC);
+        drawHanoiSilhouette(canvas, progress);
+    }
+
+    private void drawWave(Canvas canvas, float baseY, float progress, float phase, int color) {
+        path.reset();
+        float y = getHeight() * baseY;
+        float offset = (progress + phase) * getWidth() * 0.38f;
+        for (float x = -getWidth() * 0.2f; x <= getWidth() * 1.2f; x += dp(18)) {
+            float waveY = y + (float) Math.sin((x + offset) / dp(42)) * dp(7);
+            if (x <= -getWidth() * 0.19f) {
+                path.moveTo(x, waveY);
+            } else {
+                path.lineTo(x, waveY);
+            }
+        }
+        strokePaint.setStrokeWidth(dp(2.2f));
+        strokePaint.setColor(color);
+        canvas.drawPath(path, strokePaint);
+    }
+
+    private void drawHanoiSilhouette(Canvas canvas, float progress) {
+        float base = getHeight() * 0.82f;
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(0x33212936);
+        rect.set(getWidth() * 0.06f, base - dp(40), getWidth() * 0.94f, base + dp(26));
+        canvas.drawRoundRect(rect, dp(18), dp(18), paint);
+
+        paint.setColor(0x66FFFFFF);
+        paint.setTextAlign(Paint.Align.CENTER);
+        paint.setFakeBoldText(true);
+        paint.setTextSize(dp(18));
+        canvas.drawText("Hà Nội, Việt Nam", getWidth() * 0.5f, base - dp(12), paint);
+        paint.setFakeBoldText(false);
+
+        strokePaint.setStrokeWidth(dp(2));
+        strokePaint.setColor(0xAAFFD54A);
+        float pulse = 0.65f + 0.35f * (float) Math.sin(progress * Math.PI * 2f);
+        canvas.drawCircle(getWidth() * 0.5f, base + dp(7), dp(4 + 3 * pulse), strokePaint);
     }
 
     private void drawVine(Canvas canvas, float sx, float sy, float cx, float cy, float ex, float ey, float progress, float phase) {

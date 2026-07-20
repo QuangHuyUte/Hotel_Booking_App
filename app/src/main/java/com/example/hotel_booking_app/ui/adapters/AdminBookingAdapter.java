@@ -64,15 +64,15 @@ public class AdminBookingAdapter extends RecyclerView.Adapter<AdminBookingAdapte
     public void onBindViewHolder(@NonNull AdminBookingViewHolder holder, int position) {
         Booking booking = bookings.get(position);
         Cabin cabin = cabinById.get(booking.getCabinId());
-        holder.titleTextView.setText(cabin == null ? "Cabin booking" : cabin.getName());
-        holder.nightsTextView.setText(booking.getNumNights() + " night" + (booking.getNumNights() == 1 ? "" : "s"));
+        holder.titleTextView.setText(cabin == null ? "Đặt phòng khách sạn" : cabin.getName());
+        holder.nightsTextView.setText(booking.getNumNights() + " đêm");
         holder.statusTextView.setText(statusLabel(booking));
         holder.statusTextView.setBackgroundResource(statusBackground(booking));
         holder.dateTextView.setText(formatDate(booking.getStartDate()) + "  ->  " + formatDate(booking.getEndDate()));
         holder.customerTextView.setText(customerLabel(booking));
-        holder.priceTextView.setText("Guests: " + booking.getNumGuests() + "   |   "
-                + PriceUtils.formatUsd(booking.getTotalPrice()) + " /total");
-        holder.createdTextView.setText("Booked: " + formatCreatedDate(booking.getCreatedAt()));
+        holder.priceTextView.setText("Khách: " + booking.getNumGuests() + "   |   "
+                + PriceUtils.formatUsd(booking.getTotalPrice()) + " tổng cộng");
+        holder.createdTextView.setText("Đã đặt: " + formatCreatedDate(booking.getCreatedAt()));
         bindImage(holder, cabin);
         bindActions(holder, booking);
         holder.itemView.setOnClickListener(view -> listener.onOpen(booking));
@@ -93,13 +93,13 @@ public class AdminBookingAdapter extends RecyclerView.Adapter<AdminBookingAdapte
     private void bindActions(AdminBookingViewHolder holder, Booking booking) {
         boolean cancelled = AppConstants.BOOKING_CANCELLED.equalsIgnoreCase(booking.getStatus());
         if (cancelled || booking.isPaid()) {
-            holder.primaryButton.setText("Open");
+            holder.primaryButton.setText("Mở");
             holder.primaryButton.setOnClickListener(view -> listener.onOpen(booking));
         } else if (AppConstants.BOOKING_PENDING.equalsIgnoreCase(booking.getStatus())) {
-            holder.primaryButton.setText("Confirm");
+            holder.primaryButton.setText("Xác nhận");
             holder.primaryButton.setOnClickListener(view -> listener.onPrimaryAction(booking));
         } else {
-            holder.primaryButton.setText("Mark paid");
+            holder.primaryButton.setText("Đánh dấu đã trả");
             holder.primaryButton.setOnClickListener(view -> listener.onPrimaryAction(booking));
         }
         holder.cancelButton.setVisibility(cancelled ? View.GONE : View.VISIBLE);
@@ -109,26 +109,26 @@ public class AdminBookingAdapter extends RecyclerView.Adapter<AdminBookingAdapte
     private String customerLabel(Booking booking) {
         User user = userById.get(booking.getUserId());
         if (user == null) {
-            return "Customer: loading...";
+            return "Khách hàng: đang tải...";
         }
         String name = user.getFullName() == null || user.getFullName().trim().isEmpty()
-                ? "Unnamed customer"
+                ? "Khách chưa đặt tên"
                 : user.getFullName().trim();
         String phone = user.getPhone() == null || user.getPhone().trim().isEmpty()
                 ? ""
                 : " | " + user.getPhone().trim();
-        return "Customer: " + name + phone;
+        return "Khách hàng: " + name + phone;
     }
 
     private String statusLabel(Booking booking) {
         if (booking.isPaid()) {
-            return "PAID";
+            return "ĐÃ THANH TOÁN";
         }
         if (AppConstants.BOOKING_CONFIRMED.equalsIgnoreCase(booking.getStatus())) {
-            return "PAY LATER";
+            return "TRẢ SAU";
         }
         String status = booking.getStatus() == null ? "" : booking.getStatus().toUpperCase(Locale.US);
-        return status.isEmpty() ? "PENDING" : status;
+        return status.isEmpty() ? "ĐANG CHỜ" : status;
     }
 
     private int statusBackground(Booking booking) {

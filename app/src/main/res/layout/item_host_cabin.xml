@@ -83,7 +83,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Tap card to view details"
+                android:text="Chạm thẻ để xem chi tiết"
                 android:textColor="@color/muted" />
         </LinearLayout>
     </LinearLayout>
@@ -101,7 +101,7 @@
             android:layout_marginEnd="6dp"
             android:layout_weight="1"
             android:background="@drawable/bg_button_secondary"
-            android:text="Edit"
+            android:text="Sửa"
             android:textColor="@color/primary_dark" />
 
         <Button
@@ -112,7 +112,7 @@
             android:layout_weight="1"
             android:background="@drawable/bg_button_secondary"
             android:singleLine="true"
-            android:text="Duplicate"
+            android:text="Nhân bản"
             android:textColor="@color/primary_dark" />
 
         <Button
@@ -121,7 +121,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:background="@drawable/bg_button_danger"
-            android:text="Delete"
+            android:text="Xóa"
             android:textColor="@color/white" />
     </LinearLayout>
 </LinearLayout>

@@ -67,10 +67,10 @@ public class PaymentAdapter extends RecyclerView.Adapter<PaymentAdapter.PaymentV
         holder.statusTextView.setBackgroundResource(statusBackground(payment, null));
         holder.imageView.setImageResource(R.drawable.ic_launcher_background);
         holder.detailTextView.setText(
-                "Booking\nLoading stay details..."
-                        + "\n\nMethod\n" + safe(payment.getMethod())
-                        + "\n\nProvider\n" + safe(payment.getProvider())
-                        + "\n\nPaid at\n" + safe(payment.getPaidAt())
+                "Đặt phòng\nĐang tải thông tin chỗ nghỉ..."
+                        + "\n\nHình thức\n" + safe(payment.getMethod())
+                        + "\n\nNhà cung cấp\n" + safe(payment.getProvider())
+                        + "\n\nThanh toán lúc\n" + safe(payment.getPaidAt())
         );
         bindBooking(holder, payment);
         holder.itemView.setOnClickListener(view -> listener.onPaymentClick(payment));
@@ -96,10 +96,10 @@ public class PaymentAdapter extends RecyclerView.Adapter<PaymentAdapter.PaymentV
             public void onError(String message) {
                 if (payment.getBookingId().equals(holder.boundBookingId)) {
                     holder.detailTextView.setText(
-                            "Booking\nStay details unavailable"
-                                    + "\n\nMethod\n" + safe(payment.getMethod())
-                                    + "\n\nProvider\n" + safe(payment.getProvider())
-                                    + "\n\nPaid at\n" + safe(payment.getPaidAt())
+                            "Đặt phòng\nChưa có thông tin chỗ nghỉ"
+                                    + "\n\nHình thức\n" + safe(payment.getMethod())
+                                    + "\n\nNhà cung cấp\n" + safe(payment.getProvider())
+                                    + "\n\nThanh toán lúc\n" + safe(payment.getPaidAt())
                     );
                 }
             }
@@ -127,17 +127,17 @@ public class PaymentAdapter extends RecyclerView.Adapter<PaymentAdapter.PaymentV
 
             @Override
             public void onError(String message) {
-                renderPaymentDetails(holder, payment, booking, "Cabin stay");
+                renderPaymentDetails(holder, payment, booking, "Đặt phòng khách sạn");
             }
         });
     }
 
     private void renderPaymentDetails(PaymentViewHolder holder, Payment payment, Booking booking, String cabinName) {
         holder.detailTextView.setText(
-                "Booking\n" + cabinName + "\n" + booking.getStartDate() + " -> " + booking.getEndDate()
-                        + "\n\nMethod\n" + safe(payment.getMethod())
-                        + "\n\nProvider\n" + safe(payment.getProvider())
-                        + "\n\nPaid at\n" + safe(payment.getPaidAt())
+                "Đặt phòng\n" + cabinName + "\n" + booking.getStartDate() + " -> " + booking.getEndDate()
+                        + "\n\nHình thức\n" + safe(payment.getMethod())
+                        + "\n\nNhà cung cấp\n" + safe(payment.getProvider())
+                        + "\n\nThanh toán lúc\n" + safe(payment.getPaidAt())
         );
     }
 
@@ -151,10 +151,10 @@ public class PaymentAdapter extends RecyclerView.Adapter<PaymentAdapter.PaymentV
 
     private String statusLabel(Payment payment, Booking booking) {
         if (booking != null && booking.isPaid()) {
-            return "PAID";
+            return "ĐÃ THANH TOÁN";
         }
         String status = safe(payment.getStatus());
-        return status.equals("-") ? "PENDING" : status.toUpperCase(Locale.US);
+        return status.equals("-") ? "ĐANG CHỜ" : translatePaymentStatus(status);
     }
 
     private int statusBackground(Payment payment, Booking booking) {
@@ -170,6 +170,22 @@ public class PaymentAdapter extends RecyclerView.Adapter<PaymentAdapter.PaymentV
 
     private String safe(String value) {
         return value == null || value.trim().isEmpty() ? "-" : value;
+    }
+
+    private String translatePaymentStatus(String status) {
+        if (AppConstants.PAYMENT_PAID.equalsIgnoreCase(status)) {
+            return "ĐÃ THANH TOÁN";
+        }
+        if (AppConstants.PAYMENT_FAILED.equalsIgnoreCase(status)) {
+            return "THẤT BẠI";
+        }
+        if (AppConstants.PAYMENT_REFUNDED.equalsIgnoreCase(status)) {
+            return "ĐÃ HOÀN TIỀN";
+        }
+        if ("pending".equalsIgnoreCase(status)) {
+            return "ĐANG CHỜ";
+        }
+        return status.toUpperCase(Locale.US);
     }
 
     @Override

@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.hotel_booking_app.R;
 import com.example.hotel_booking_app.data.models.Cabin;
+import com.example.hotel_booking_app.data.models.RoomType;
 import com.example.hotel_booking_app.utils.PriceUtils;
 
 import java.util.ArrayList;
@@ -53,10 +54,10 @@ public class CabinAdapter extends RecyclerView.Adapter<CabinAdapter.CabinViewHol
     public void onBindViewHolder(@NonNull CabinViewHolder holder, int position) {
         Cabin cabin = cabins.get(position);
         holder.nameTextView.setText(cabin.getName());
-        holder.locationTextView.setText(safe(cabin.getLocation(), "Hotel Booking App retreat"));
-        holder.amenitiesTextView.setText(safe(cabin.getAmenities(), "Private stay, breakfast option, host support"));
+        holder.locationTextView.setText(safe(cabin.getLocation(), "Khách sạn Serein Stay"));
+        holder.amenitiesTextView.setText(roomSummary(cabin));
         holder.priceTextView.setText(priceLabel(holder, cabin));
-        holder.capacityTextView.setText("\uD83D\uDC65  " + cabin.getMaxCapacity() + " guests");
+        holder.capacityTextView.setText(capacityLabel(cabin));
         Glide.with(holder.itemView.getContext())
                 .load(cabin.getImage())
                 .centerCrop()
@@ -90,14 +91,17 @@ public class CabinAdapter extends RecyclerView.Adapter<CabinAdapter.CabinViewHol
     }
 
     private CharSequence priceLabel(CabinViewHolder holder, Cabin cabin) {
+        if (cabin.getMatchedRoomType() != null) {
+            return PriceUtils.formatUsd(cabin.getMatchedRoomType().getBasePrice()) + " / đêm";
+        }
         double finalPrice = PriceUtils.priceAfterDiscount(cabin.getRegularPrice(), cabin.getDiscount());
         if (cabin.getDiscount() <= 0) {
-            return PriceUtils.formatUsd(finalPrice) + " / night";
+            return PriceUtils.formatUsd(finalPrice) + " / đêm";
         }
 
         String discounted = PriceUtils.formatUsd(finalPrice);
         String original = PriceUtils.formatUsd(cabin.getRegularPrice());
-        String full = discounted + "  " + original + " / night";
+        String full = discounted + "  " + original + " / đêm";
         SpannableString spannable = new SpannableString(full);
         int start = discounted.length() + 2;
         int end = start + original.length();
@@ -110,5 +114,25 @@ public class CabinAdapter extends RecyclerView.Adapter<CabinAdapter.CabinViewHol
 
     private String safe(String value, String fallback) {
         return value == null || value.trim().isEmpty() ? fallback : value;
+    }
+
+    private String roomSummary(Cabin cabin) {
+        RoomType roomType = cabin.getMatchedRoomType();
+        if (roomType == null) {
+            return safe(cabin.getAmenities(), "Chỗ nghỉ riêng, có bữa sáng, hỗ trợ từ quản lý");
+        }
+        String living = roomType.hasLivingRoom() ? " · living room" : "";
+        return roomType.displayName()
+                + " · " + roomType.sizeLabel()
+                + " · " + roomType.bedLabel()
+                + living;
+    }
+
+    private String capacityLabel(Cabin cabin) {
+        RoomType roomType = cabin.getMatchedRoomType();
+        if (roomType == null) {
+            return "\uD83D\uDC65  " + cabin.getMaxCapacity() + " khách";
+        }
+        return "\uD83D\uDC65  tối đa " + roomType.effectiveMaxAdults() + " người lớn";
     }
 }

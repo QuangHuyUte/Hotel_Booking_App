@@ -19,10 +19,13 @@ public final class AppConstants {
     public static final String TABLE_AMENITIES = "amenities";
     public static final String TABLE_CABIN_AMENITIES = "cabin_amenities";
     public static final String TABLE_COUPONS = "coupons";
+    public static final String TABLE_ROOM_TYPES = "room_types";
+    public static final String TABLE_ROOM_INVENTORY = "room_inventory";
 
     public static final String ROLE_CUSTOMER = "customer";
-    public static final String ROLE_HOST = "cabinOwner";
-    public static final String ROLE_ADMIN = "admin";
+    public static final String ROLE_MANAGER = "manager";
+    public static final String ROLE_HOST = ROLE_MANAGER;
+    public static final String ROLE_ADMIN = ROLE_MANAGER;
 
     public static final String BOOKING_PENDING = "pending";
     public static final String BOOKING_CONFIRMED = "confirmed";
@@ -39,6 +42,7 @@ public final class AppConstants {
     public static final String COUPON_FIXED = "fixed";
 
     public static final String EXTRA_CABIN_ID = "extra_cabin_id";
+    public static final String EXTRA_ROOM_TYPE_ID = "extra_room_type_id";
     public static final String EXTRA_BOOKING_ID = "extra_booking_id";
     public static final String EXTRA_PAYMENT_ID = "extra_payment_id";
 

@@ -18,7 +18,7 @@ public class WishlistService {
 
     public void getWishlist(String userId, SupabaseCallback<List<Wishlist>> callback) {
         if (!hasValue(userId)) {
-            callback.onError("Bạn cần đăng nhập để xem wishlist.");
+            callback.onError("Vui lòng đăng nhập để xem danh sách đã lưu.");
             return;
         }
         Map<String, String> filters = new HashMap<>();
@@ -28,7 +28,7 @@ public class WishlistService {
 
     public void addToWishlist(String userId, String cabinId, SupabaseCallback<Wishlist> callback) {
         if (!hasValue(userId) || !hasValue(cabinId)) {
-            callback.onError("Thiếu thông tin user hoặc cabin để favorite.");
+            callback.onError("Missing user or cabin information to save favorite.");
             return;
         }
         supabaseClient.insert(AppConstants.TABLE_WISHLISTS, new Wishlist(userId, cabinId), Wishlist[].class, callback);
@@ -36,7 +36,7 @@ public class WishlistService {
 
     public void getWishlistForCabin(String cabinId, SupabaseCallback<List<Wishlist>> callback) {
         if (!hasValue(cabinId)) {
-            callback.onError("Thiếu cabinId để đếm wishlist.");
+            callback.onError("Missing cabinId to count wishlist items.");
             return;
         }
         Map<String, String> filters = new HashMap<>();
@@ -67,7 +67,7 @@ public class WishlistService {
 
     public void removeFromWishlist(String userId, String cabinId, SupabaseCallback<Boolean> callback) {
         if (!hasValue(userId) || !hasValue(cabinId)) {
-            callback.onError("Thiếu thông tin user hoặc cabin để bỏ favorite.");
+            callback.onError("Missing user or cabin information to remove favorite.");
             return;
         }
         Map<String, String> filters = new HashMap<>();

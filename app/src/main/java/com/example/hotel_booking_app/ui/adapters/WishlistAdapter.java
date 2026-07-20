@@ -44,7 +44,7 @@ public class WishlistAdapter extends RecyclerView.Adapter<WishlistAdapter.Wishli
     @Override
     public void onBindViewHolder(@NonNull WishlistViewHolder holder, int position) {
         Wishlist wishlist = wishlists.get(position);
-        holder.titleTextView.setText("Cabin yêu thích");
+        holder.titleTextView.setText("Favorite cabin");
         holder.subtitleTextView.setText(wishlist.getCabinId());
         holder.itemView.setOnClickListener(view -> listener.onWishlistClick(wishlist));
     }

@@ -42,7 +42,7 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         bookingService = new BookingService();
         sessionManager = new SessionManager(this);
         adapter = new PaymentAdapter(payment -> {
-            Intent intent = new Intent(this, InvoiceActivity.class);
+            Intent intent = new Intent(this, BookingInvoiceActivity.class);
             intent.putExtra(AppConstants.EXTRA_PAYMENT_ID, payment.getId());
             startActivity(intent);
         });
@@ -55,7 +55,7 @@ public class PaymentHistoryActivity extends AppCompatActivity {
     }
 
     private void loadPayments() {
-        statusTextView.setText("Loading payment history...");
+        statusTextView.setText("Đang tải lịch sử thanh toán...");
         paymentService.getPaymentsForUser(sessionManager.getUserId(), new SupabaseCallback<List<Payment>>() {
             @Override
             public void onSuccess(List<Payment> payments) {
@@ -139,9 +139,9 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                 failed++;
             }
         }
-        return "Payments: " + payments.size()
-                + " | Paid: " + paid
-                + " | Pending: " + pending
-                + " | Failed: " + failed;
+        return "Thanh toán: " + payments.size()
+                + " | Đã trả: " + paid
+                + " | Đang chờ: " + pending
+                + " | Thất bại: " + failed;
     }
 }
