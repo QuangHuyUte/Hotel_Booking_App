@@ -66,11 +66,11 @@ public class SignInActivity extends AppCompatActivity {
         customerModeButton.setOnClickListener(view -> setLoginMode(false));
         managerModeButton.setOnClickListener(view -> setLoginMode(true));
         loginButton.setOnClickListener(view -> loginWithPassword());
-        closeButton.setOnClickListener(view -> openGuestSearch());
         gmailButton.setOnClickListener(view -> openGmailOtpDialog());
         registerButton.setOnClickListener(view -> startActivity(new Intent(this, SignUpActivity.class)));
         forgotButton.setOnClickListener(view -> startActivity(new Intent(this, PasswordResetActivity.class)));
         guestButton.setOnClickListener(view -> openGuestSearch());
+        closeButton.setOnClickListener(view -> openGuestSearch());
 
         setLoginMode(false);
         handleOAuthRedirect(getIntent() == null ? null : getIntent().getData());
@@ -92,11 +92,12 @@ public class SignInActivity extends AppCompatActivity {
         managerModeButton.setBackgroundResource(managerMode ? R.drawable.bg_button_primary : R.drawable.bg_google_button);
         managerModeButton.setTextColor(getColor(managerMode ? R.color.black : R.color.booking_text));
         emailEditText.setHint(managerMode ? "Email quản lý" : "Email khách hàng");
-        gmailButton.setVisibility(managerMode ? View.GONE : View.VISIBLE);
+        gmailButton.setVisibility(View.VISIBLE);
+        gmailButton.setText(managerMode ? "Đăng nhập quản lý bằng Google" : "Đăng nhập bằng Google");
         registerButton.setVisibility(managerMode ? View.GONE : View.VISIBLE);
         setStatus(managerMode
-                ? "Chế độ Quản lý dành cho tài khoản manager, ví dụ huygialai2005@gmail.com."
-                : "Chế độ Khách hàng dùng để tìm phòng, đặt phòng và đăng nhập nhanh bằng Google/OTP.");
+                ? "Chế độ Quản lý: dùng email/mật khẩu hoặc Gmail OTP với tài khoản đã có quyền manager."
+                : "Chế độ Khách hàng: dùng email/mật khẩu hoặc Gmail OTP để vào app nhanh.");
     }
 
     private void loginWithPassword() {
@@ -111,10 +112,9 @@ public class SignInActivity extends AppCompatActivity {
         authService.login(email, password, new SupabaseCallback<User>() {
             @Override
             public void onSuccess(User user) {
-                if (!isExpectedLoginRole(user)) {
-                    return;
+                if (isExpectedLoginRole(user)) {
+                    completeLogin(user);
                 }
-                completeLogin(user);
             }
 
             @Override
@@ -128,22 +128,17 @@ public class SignInActivity extends AppCompatActivity {
         String role = user == null || user.getRole() == null ? "" : user.getRole();
         boolean isManager = AppConstants.ROLE_MANAGER.equalsIgnoreCase(role);
         if (managerLoginMode && !isManager) {
-            setStatus("Đây là tài khoản khách hàng. Hãy chuyển sang tab Khách hàng để đăng nhập.");
+            setStatus("Email này chưa có quyền quản lý. Hãy dùng tab Khách hàng hoặc cấp role manager trong database.");
             return false;
         }
         if (!managerLoginMode && isManager) {
-            setStatus("Đây là tài khoản quản lý. Hãy chuyển sang tab Quản lý để đăng nhập.");
+            setStatus("Email này là tài khoản quản lý. Nếu muốn vào trang quản lý, chọn tab Quản lý rồi đăng nhập.");
             return false;
         }
         return true;
     }
 
     private void openGmailOtpDialog() {
-        if (managerLoginMode) {
-            setStatus("Google/OTP chỉ dùng cho tài khoản khách hàng. Quản lý đăng nhập bằng email và mật khẩu.");
-            return;
-        }
-
         Dialog dialog = new Dialog(this);
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
@@ -162,7 +157,7 @@ public class SignInActivity extends AppCompatActivity {
         header.addView(close, new LinearLayout.LayoutParams(dp(44), dp(44)));
 
         TextView title = new TextView(this);
-        title.setText("Đăng nhập bằng Google");
+        title.setText(managerLoginMode ? "OTP quản lý" : "OTP khách hàng");
         title.setTextColor(getColor(R.color.booking_text));
         title.setTextSize(21);
         title.setGravity(Gravity.CENTER);
@@ -174,7 +169,9 @@ public class SignInActivity extends AppCompatActivity {
         panel.addView(header);
 
         TextView helper = new TextView(this);
-        helper.setText("Nhập Gmail của bạn. App sẽ gửi mã OTP 6 số, xác nhận xong là đăng nhập khách hàng luôn.");
+        helper.setText(managerLoginMode
+                ? "Nhập Gmail quản lý. Nếu email đã có role manager, xác nhận OTP xong sẽ vào trang quản lý."
+                : "Nhập Gmail khách hàng. Nếu email mới, app sẽ tạo tài khoản khách sau khi xác nhận OTP.");
         helper.setTextColor(getColor(R.color.booking_muted));
         helper.setTextSize(13);
         helper.setGravity(Gravity.CENTER);
@@ -189,10 +186,7 @@ public class SignInActivity extends AppCompatActivity {
         emailInput.setHintTextColor(getColor(R.color.booking_muted));
         emailInput.setPadding(dp(14), 0, dp(14), 0);
         emailInput.setBackgroundResource(R.drawable.bg_booking_field);
-        panel.addView(emailInput, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(52)
-        ));
+        panel.addView(emailInput, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52)));
 
         EditText otpInput = new EditText(this);
         otpInput.setHint("Mã OTP 6 số");
@@ -203,10 +197,7 @@ public class SignInActivity extends AppCompatActivity {
         otpInput.setPadding(dp(14), 0, dp(14), 0);
         otpInput.setBackgroundResource(R.drawable.bg_booking_field);
         otpInput.setVisibility(View.GONE);
-        LinearLayout.LayoutParams otpParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(52)
-        );
+        LinearLayout.LayoutParams otpParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52));
         otpParams.setMargins(0, dp(12), 0, 0);
         panel.addView(otpInput, otpParams);
 
@@ -216,10 +207,7 @@ public class SignInActivity extends AppCompatActivity {
         continueButton.setAllCaps(false);
         continueButton.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         continueButton.setBackgroundResource(R.drawable.bg_booking_cta);
-        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(52)
-        );
+        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52));
         buttonParams.setMargins(0, dp(12), 0, 0);
         panel.addView(continueButton, buttonParams);
 
@@ -237,6 +225,7 @@ public class SignInActivity extends AppCompatActivity {
         final boolean[] otpSent = {false};
         final String[] pendingEmail = {""};
         final String[] pendingName = {""};
+        final String expectedRole = managerLoginMode ? AppConstants.ROLE_MANAGER : AppConstants.ROLE_CUSTOMER;
 
         close.setOnClickListener(view -> dialog.dismiss());
         continueButton.setOnClickListener(view -> {
@@ -244,7 +233,7 @@ public class SignInActivity extends AppCompatActivity {
                 requestGmailOtp(emailInput, otpInput, continueButton, dialogStatus, otpSent, pendingEmail, pendingName);
                 return;
             }
-            verifyGmailOtp(pendingName[0], pendingEmail[0], otpInput.getText().toString(), dialog, continueButton, dialogStatus);
+            verifyGmailOtp(pendingName[0], pendingEmail[0], otpInput.getText().toString(), expectedRole, dialog, continueButton, dialogStatus);
         });
 
         dialog.setContentView(panel);
@@ -294,7 +283,7 @@ public class SignInActivity extends AppCompatActivity {
                 otpInput.requestFocus();
                 continueButton.setText("Xác nhận OTP");
                 continueButton.setEnabled(true);
-                dialogStatus.setText("Đã gửi OTP. Nhập mã 6 số trong Gmail để vào app.");
+                dialogStatus.setText("Đã gửi OTP. Nhập mã 6 số trong Gmail để đăng nhập.");
                 setStatus("Đã gửi OTP tới " + email + ".");
             }
 
@@ -308,7 +297,7 @@ public class SignInActivity extends AppCompatActivity {
         });
     }
 
-    private void verifyGmailOtp(String name, String email, String otp, Dialog dialog, Button continueButton, TextView dialogStatus) {
+    private void verifyGmailOtp(String name, String email, String otp, String expectedRole, Dialog dialog, Button continueButton, TextView dialogStatus) {
         if (otp == null || otp.trim().length() < 6) {
             dialogStatus.setText("Vui lòng nhập mã OTP 6 số.");
             dialogStatus.setVisibility(View.VISIBLE);
@@ -320,16 +309,13 @@ public class SignInActivity extends AppCompatActivity {
         continueButton.setEnabled(false);
         setStatus("Đang xác nhận OTP Gmail...");
 
-        authService.verifyGmailOtp(name, email, otp, new SupabaseCallback<User>() {
+        authService.verifyGmailOtp(name, email, otp, expectedRole, new SupabaseCallback<User>() {
             @Override
             public void onSuccess(User user) {
-                boolean isManager = user != null
-                        && user.getRole() != null
-                        && AppConstants.ROLE_MANAGER.equalsIgnoreCase(user.getRole());
-                if (isManager) {
+                if (!isExpectedLoginRole(user)) {
                     continueButton.setEnabled(true);
-                    dialogStatus.setText("Email này đang là tài khoản quản lý. Hãy dùng tab Quản lý để đăng nhập bằng mật khẩu.");
-                    setStatus("Email này thuộc tài khoản quản lý, không dùng OTP khách hàng.");
+                    dialogStatus.setText(statusTextView.getText());
+                    dialogStatus.setVisibility(View.VISIBLE);
                     return;
                 }
                 dialog.dismiss();
@@ -422,10 +408,9 @@ public class SignInActivity extends AppCompatActivity {
             authService.loginWithOAuthSession(name, email, subject, accessToken, refreshToken, new SupabaseCallback<User>() {
                 @Override
                 public void onSuccess(User user) {
-                    if (!isExpectedLoginRole(user)) {
-                        return;
+                    if (isExpectedLoginRole(user)) {
+                        completeLogin(user);
                     }
-                    completeLogin(user);
                 }
 
                 @Override
