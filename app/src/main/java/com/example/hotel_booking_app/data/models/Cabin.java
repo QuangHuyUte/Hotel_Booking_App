@@ -177,6 +177,35 @@ public class Cabin {
         this.matchedRoomType = matchedRoomType;
     }
 
+    public Cabin copyForMatchedRoom(RoomType roomType) {
+        Cabin copy = new Cabin();
+        copy.id = id;
+        copy.name = name;
+        copy.maxCapacity = maxCapacity;
+        copy.regularPrice = regularPrice;
+        copy.discount = discount;
+        copy.image = image;
+        copy.description = description;
+        copy.location = location;
+        copy.latitude = latitude;
+        copy.longitude = longitude;
+        copy.mapPlaceId = mapPlaceId;
+        copy.address = address;
+        copy.district = district;
+        copy.propertyType = propertyType;
+        copy.starRating = starRating;
+        copy.reviewScore = reviewScore;
+        copy.reviewCount = reviewCount;
+        copy.googleMapsUrl = googleMapsUrl;
+        copy.amenities = amenities;
+        copy.hostId = hostId;
+        copy.createdAt = createdAt;
+        copy.updatedAt = updatedAt;
+        copy.roomTypes = roomTypes == null ? new ArrayList<>() : new ArrayList<>(roomTypes);
+        copy.matchedRoomType = roomType;
+        return copy;
+    }
+
     public double displayPrice() {
         if (matchedRoomType != null && matchedRoomType.getBasePrice() > 0) {
             return matchedRoomType.getBasePrice();

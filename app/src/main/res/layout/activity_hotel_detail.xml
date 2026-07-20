@@ -410,6 +410,48 @@
                 android:nestedScrollingEnabled="false" />
 
             <LinearLayout
+                android:id="@+id/container_review_pagination"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/button_reviews_prev"
+                    android:layout_width="84dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_review_page_button"
+                    android:text="Trước"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/text_reviews_page"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:textColor="@color/booking_muted"
+                    android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/button_reviews_next"
+                    android:layout_width="84dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_review_page_button"
+                    android:text="Sau"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/container_admin_actions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

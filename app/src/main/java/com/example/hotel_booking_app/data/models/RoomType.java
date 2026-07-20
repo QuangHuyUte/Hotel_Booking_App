@@ -225,8 +225,24 @@ public class RoomType {
     }
 
     public String displayName() {
-        String label = category == null || category.trim().isEmpty() ? name : category;
-        return label == null || label.trim().isEmpty() ? "Phòng" : translateCategory(label.trim());
+        return titleLabel();
+    }
+
+    public String titleLabel() {
+        if (name != null && !name.trim().isEmpty()) {
+            return name.trim();
+        }
+        if (category != null && !category.trim().isEmpty()) {
+            return translateCategory(category.trim());
+        }
+        return "Phòng";
+    }
+
+    public String categoryLabel() {
+        if (category == null || category.trim().isEmpty()) {
+            return "Loại phòng";
+        }
+        return translateCategory(category.trim());
     }
 
     public String sizeLabel() {
@@ -237,10 +253,11 @@ public class RoomType {
     }
 
     public String bedLabel() {
-        if (bedSummary != null && !bedSummary.trim().isEmpty()) {
-            return translateBedLabel(bedSummary.trim());
+        String label = bedSummary != null && !bedSummary.trim().isEmpty() ? bedSummary.trim() : beds;
+        if (label != null && !label.trim().isEmpty()) {
+            return translateBedLabel(label.trim());
         }
-        return beds == null || beds.trim().isEmpty() ? "Chưa có thông tin giường" : translateBedLabel(beds.trim());
+        return "Chưa có thông tin giường";
     }
 
     public int effectiveMaxAdults() {
@@ -256,6 +273,30 @@ public class RoomType {
 
     public int effectiveBedCount() {
         return bedCount > 0 ? bedCount : inferBedCount();
+    }
+
+    public boolean fitsRoomSizeForGuests(int guests) {
+        if (sizeM2 <= 0 || guests <= 0) {
+            return true;
+        }
+        return sizeM2 >= minimumSizeForGuests(guests);
+    }
+
+    public int minimumSizeForGuests(int guests) {
+        int normalizedGuests = Math.max(1, guests);
+        if (normalizedGuests <= 1) {
+            return 18;
+        }
+        if (normalizedGuests == 2) {
+            return 22;
+        }
+        if (normalizedGuests == 3) {
+            return 30;
+        }
+        if (normalizedGuests == 4) {
+            return 40;
+        }
+        return 50 + (normalizedGuests - 5) * 6;
     }
 
     private String translateCategory(String value) {
@@ -287,26 +328,28 @@ public class RoomType {
     }
 
     private String translateBedLabel(String value) {
-        return value
-                .replace("Sofa Single", "sofa đơn")
-                .replace("Sofa Double", "sofa đôi")
-                .replace("single", "đơn")
-                .replace("Single", "Đơn")
-                .replace("double", "đôi")
-                .replace("Double", "Đôi")
-                .replace("queen", "queen")
-                .replace("Queen", "Queen")
-                .replace("king", "king")
-                .replace("King", "King")
-                .replace("sofa beds", "sofa")
-                .replace("sofa bed", "sofa")
-                .replace("sofa double", "sofa đôi")
-                .replace("beds", "giường")
-                .replace("bed", "giường")
-                .replace(" and ", " và ");
-    }
-
-    private int inferBedCount() {
+        String normalized = value.trim();
+        normalized = normalized.replaceAll("(?i)1\\s+single\\s+beds?", "1 giường đơn");
+        normalized = normalized.replaceAll("(?i)2\\s+single\\s+beds?", "2 giường đơn");
+        normalized = normalized.replaceAll("(?i)1\\s+double\\s+beds?", "1 giường đôi");
+        normalized = normalized.replaceAll("(?i)2\\s+double\\s+beds?", "2 giường đôi");
+        normalized = normalized.replaceAll("(?i)1\\s+queen\\s+beds?", "1 giường Queen");
+        normalized = normalized.replaceAll("(?i)2\\s+queen\\s+beds?", "2 giường Queen");
+        normalized = normalized.replaceAll("(?i)1\\s+king\\s+beds?", "1 giường King");
+        normalized = normalized.replaceAll("(?i)2\\s+king\\s+beds?", "2 giường King");
+        normalized = normalized.replaceAll("(?i)1\\s+sofa\\s+single", "1 sofa đơn");
+        normalized = normalized.replaceAll("(?i)1\\s+sofa\\s+double", "1 sofa đôi");
+        normalized = normalized.replaceAll("(?i)\\bsingle bed\\b", "giường đơn");
+        normalized = normalized.replaceAll("(?i)\\bdouble bed\\b", "giường đôi");
+        normalized = normalized.replaceAll("(?i)\\bqueen bed\\b", "giường Queen");
+        normalized = normalized.replaceAll("(?i)\\bking bed\\b", "giường King");
+        normalized = normalized.replaceAll("(?i)\\bsofa beds?\\b", "sofa");
+        normalized = normalized.replace(" and ", " và ");
+        normalized = normalized.replaceAll("(?i)\\bbeds\\b", "giường");
+        normalized = normalized.replaceAll("(?i)\\bbed\\b", "giường");
+        normalized = normalized.replaceAll("\\s+", " ").trim();
+        return normalized;
+    }    private int inferBedCount() {
         String value = ((beds == null ? "" : beds) + " " + (bedSummary == null ? "" : bedSummary)).toLowerCase();
         int total = 0;
         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d+)\\s*(single|double|queen|king|sofa|extra|bunk|bed)").matcher(value);
@@ -320,3 +363,4 @@ public class RoomType {
         return total > 0 ? total : 1;
     }
 }
+

@@ -170,6 +170,39 @@ create table if not exists room_types (
   unique ("cabinId", name)
 );
 
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'cabinid')
+     and not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'cabinId') then
+    alter table public.room_types rename column cabinid to "cabinId";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'maxguests') then alter table public.room_types rename column maxguests to "maxGuests"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'maxadults') then alter table public.room_types rename column maxadults to "maxAdults"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'totalrooms') then alter table public.room_types rename column totalrooms to "totalRooms"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'baseprice') then alter table public.room_types rename column baseprice to "basePrice"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'bedtype') then alter table public.room_types rename column bedtype to "bedType"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'bedcount') then alter table public.room_types rename column bedcount to "bedCount"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'sleepingcapacity') then alter table public.room_types rename column sleepingcapacity to "sleepingCapacity"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'bedsummary') then alter table public.room_types rename column bedsummary to "bedSummary"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'bedconfig') then alter table public.room_types rename column bedconfig to "bedConfig"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'bedwidthm') then alter table public.room_types rename column bedwidthm to "bedWidthM"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'bedlengthm') then alter table public.room_types rename column bedlengthm to "bedLengthM"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'sizem2') then alter table public.room_types rename column sizem2 to "sizeM2"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'haslivingroom') then alter table public.room_types rename column haslivingroom to "hasLivingRoom"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'isactive') then alter table public.room_types rename column isactive to "isActive"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'createdat') then alter table public.room_types rename column createdat to "createdAt"; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'updatedat') then alter table public.room_types rename column updatedat to "updatedAt"; end if;
+end $$;
+
+alter table room_types enable row level security;
+drop policy if exists "room_types_demo_access" on room_types;
+create policy "room_types_demo_access"
+on room_types for all
+to anon, authenticated
+using (true)
+with check (true);
+grant select, insert, update, delete on table room_types to anon, authenticated;
+
 create table if not exists room_inventory (
   _id uuid primary key default gen_random_uuid(),
   "roomTypeId" uuid not null references room_types(_id) on delete cascade,
@@ -182,6 +215,37 @@ create table if not exists room_inventory (
   constraint room_inventory_available_nonnegative check ("availableRooms" >= 0),
   unique ("roomTypeId", date)
 );
+
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_inventory' and column_name = 'roomtypeid') then
+    alter table public.room_inventory rename column roomtypeid to "roomTypeId";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_inventory' and column_name = 'availablerooms') then
+    alter table public.room_inventory rename column availablerooms to "availableRooms";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_inventory' and column_name = 'priceoverride') then
+    alter table public.room_inventory rename column priceoverride to "priceOverride";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_inventory' and column_name = 'isclosed') then
+    alter table public.room_inventory rename column isclosed to "isClosed";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_inventory' and column_name = 'createdat') then
+    alter table public.room_inventory rename column createdat to "createdAt";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_inventory' and column_name = 'updatedat') then
+    alter table public.room_inventory rename column updatedat to "updatedAt";
+  end if;
+end $$;
+
+alter table room_inventory enable row level security;
+drop policy if exists "room_inventory_demo_access" on room_inventory;
+create policy "room_inventory_demo_access"
+on room_inventory for all
+to anon, authenticated
+using (true)
+with check (true);
+grant select, insert, update, delete on table room_inventory to anon, authenticated;
 
 create table if not exists coupons (
   _id uuid primary key default gen_random_uuid(),

@@ -27,8 +27,11 @@ import java.util.List;
 public class HostCabinAdapter extends RecyclerView.Adapter<HostCabinAdapter.HostCabinViewHolder> {
     public interface HostCabinListener {
         void onSelect(Cabin cabin);
+
         void onEdit(Cabin cabin);
+
         void onDuplicate(Cabin cabin);
+
         void onDelete(Cabin cabin);
     }
 
@@ -87,7 +90,7 @@ public class HostCabinAdapter extends RecyclerView.Adapter<HostCabinAdapter.Host
         Cabin cabin = cabins.get(position);
         holder.nameTextView.setText(cabin.getName());
         holder.locationTextView.setText(cabin.getLocation() == null || cabin.getLocation().trim().isEmpty()
-                ? "Location not updated"
+                ? "Chưa cập nhật vị trí"
                 : cabin.getLocation());
         holder.detailTextView.setText(managerRoomSummary(cabin));
         double finalPrice = cabin.displayPrice();
@@ -158,22 +161,18 @@ public class HostCabinAdapter extends RecyclerView.Adapter<HostCabinAdapter.Host
 
     private String managerRoomSummary(Cabin cabin) {
         if (cabin.getRoomTypes() == null || cabin.getRoomTypes().isEmpty()) {
-            return "\uD83C\uDFE8 Chưa có loại phòng";
+            return "Chưa tải được loại phòng. Bấm tab hotel này để xem room, hoặc Sửa hotel để chỉnh thông tin tổng quan.";
         }
         int totalRooms = 0;
         int maxGuests = 0;
-        double minPrice = Double.MAX_VALUE;
         for (RoomType roomType : cabin.getRoomTypes()) {
             totalRooms += Math.max(0, roomType.getTotalRooms());
             maxGuests = Math.max(maxGuests, roomType.effectiveMaxAdults());
-            if (roomType.getBasePrice() > 0) {
-                minPrice = Math.min(minPrice, roomType.getBasePrice());
-            }
         }
         RoomType cheapest = cabin.getMatchedRoomType();
-        String base = cabin.getRoomTypes().size() + " room types · " + totalRooms + " rooms";
+        String base = cabin.getRoomTypes().size() + " loại phòng · " + totalRooms + " phòng";
         if (cheapest != null) {
-            base += " · from " + cheapest.displayName();
+            base += " · từ " + cheapest.displayName();
         }
         if (maxGuests > 0) {
             base += " · tối đa " + maxGuests + " người lớn";

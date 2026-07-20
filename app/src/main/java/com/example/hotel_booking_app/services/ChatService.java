@@ -33,6 +33,12 @@ public class ChatService {
         supabaseClient.getList(AppConstants.TABLE_CONVERSATIONS, "*", null, "updatedAt.desc", null, Conversation[].class, callback);
     }
 
+    public void getConversationById(String conversationId, SupabaseCallback<Conversation> callback) {
+        Map<String, String> filters = new HashMap<>();
+        filters.put("_id", conversationId);
+        supabaseClient.getSingle(AppConstants.TABLE_CONVERSATIONS, filters, Conversation[].class, callback);
+    }
+
     public void createConversation(String guestId, String hostId, String cabinId, String bookingId, SupabaseCallback<Conversation> callback) {
         Conversation conversation = new Conversation();
         conversation.setGuestId(guestId);

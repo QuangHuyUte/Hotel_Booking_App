@@ -73,4 +73,8 @@
     </ScrollView>
 
     <include layout="@layout/view_bottom_nav_cabins" />
+
+    <include
+        layout="@layout/view_bottom_nav_manager"
+        android:visibility="gone" />
 </FrameLayout>

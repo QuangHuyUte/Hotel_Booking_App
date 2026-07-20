@@ -71,6 +71,69 @@ create table if not exists public.room_types (
   constraint room_types_valid_total check ("totalRooms" >= 0),
   unique ("cabinId", name)
 );
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'cabinid')
+     and not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'cabinId') then
+    alter table public.room_types rename column cabinid to "cabinId";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'maxguests') then
+    alter table public.room_types rename column maxguests to "maxGuests";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'maxadults') then
+    alter table public.room_types rename column maxadults to "maxAdults";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'totalrooms') then
+    alter table public.room_types rename column totalrooms to "totalRooms";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'baseprice') then
+    alter table public.room_types rename column baseprice to "basePrice";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'bedtype') then
+    alter table public.room_types rename column bedtype to "bedType";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'bedcount') then
+    alter table public.room_types rename column bedcount to "bedCount";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'sleepingcapacity') then
+    alter table public.room_types rename column sleepingcapacity to "sleepingCapacity";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'bedsummary') then
+    alter table public.room_types rename column bedsummary to "bedSummary";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'bedconfig') then
+    alter table public.room_types rename column bedconfig to "bedConfig";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'bedwidthm') then
+    alter table public.room_types rename column bedwidthm to "bedWidthM";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'bedlengthm') then
+    alter table public.room_types rename column bedlengthm to "bedLengthM";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'sizem2') then
+    alter table public.room_types rename column sizem2 to "sizeM2";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'haslivingroom') then
+    alter table public.room_types rename column haslivingroom to "hasLivingRoom";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'isactive') then
+    alter table public.room_types rename column isactive to "isActive";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'createdat') then
+    alter table public.room_types rename column createdat to "createdAt";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_types' and column_name = 'updatedat') then
+    alter table public.room_types rename column updatedat to "updatedAt";
+  end if;
+end $$;
+alter table public.room_types enable row level security;
+drop policy if exists "room_types_demo_access" on public.room_types;
+create policy "room_types_demo_access"
+on public.room_types for all
+to anon, authenticated
+using (true)
+with check (true);
+grant select, insert, update, delete on table public.room_types to anon, authenticated;
 alter table public.room_types add column if not exists category varchar not null default 'Standard';
 alter table public.room_types add column if not exists "maxAdults" integer not null default 2;
 alter table public.room_types add column if not exists "bedType" varchar default 'Queen';
@@ -101,6 +164,36 @@ create table if not exists public.room_inventory (
   constraint room_inventory_available_nonnegative check ("availableRooms" >= 0),
   unique ("roomTypeId", date)
 );
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_inventory' and column_name = 'roomtypeid')
+     and not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_inventory' and column_name = 'roomTypeId') then
+    alter table public.room_inventory rename column roomtypeid to "roomTypeId";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_inventory' and column_name = 'availablerooms') then
+    alter table public.room_inventory rename column availablerooms to "availableRooms";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_inventory' and column_name = 'priceoverride') then
+    alter table public.room_inventory rename column priceoverride to "priceOverride";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_inventory' and column_name = 'isclosed') then
+    alter table public.room_inventory rename column isclosed to "isClosed";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_inventory' and column_name = 'createdat') then
+    alter table public.room_inventory rename column createdat to "createdAt";
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'room_inventory' and column_name = 'updatedat') then
+    alter table public.room_inventory rename column updatedat to "updatedAt";
+  end if;
+end $$;
+alter table public.room_inventory enable row level security;
+drop policy if exists "room_inventory_demo_access" on public.room_inventory;
+create policy "room_inventory_demo_access"
+on public.room_inventory for all
+to anon, authenticated
+using (true)
+with check (true);
+grant select, insert, update, delete on table public.room_inventory to anon, authenticated;
 alter table public.bookings add column if not exists "roomTypeId" uuid references public.room_types(_id);
 alter table public.bookings add column if not exists "numRooms" integer not null default 1;
 alter table public.blocked_dates add column if not exists "roomTypeId" uuid references public.room_types(_id) on delete cascade;
@@ -205,11 +298,11 @@ insert into public.cabins (
   latitude, longitude, "mapPlaceId", amenities, "hostId", address, district, "propertyType",
   "starRating", "reviewScore", "reviewCount", "googleMapsUrl", "createdAt", "updatedAt"
 ) values
-  ('20000000-0000-4000-8000-000000000001', 'Hotel Majestic Saigon', 4, 118, 8, 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80', 'A heritage riverside hotel on Dong Khoi with classic rooms, balcony options, and quick access to Nguyen Hue Walking Street.', 'District 1, Ho Chi Minh City, Vietnam', 10.7756, 106.7039, null, 'WiFi, Breakfast, Parking, Air conditioning, Private bathroom, Balcony', '10000000-0000-4000-8000-000000000002', '01 Dong Khoi Street, Saigon Ward, Ho Chi Minh City, Vietnam', 'District 1', 'Hotel', 5, 8.9, 936, 'https://www.google.com/maps/search/?api=1&query=10.7756,106.7039', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('20000000-0000-4000-8000-000000000001', 'Hotel Majestic Saigon', 4, 118, 8, 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80', 'A heritage riverside hotel on Dong Khoi with classic rooms, balcony options, and quick access to Nguyen Hue Walking Street.', 'District 1, Ho Chi Minh City, Vietnam', 10.7756, 106.7039, null, 'WiFi, Breakfast, Parking, Air conditioning, Private bathroom, Balcony', '10000000-0000-4000-8000-000000000001', '01 Dong Khoi Street, Saigon Ward, Ho Chi Minh City, Vietnam', 'District 1', 'Hotel', 5, 8.9, 936, 'https://www.google.com/maps/search/?api=1&query=10.7756,106.7039', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
   ('20000000-0000-4000-8000-000000000002', 'The Imperial Vung Tau Hotel', 5, 126, 12, 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&w=1200&q=80', 'A beachfront Vung Tau stay near Back Beach with larger rooms, pool access, and sea-view choices.', 'Back Beach, Vung Tau, Vietnam', 10.3353, 107.0931, null, 'WiFi, Breakfast, Parking, Pool, Sea view, Balcony', '10000000-0000-4000-8000-000000000003', '159 Thuy Van Street, Vung Tau, Vietnam', 'Vung Tau', 'Hotel', 5, 8.8, 742, 'https://www.google.com/maps/search/?api=1&query=10.3353,107.0931', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('20000000-0000-4000-8000-000000000003', 'Sofitel Legend Metropole Hanoi', 4, 148, 5, 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 'A landmark Hoan Kiem hotel near the Opera House with heritage rooms, quiet suites, and walkable Old Quarter access.', 'Hoan Kiem, Hanoi, Vietnam', 21.0256, 105.8561, null, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony', '10000000-0000-4000-8000-000000000001', '15 Ngo Quyen Street, Hoan Kiem Ward, Hanoi, Vietnam', 'Hoan Kiem', 'Hotel', 5, 9.2, 4691, 'https://www.google.com/maps/search/?api=1&query=21.0256,105.8561', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('20000000-0000-4000-8000-000000000004', 'Furama Resort Danang', 5, 142, 10, 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80', 'A beach resort on Vo Nguyen Giap Street with spacious rooms, family suites, pools, and ocean-facing options.', 'My Khe Beach, Da Nang, Vietnam', 16.0394, 108.2492, null, 'WiFi, Breakfast, Parking, Pool, Sea view, Air conditioning', '10000000-0000-4000-8000-000000000001', '103 - 105 Vo Nguyen Giap Street, Khue My Ward, Da Nang, Vietnam', 'My Khe', 'Resort', 5, 9.0, 1294, 'https://www.google.com/maps/search/?api=1&query=16.0394,108.2492', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('20000000-0000-4000-8000-000000000005', 'Dalat Palace Heritage Hotel', 4, 112, 6, 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 'A heritage Da Lat hotel by Xuan Huong Lake with classic rooms, garden views, and larger suite options.', 'Ward 3, Da Lat, Vietnam', 11.9391, 108.4444, null, 'WiFi, Breakfast, Parking, Air conditioning, Private bathroom, Balcony', '10000000-0000-4000-8000-000000000001', '02 Tran Phu, Ward 3, Da Lat, Lam Dong, Vietnam', 'Ward 3', 'Hotel', 5, 8.7, 531, 'https://www.google.com/maps/search/?api=1&query=11.9391,108.4444', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
+  ('20000000-0000-4000-8000-000000000003', 'Sofitel Legend Metropole Hanoi', 4, 148, 5, 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80', 'A landmark Hoan Kiem hotel near the Opera House with heritage rooms, quiet suites, and walkable Old Quarter access.', 'Hoan Kiem, Hanoi, Vietnam', 21.0256, 105.8561, null, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony', '10000000-0000-4000-8000-000000000002', '15 Ngo Quyen Street, Hoan Kiem Ward, Hanoi, Vietnam', 'Hoan Kiem', 'Hotel', 5, 9.2, 4691, 'https://www.google.com/maps/search/?api=1&query=21.0256,105.8561', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('20000000-0000-4000-8000-000000000004', 'Furama Resort Danang', 5, 142, 10, 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80', 'A beach resort on Vo Nguyen Giap Street with spacious rooms, family suites, pools, and ocean-facing options.', 'My Khe Beach, Da Nang, Vietnam', 16.0394, 108.2492, null, 'WiFi, Breakfast, Parking, Pool, Sea view, Air conditioning', '10000000-0000-4000-8000-000000000002', '103 - 105 Vo Nguyen Giap Street, Khue My Ward, Da Nang, Vietnam', 'My Khe', 'Resort', 5, 9.0, 1294, 'https://www.google.com/maps/search/?api=1&query=16.0394,108.2492', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('20000000-0000-4000-8000-000000000005', 'Dalat Palace Heritage Hotel', 4, 112, 6, 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80', 'A heritage Da Lat hotel by Xuan Huong Lake with classic rooms, garden views, and larger suite options.', 'Ward 3, Da Lat, Vietnam', 11.9391, 108.4444, null, 'WiFi, Breakfast, Parking, Air conditioning, Private bathroom, Balcony', '10000000-0000-4000-8000-000000000003', '02 Tran Phu, Ward 3, Da Lat, Lam Dong, Vietnam', 'Ward 3', 'Hotel', 5, 8.7, 531, 'https://www.google.com/maps/search/?api=1&query=11.9391,108.4444', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
 -- real-world hotel names: 15 hotels per city including the curated rows above
 with city_templates as (
@@ -272,9 +365,9 @@ select
   null,
   amenities,
   case
-    when city = 'Ho Chi Minh City' then '10000000-0000-4000-8000-000000000002'::uuid
-    when city = 'Vung Tau' then '10000000-0000-4000-8000-000000000003'::uuid
-    else '10000000-0000-4000-8000-000000000001'::uuid
+    when city = 'Ho Chi Minh City' then '10000000-0000-4000-8000-000000000001'::uuid
+    when city in ('Hanoi', 'Da Nang') then '10000000-0000-4000-8000-000000000002'::uuid
+    else '10000000-0000-4000-8000-000000000003'::uuid
   end,
   address_text,
   district,
@@ -371,21 +464,63 @@ select
   timestamp '2026-07-20 08:00:00'
 from public.cabins c
 cross join lateral (
+  select *
+  from (
+    values
+      (1, 'Standard', '20-24 m2 room for quick stays', 2, 2, 5, 0.88, '1 Double bed', 'Double', 1, 2, '1 Double bed', '[{"type":"Double","quantity":1,"adultCapacity":2}]', 1.5, 24, false, 'WiFi, Air conditioning, Private bathroom'),
+      (2, 'Superior', '26-30 m2 queen room with extra comfort', 2, 2, 4, 1.02, '1 Queen bed', 'Queen', 1, 2, '1 Queen bed', '[{"type":"Queen","quantity":1,"adultCapacity":2}]', 1.6, 28, false, 'WiFi, Breakfast, Air conditioning, Private bathroom'),
+      (3, 'Deluxe', '32-40 m2 room for couples or small groups', 3, 3, 3, 1.18, '1 King bed and 1 sofa bed', 'King', 2, 3, '1 King bed and 1 sofa bed', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Sofa Single","quantity":1,"adultCapacity":1}]', 1.8, 36, false, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony'),
+      (4, 'Suite', '44-55 m2 suite with separate living room', 4, 4, 2, 1.42, '1 King bed and 1 sofa double', 'King', 2, 4, '1 King bed and 1 sofa double', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Sofa Double","quantity":1,"adultCapacity":2}]', 1.8, 50, true, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony')
+  ) as t(room_rank, category, description, max_guests, max_adults, total_rooms, price_multiplier, beds, bed_type, bed_count, sleeping_capacity, bed_summary, bed_config, bed_width, size_m2, has_living_room, amenities)
+  where t.room_rank <= case when mod(length(c.name), 2) = 0 then 2 else 3 end
+) as room(room_rank, category, description, max_guests, max_adults, total_rooms, price_multiplier, beds, bed_type, bed_count, sleeping_capacity, bed_summary, bed_config, bed_width, size_m2, has_living_room, amenities)
+where room.max_guests <= c."maxCapacity";
+
+-- Safety net: every hotel must have room types even if an earlier seed section was edited.
+insert into public.room_types (
+  "_id", "cabinId", name, category, description, "maxGuests", "maxAdults", "totalRooms", "basePrice",
+  beds, "bedType", "bedCount", "sleepingCapacity", "bedSummary", "bedConfig",
+  "bedWidthM", "bedLengthM", size, "sizeM2", "hasLivingRoom",
+  amenities, image, "isActive", "createdAt", "updatedAt"
+)
+select
+  gen_random_uuid(),
+  c."_id",
+  c.name || ' Demo ' || room.category,
+  room.category,
+  room.description || ' at ' || c.name || '.',
+  room.max_guests,
+  room.max_adults,
+  room.total_rooms,
+  round((c."regularPrice" * room.price_multiplier)::numeric, 2),
+  room.beds,
+  room.bed_type,
+  room.bed_count,
+  room.sleeping_capacity,
+  room.bed_summary,
+  room.bed_config::jsonb,
+  room.bed_width,
+  2.0,
+  room.size_m2 || ' m2',
+  room.size_m2,
+  room.has_living_room,
+  room.amenities,
+  c.image,
+  true,
+  timestamp '2026-07-20 08:00:00',
+  timestamp '2026-07-20 08:00:00'
+from public.cabins c
+cross join lateral (
   values
-    ('Solo', '18-22 m2 compact room for one adult', 1, 1, 5, 0.72, '1 Single bed', 'Single', 1, 1, '1 Single bed', '[{"type":"Single","quantity":1,"adultCapacity":1}]', 1.0, 20, false, 'WiFi, Air conditioning, Private bathroom'),
-    ('Standard', '20-25 m2 room for quick stays', 2, 2, 7, 0.88, '1 Double bed', 'Double', 1, 2, '1 Double bed', '[{"type":"Double","quantity":1,"adultCapacity":2}]', 1.5, 24, false, 'WiFi, Air conditioning, Private bathroom'),
-    ('Twin', '24-30 m2 room with two separate beds', 2, 2, 5, 0.98, '2 Single beds', 'Single', 2, 2, '2 Single beds', '[{"type":"Single","quantity":2,"adultCapacity":1}]', 1.0, 28, false, 'WiFi, Breakfast, Air conditioning, Private bathroom'),
-    ('Superior', '28-34 m2 queen room with extra comfort', 2, 2, 5, 1.08, '1 Queen bed', 'Queen', 1, 2, '1 Queen bed', '[{"type":"Queen","quantity":1,"adultCapacity":2}]', 1.6, 32, false, 'WiFi, Breakfast, Air conditioning, Private bathroom'),
-    ('Deluxe', '34-45 m2 room for couples or small groups', 3, 3, 4, 1.24, '1 King bed and 1 sofa bed', 'King', 2, 3, '1 King bed and 1 sofa bed', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Sofa Single","quantity":1,"adultCapacity":1}]', 1.8, 38, false, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony'),
-    ('Family', '40-52 m2 family room with flexible bedding', 4, 4, 3, 1.46, '2 Double beds', 'Double', 2, 4, '2 Double beds', '[{"type":"Double","quantity":2,"adultCapacity":2}]', 1.5, 46, false, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony'),
-    ('Suite', '50 m2+ suite with separate living room', 5, 5, 2, 1.72, '1 King bed, 1 Double bed and 1 sofa bed', 'King', 3, 5, '1 King bed, 1 Double bed and 1 sofa bed', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Double","quantity":1,"adultCapacity":2},{"type":"Sofa Single","quantity":1,"adultCapacity":1}]', 1.8, 58, true, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony')
+    ('Standard', '20-24 m2 room for short stays', 2, 2, 4, 0.88, '1 Double bed', 'Double', 1, 2, '1 Double bed', '[{"type":"Double","quantity":1,"adultCapacity":2}]', 1.5, 24, false, 'WiFi, Air conditioning, Private bathroom'),
+    ('Superior', '26-30 m2 queen room with extra comfort', 2, 2, 3, 1.02, '1 Queen bed', 'Queen', 1, 2, '1 Queen bed', '[{"type":"Queen","quantity":1,"adultCapacity":2}]', 1.6, 28, false, 'WiFi, Breakfast, Air conditioning, Private bathroom'),
+    ('Deluxe', '32-40 m2 room with more comfort', 3, 3, 2, 1.18, '1 King bed and 1 sofa bed', 'King', 2, 3, '1 King bed and 1 sofa bed', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Sofa Single","quantity":1,"adultCapacity":1}]', 1.8, 36, false, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony')
 ) as room(category, description, max_guests, max_adults, total_rooms, price_multiplier, beds, bed_type, bed_count, sleeping_capacity, bed_summary, bed_config, bed_width, size_m2, has_living_room, amenities)
 where not exists (
   select 1
   from public.room_types rt
   where rt."cabinId" = c."_id"
-)
-  and (room.category not in ('Family', 'Suite') or c."maxCapacity" >= 4);
+);
 
 insert into public.room_inventory (
   "_id", "roomTypeId", date, "availableRooms", "priceOverride", "isClosed", "createdAt", "updatedAt"
@@ -418,6 +553,24 @@ insert into public.images ("_id", "cabinId", "imageUrl", name, "isCover", "creat
 select gen_random_uuid(), c."_id", c.image, 'Cover', true, timestamp '2026-07-20 08:00:00'
 from public.cabins c;
 
+insert into public.images ("_id", "cabinId", "imageUrl", name, "isCover", "createdAt")
+select gen_random_uuid(), c."_id", gallery."imageUrl", gallery.name, false, timestamp '2026-07-20 08:00:00'
+from public.cabins c
+cross join lateral (
+  values
+    ('Lobby', case
+      when c.location ilike '%Vung Tau%' or c.location ilike '%Da Nang%' then 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=1200&q=80'
+      when c.location ilike '%Da Lat%' then 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80'
+      else 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=1200&q=80'
+    end),
+    ('Room detail', case
+      when c.location ilike '%Vung Tau%' or c.location ilike '%Da Nang%' then 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80'
+      else 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80'
+    end),
+    ('Bathroom and amenities', 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=80'),
+    ('Restaurant', 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80')
+) as gallery(name, "imageUrl");
+
 insert into public.coupons (
   "_id", code, description, "discountType", "discountValue", "maxDiscountAmount",
   "minBookingAmount", "startDate", "endDate", "usageLimit", "usedCount", "isActive", "createdAt", "updatedAt"
@@ -435,8 +588,8 @@ insert into public.blocked_dates (
   "_id", "cabinId", "roomTypeId", "hostId", "startDate", "endDate", reason, "createdAt", "updatedAt"
 ) values
   ('88000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000003', date '2026-08-12', date '2026-08-15', 'Room refresh and deep cleaning', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('88000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000004', '30000000-0000-4000-8000-000000000013', '10000000-0000-4000-8000-000000000001', date '2026-08-20', date '2026-08-22', 'Suite maintenance', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('88000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000002', date '2026-07-25', date '2026-07-26', 'Demo booking: Standard Queen sold out for this night', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
+  ('88000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000004', '30000000-0000-4000-8000-000000000013', '10000000-0000-4000-8000-000000000002', date '2026-08-20', date '2026-08-22', 'Suite maintenance', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('88000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', date '2026-07-25', date '2026-07-26', 'Demo booking: Standard Queen sold out for this night', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
 insert into public.bookings (
   "_id", "userId", "cabinId", "roomTypeId", "numRooms", "startDate", "endDate", "numNights",
@@ -456,13 +609,110 @@ insert into public.payments (
   ('81000000-0000-4000-8000-000000000002', '80000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000102', 539.00, 'app', 'mock', 'TXN-0002', 'pending', null, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
   ('81000000-0000-4000-8000-000000000003', '80000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000103', 232.00, 'card', 'stripe', 'TXN-0003', 'paid', timestamp '2026-07-24 09:00:00', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
   ('81000000-0000-4000-8000-000000000004', '80000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000104', 414.00, 'card', 'stripe', 'TXN-0004', 'paid', timestamp '2026-07-08 09:00:00', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('81000000-0000-4000-8000-000000000005', '80000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000105', 84.00, 'card', 'stripe', 'TXN-0005', 'paid', timestamp '2026-07-25 09:00:00', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
+  ('81000000-0000-4000-8000-000000000005', '80000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000105', 84.00, 'card', 'stripe', 'TXN-0005', 'paid', timestamp '2026-07-25 09:00:00', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('81000000-0000-4000-8000-000000000006', '80000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', 214.00, 'bank_transfer', 'manual', 'TXN-0006', 'paid', timestamp '2026-07-18 14:00:00', timestamp '2026-07-18 13:50:00', timestamp '2026-07-20 08:00:00'),
+  ('81000000-0000-4000-8000-000000000007', '80000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000102', 289.00, 'card', 'stripe', 'TXN-0007', 'paid', timestamp '2026-07-19 10:30:00', timestamp '2026-07-19 10:25:00', timestamp '2026-07-20 08:00:00'),
+  ('81000000-0000-4000-8000-000000000008', '80000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000103', 156.00, 'app', 'mock', 'TXN-0008', 'pending', null, timestamp '2026-07-19 16:15:00', timestamp '2026-07-20 08:00:00');
+
+with manager_booking_source as (
+  select
+    c."hostId" as host_id,
+    rt."_id" as room_type_id,
+    rt."cabinId" as cabin_id,
+    rt."basePrice" as base_price,
+    rt."maxGuests" as max_guests,
+    row_number() over (partition by c."hostId" order by c.name, rt.category, rt.name) as rn
+  from public.room_types rt
+  join public.cabins c on c."_id" = rt."cabinId"
+  where c."hostId" in (
+    '10000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000002',
+    '10000000-0000-4000-8000-000000000003'
+  )
+    and rt."isActive" = true
+),
+generated_manager_bookings as (
+  select
+    gen_random_uuid() as booking_id,
+    case (rn % 5)
+      when 0 then '10000000-0000-4000-8000-000000000101'::uuid
+      when 1 then '10000000-0000-4000-8000-000000000102'::uuid
+      when 2 then '10000000-0000-4000-8000-000000000103'::uuid
+      when 3 then '10000000-0000-4000-8000-000000000104'::uuid
+      else '10000000-0000-4000-8000-000000000105'::uuid
+    end as user_id,
+    cabin_id,
+    room_type_id,
+    rn,
+    (date '2026-08-01' + (rn::integer % 24)) as start_date,
+    case when rn % 4 = 0 then 2 else 1 end as nights,
+    greatest(1, least(max_guests, 1 + (rn::integer % greatest(1, max_guests)))) as guests,
+    round((base_price * (case when rn % 4 = 0 then 2 else 1 end))::numeric, 2) as cabin_price,
+    case when rn % 3 = 0 then 24.00 else 0.00 end as extras_price,
+    case when rn % 5 = 0 then 'pending'
+         when rn % 7 = 0 then 'checked-out'
+         else 'confirmed'
+    end as booking_status,
+    case when rn % 3 = 0 then true else false end as has_breakfast,
+    case when rn % 5 = 0 then false else true end as is_paid
+  from manager_booking_source
+  where rn <= case when host_id = '10000000-0000-4000-8000-000000000001' then 32 else 20 end
+),
+inserted_manager_bookings as (
+  insert into public.bookings (
+    "_id", "userId", "cabinId", "roomTypeId", "numRooms", "startDate", "endDate", "numNights",
+    "numGuests", "cabinPrice", "extrasPrice", "totalPrice", status, "hasBreakfast", "isPaid",
+    observations, "couponId", "discountAmount", "createdAt", "updatedAt"
+  )
+  select
+    booking_id,
+    user_id,
+    cabin_id,
+    room_type_id,
+    1,
+    start_date,
+    start_date + nights,
+    nights,
+    guests,
+    cabin_price,
+    extras_price,
+    cabin_price + extras_price,
+    booking_status,
+    has_breakfast,
+    is_paid,
+    'Generated manager dashboard transaction seed',
+    null,
+    0.00,
+    timestamp '2026-07-20 09:00:00' + (rn || ' hours')::interval,
+    timestamp '2026-07-20 09:00:00'
+  from generated_manager_bookings
+  returning "_id", "userId", "totalPrice", "isPaid", "createdAt"
+)
+insert into public.payments (
+  "_id", "bookingId", "userId", amount, method, provider, "transactionId", status, "paidAt", "createdAt", "updatedAt"
+)
+select
+  gen_random_uuid(),
+  "_id",
+  "userId",
+  "totalPrice",
+  case when "isPaid" then 'card' else 'app' end,
+  case when "isPaid" then 'stripe' else 'mock' end,
+  case when "isPaid" then 'HCM-MGR-' || lpad(row_number() over (order by "createdAt")::text, 4, '0') else null end,
+  case when "isPaid" then 'paid' else 'pending' end,
+  case when "isPaid" then "createdAt" + interval '1 hour' else null end,
+  "createdAt",
+  timestamp '2026-07-20 09:00:00'
+from inserted_manager_bookings;
 
 insert into public.rates (
   "_id", "userId", "cabinId", "bookingId", rating, comment, "createdAt", "updatedAt"
 ) values
   ('82000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000104', '20000000-0000-4000-8000-000000000004', '80000000-0000-4000-8000-000000000004', 5, 'Clean deluxe room and easy beach access.', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('82000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000103', '20000000-0000-4000-8000-000000000003', '80000000-0000-4000-8000-000000000003', 4, 'Good location and quick check-in.', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
+  ('82000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000103', '20000000-0000-4000-8000-000000000003', '80000000-0000-4000-8000-000000000003', 4, 'Good location and quick check-in.', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('82000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000001', '80000000-0000-4000-8000-000000000001', 5, 'Early stay was smooth, room looked clean, and check-in was quick.', timestamp '2026-07-18 12:00:00', timestamp '2026-07-20 08:00:00'),
+  ('82000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000102', '20000000-0000-4000-8000-000000000002', '80000000-0000-4000-8000-000000000002', 5, 'Nice sea-view room with enough space for the family.', timestamp '2026-07-19 09:00:00', timestamp '2026-07-20 08:00:00'),
+  ('82000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000105', '20000000-0000-4000-8000-000000000005', '80000000-0000-4000-8000-000000000005', 4, 'Quiet room and easy to manage on the admin side.', timestamp '2026-07-19 18:00:00', timestamp '2026-07-20 08:00:00');
 
 with review_targets as (
   select
@@ -530,18 +780,59 @@ insert into public.wishlists ("_id", "userId", "cabinId", "createdAt") values
 insert into public.conversations (
   "_id", "guestId", "hostId", "cabinId", "bookingId", "createdAt", "updatedAt"
 ) values
-  ('84000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', '10000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', '80000000-0000-4000-8000-000000000001', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
+  ('84000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', '10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', '80000000-0000-4000-8000-000000000001', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
 insert into public.messages (
   "_id", "conversationId", "senderId", message, "isRead", "createdAt"
 ) values
   ('85000000-0000-4000-8000-000000000001', '84000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', 'Hi, is the Deluxe Balcony room available for August 4?', true, timestamp '2026-07-20 08:00:00'),
-  ('85000000-0000-4000-8000-000000000002', '84000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000002', 'Yes, the room is available and breakfast can be added.', false, timestamp '2026-07-20 08:05:00');
+  ('85000000-0000-4000-8000-000000000002', '84000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'Yes, the room is available and breakfast can be added.', false, timestamp '2026-07-20 08:05:00');
+
+with generated_conversation_source as (
+  select
+    b."_id" as booking_id,
+    b."userId" as guest_id,
+    c."hostId" as host_id,
+    c."_id" as cabin_id,
+    row_number() over (partition by c."hostId" order by b."createdAt", c.name) as rn
+  from public.bookings b
+  join public.cabins c on c."_id" = b."cabinId"
+  where b."_id" <> '80000000-0000-4000-8000-000000000001'
+    and c."hostId" in (
+      '10000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000002',
+      '10000000-0000-4000-8000-000000000003'
+    )
+),
+inserted_conversations as (
+  insert into public.conversations (
+    "_id", "guestId", "hostId", "cabinId", "bookingId", "createdAt", "updatedAt"
+  )
+  select
+    gen_random_uuid(),
+    guest_id,
+    host_id,
+    cabin_id,
+    booking_id,
+    timestamp '2026-07-20 10:00:00' + (rn || ' minutes')::interval,
+    timestamp '2026-07-20 10:00:00' + (rn || ' minutes')::interval
+  from generated_conversation_source
+  where rn <= 6
+  returning "_id", "guestId", "hostId", "createdAt"
+)
+insert into public.messages (
+  "_id", "conversationId", "senderId", message, "isRead", "createdAt"
+)
+select gen_random_uuid(), "_id", "guestId", 'Hello, I want to confirm room details and check-in time for my booking.', true, "createdAt" + interval '1 minute'
+from inserted_conversations
+union all
+select gen_random_uuid(), "_id", "hostId", 'Thanks for contacting us. Your room type and check-in note are ready in the hotel system.', false, "createdAt" + interval '4 minutes'
+from inserted_conversations;
 
 insert into public.notifications (
   "_id", title, "userId", "isRead", data, "createdAt", type, message
 ) values
-  ('86000000-0000-4000-8000-000000000001', 'Booking pending', '10000000-0000-4000-8000-000000000002', false, '{"bookingId":"80000000-0000-4000-8000-000000000001","status":"pending"}'::jsonb, timestamp '2026-07-20 08:00:00', 'booking', 'A guest booked Saigon Deluxe Balcony.'),
+  ('86000000-0000-4000-8000-000000000001', 'Booking pending', '10000000-0000-4000-8000-000000000001', false, '{"bookingId":"80000000-0000-4000-8000-000000000001","status":"pending"}'::jsonb, timestamp '2026-07-20 08:00:00', 'booking', 'A guest booked Saigon Deluxe Balcony.'),
   ('86000000-0000-4000-8000-000000000002', 'Payment reminder', '10000000-0000-4000-8000-000000000102', false, '{"bookingId":"80000000-0000-4000-8000-000000000002","status":"confirmed"}'::jsonb, timestamp '2026-07-20 08:00:00', 'payment', 'Please finish payment for your Vung Tau suite.');
 
 insert into public.otps ("_id", email, otp, "expiresAt", "userId", "createdAt") values
@@ -549,5 +840,27 @@ insert into public.otps ("_id", email, otp, "expiresAt", "userId", "createdAt") 
   ('87000000-0000-4000-8000-000000000002', 'huygialai2005@gmail.com', '119844', timestamp '2026-07-20 08:20:00', '10000000-0000-4000-8000-000000000001', timestamp '2026-07-20 08:00:00'),
   ('87000000-0000-4000-8000-000000000003', 'cuong72005@gmail.com', '720050', timestamp '2026-07-20 08:20:00', '10000000-0000-4000-8000-000000000002', timestamp '2026-07-20 08:00:00'),
   ('87000000-0000-4000-8000-000000000004', 'trantuankha030205@gmail.com', '302050', timestamp '2026-07-20 08:20:00', '10000000-0000-4000-8000-000000000003', timestamp '2026-07-20 08:00:00');
+
+do $$
+declare
+  hotel_count integer;
+  room_type_count integer;
+  missing_room_hotels integer;
+begin
+  select count(*) into hotel_count from public.cabins;
+  select count(*) into room_type_count from public.room_types;
+  select count(*) into missing_room_hotels
+  from public.cabins c
+  where not exists (
+    select 1
+    from public.room_types rt
+    where rt."cabinId" = c."_id"
+  );
+
+  if hotel_count = 0 or room_type_count = 0 or missing_room_hotels > 0 then
+    raise exception 'Seed validation failed: hotels=%, room_types=%, hotels_without_rooms=%',
+      hotel_count, room_type_count, missing_room_hotels;
+  end if;
+end $$;
 
 commit;

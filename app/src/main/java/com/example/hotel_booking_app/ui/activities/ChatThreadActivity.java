@@ -14,12 +14,18 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.hotel_booking_app.R;
+import com.example.hotel_booking_app.data.models.Booking;
+import com.example.hotel_booking_app.data.models.Cabin;
 import com.example.hotel_booking_app.data.models.Conversation;
 import com.example.hotel_booking_app.data.models.Message;
+import com.example.hotel_booking_app.data.models.RoomType;
 import com.example.hotel_booking_app.data.models.User;
 import com.example.hotel_booking_app.data.remote.SupabaseCallback;
 import com.example.hotel_booking_app.services.AuthService;
+import com.example.hotel_booking_app.services.BookingService;
+import com.example.hotel_booking_app.services.CabinService;
 import com.example.hotel_booking_app.services.ChatService;
+import com.example.hotel_booking_app.services.RoomTypeService;
 import com.example.hotel_booking_app.utils.AppConstants;
 import com.example.hotel_booking_app.utils.SessionManager;
 
@@ -29,11 +35,16 @@ public class ChatThreadActivity extends AppCompatActivity {
     public static final String EXTRA_HOST_ID = "extra_host_id";
     public static final String EXTRA_CONVERSATION_ID = "extra_conversation_id";
 
+    private TextView titleTextView;
     private TextView statusTextView;
+    private TextView contextTextView;
     private LinearLayout messagesContainer;
     private ScrollView messagesScroll;
     private EditText messageEditText;
     private ChatService chatService;
+    private CabinService cabinService;
+    private BookingService bookingService;
+    private RoomTypeService roomTypeService;
     private SessionManager sessionManager;
     private String conversationId;
 
@@ -43,8 +54,13 @@ public class ChatThreadActivity extends AppCompatActivity {
         setContentView(R.layout.activity_chat_thread);
 
         chatService = new ChatService();
+        cabinService = new CabinService();
+        bookingService = new BookingService();
+        roomTypeService = new RoomTypeService();
         sessionManager = new SessionManager(this);
+        titleTextView = findViewById(R.id.text_title);
         statusTextView = findViewById(R.id.text_status);
+        contextTextView = findViewById(R.id.text_conversation_context);
         messagesContainer = findViewById(R.id.container_messages);
         messagesScroll = findViewById(R.id.scroll_messages);
         messageEditText = findViewById(R.id.edit_message);
@@ -87,6 +103,7 @@ public class ChatThreadActivity extends AppCompatActivity {
             @Override
             public void onSuccess(Conversation conversation) {
                 conversationId = conversation.getId();
+                renderConversationContext(conversation);
                 loadMessages();
             }
 
@@ -99,6 +116,7 @@ public class ChatThreadActivity extends AppCompatActivity {
 
     private void loadMessages() {
         statusTextView.setText("Đang tải tin nhắn...");
+        loadConversationContext();
         chatService.getMessages(conversationId, new SupabaseCallback<List<Message>>() {
             @Override
             public void onSuccess(List<Message> messages) {
@@ -109,6 +127,105 @@ public class ChatThreadActivity extends AppCompatActivity {
             @Override
             public void onError(String message) {
                 showChatError(message);
+            }
+        });
+    }
+
+    private void loadConversationContext() {
+        if (conversationId == null) {
+            return;
+        }
+        chatService.getConversationById(conversationId, new SupabaseCallback<Conversation>() {
+            @Override
+            public void onSuccess(Conversation conversation) {
+                renderConversationContext(conversation);
+            }
+
+            @Override
+            public void onError(String message) {
+                contextTextView.setText("Chưa tải được thông tin hotel và room cho cuộc trò chuyện này.");
+            }
+        });
+    }
+
+    private void renderConversationContext(Conversation conversation) {
+        if (conversation == null) {
+            return;
+        }
+        String guestName = userDisplayName(conversation.getGuestId());
+        titleTextView.setText(sessionManager.isHostOrAdmin() ? guestName : "Tin nhắn khách sạn");
+        contextTextView.setText("Đang tải hotel và room...");
+        if (conversation.getCabinId() == null || conversation.getCabinId().trim().isEmpty()) {
+            contextTextView.setText(guestName + " · hỏi thông tin chung · chưa booking");
+            return;
+        }
+        cabinService.getCabinById(conversation.getCabinId(), new SupabaseCallback<Cabin>() {
+            @Override
+            public void onSuccess(Cabin cabin) {
+                if (!sessionManager.isHostOrAdmin()) {
+                    titleTextView.setText(cabin.getName());
+                }
+                String base = guestName + " · " + cabin.getName();
+                if (hasText(conversation.getBookingId())) {
+                    loadBookedRoomContext(conversation, base);
+                } else {
+                    loadSuggestedRoomContext(cabin, base);
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                contextTextView.setText(guestName + " · chưa tải được hotel · "
+                        + (hasText(conversation.getBookingId()) ? "đã booking" : "chưa booking"));
+            }
+        });
+    }
+
+    private void loadBookedRoomContext(Conversation conversation, String base) {
+        bookingService.getBookingById(conversation.getBookingId(), new SupabaseCallback<Booking>() {
+            @Override
+            public void onSuccess(Booking booking) {
+                String bookingText = " · " + booking.getStartDate() + " đến " + booking.getEndDate()
+                        + " · mã " + shortId(conversation.getBookingId());
+                if (!hasText(booking.getRoomTypeId())) {
+                    contextTextView.setText(base + " · room chưa gắn loại phòng" + bookingText);
+                    return;
+                }
+                roomTypeService.getRoomTypeById(booking.getRoomTypeId(), new SupabaseCallback<RoomType>() {
+                    @Override
+                    public void onSuccess(RoomType roomType) {
+                        contextTextView.setText(base + " · " + roomType.displayName() + bookingText);
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        contextTextView.setText(base + " · đã booking" + bookingText);
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+                contextTextView.setText(base + " · đã booking · mã " + shortId(conversation.getBookingId()));
+            }
+        });
+    }
+
+    private void loadSuggestedRoomContext(Cabin cabin, String base) {
+        roomTypeService.getRoomTypesForCabin(cabin.getId(), new SupabaseCallback<List<RoomType>>() {
+            @Override
+            public void onSuccess(List<RoomType> roomTypes) {
+                if (roomTypes == null || roomTypes.isEmpty()) {
+                    contextTextView.setText(base + " · đang hỏi phòng · chưa booking");
+                    return;
+                }
+                RoomType roomType = roomTypes.get(0);
+                contextTextView.setText(base + " · hỏi trước đặt phòng · gợi ý " + roomType.displayName());
+            }
+
+            @Override
+            public void onError(String message) {
+                contextTextView.setText(base + " · hỏi trước đặt phòng · chưa booking");
             }
         });
     }
@@ -244,6 +361,39 @@ public class ChatThreadActivity extends AppCompatActivity {
 
     private void scrollToBottom() {
         messagesScroll.post(() -> messagesScroll.fullScroll(ScrollView.FOCUS_DOWN));
+    }
+
+    private String userDisplayName(String userId) {
+        if (userId == null) {
+            return "Khách lưu trú";
+        }
+        if (userId.endsWith("000000000101")) {
+            return "Alice Nguyen";
+        }
+        if (userId.endsWith("000000000102")) {
+            return "Bao Tran";
+        }
+        if (userId.endsWith("000000000103")) {
+            return "Chi Pham";
+        }
+        if (userId.endsWith("000000000104")) {
+            return "David Le";
+        }
+        if (userId.endsWith("000000000105")) {
+            return "Eve Hoang";
+        }
+        return "Khách lưu trú";
+    }
+
+    private String shortId(String value) {
+        if (value == null || value.length() < 8) {
+            return "-";
+        }
+        return value.substring(value.length() - 8);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     private int dp(int value) {

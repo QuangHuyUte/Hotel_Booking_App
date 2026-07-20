@@ -221,6 +221,10 @@ public class BookingService {
             callback.onError("Số khách không phù hợp với loại phòng này.");
             return;
         }
+        if (!roomType.fitsRoomSizeForGuests(guests)) {
+            callback.onError("Diện tích phòng chưa đủ cho số khách này.");
+            return;
+        }
 
         loadPolicy(cabin.getId(), new SupabaseCallback<BookingPolicy>() {
             @Override
@@ -773,10 +777,10 @@ public class BookingService {
 
     private String buildAvailabilitySummary(List<UnavailableRange> ranges) {
         if (ranges.isEmpty()) {
-            return "Lịch đang trống: chỗ nghỉ này chưa có đặt phòng sắp tới.";
+            return "Lịch còn trống: chỗ nghỉ này chưa có lượt đặt phòng sắp tới.";
         }
 
-        StringBuilder builder = new StringBuilder("Lịch chưa trống:");
+        StringBuilder builder = new StringBuilder("Lịch đã được đặt:");
         int limit = Math.min(ranges.size(), 4);
         for (int i = 0; i < limit; i++) {
             UnavailableRange range = ranges.get(i);
@@ -790,7 +794,7 @@ public class BookingService {
         }
 
         LocalDate availableDate = findNextAvailableDate(ranges);
-        builder.append("\nNgày gần nhất còn trống từ: ").append(availableDate);
+        builder.append("\nNgày gần nhất còn trống: ").append(availableDate);
         return builder.toString();
     }
 
@@ -839,8 +843,24 @@ public class BookingService {
             return new UnavailableRange(
                     LocalDate.parse(booking.getStartDate()),
                     LocalDate.parse(booking.getEndDate()),
-                    "booking " + booking.getStatus()
+                    bookingStatusLabel(booking.getStatus())
             );
+        }
+
+        private static String bookingStatusLabel(String status) {
+            if (AppConstants.BOOKING_PENDING.equals(status)) {
+                return "Đang chờ xác nhận";
+            }
+            if (AppConstants.BOOKING_CONFIRMED.equals(status)) {
+                return "Đã có đặt phòng";
+            }
+            if ("checked-in".equals(status)) {
+                return "Khách đang lưu trú";
+            }
+            if ("checked-out".equals(status)) {
+                return "Khách đã trả phòng";
+            }
+            return "Đã được giữ lịch";
         }
 
         static UnavailableRange fromBlockedDate(BlockedDate blockedDate) {

@@ -48,4 +48,12 @@ public class Conversation {
     public String getBookingId() {
         return bookingId;
     }
+
+    public String getCreatedAt() {
+        return createdAt;
+    }
+
+    public String getUpdatedAt() {
+        return updatedAt;
+    }
 }

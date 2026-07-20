@@ -47,6 +47,7 @@ import com.example.hotel_booking_app.utils.SessionManager;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -81,6 +82,10 @@ public class HotelDetailActivity extends AppCompatActivity {
     private LinearLayout bookingPanel;
     private FrameLayout mapPreviewContainer;
     private ReviewAdapter reviewAdapter;
+    private RecyclerView reviewsRecyclerView;
+    private Button prevReviewsButton;
+    private Button nextReviewsButton;
+    private TextView reviewPageTextView;
     private CabinService cabinService;
     private WishlistService wishlistService;
     private BookingService bookingService;
@@ -93,6 +98,9 @@ public class HotelDetailActivity extends AppCompatActivity {
     private boolean isFavorite;
     private String selectedCheckIn = "";
     private String selectedCheckOut = "";
+    private final List<Rate> allReviews = new ArrayList<>();
+    private int reviewPage = 0;
+    private static final int REVIEWS_PAGE_SIZE = 10;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -136,7 +144,10 @@ public class HotelDetailActivity extends AppCompatActivity {
         mapPreviewContainer = findViewById(R.id.map_preview);
         Button backButton = findViewById(R.id.button_back);
         bookButton = findViewById(R.id.button_book);
-        RecyclerView reviewsRecyclerView = findViewById(R.id.recycler_reviews);
+        reviewsRecyclerView = findViewById(R.id.recycler_reviews);
+        prevReviewsButton = findViewById(R.id.button_reviews_prev);
+        nextReviewsButton = findViewById(R.id.button_reviews_next);
+        reviewPageTextView = findViewById(R.id.text_reviews_page);
 
         reviewAdapter = new ReviewAdapter();
         reviewsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -156,6 +167,19 @@ public class HotelDetailActivity extends AppCompatActivity {
         adminDeleteButton.setOnClickListener(view -> deleteCabin());
         checkInTextView.setOnClickListener(view -> showDatePicker(true));
         checkOutTextView.setOnClickListener(view -> showDatePicker(false));
+        prevReviewsButton.setOnClickListener(view -> {
+            if (reviewPage > 0) {
+                reviewPage--;
+                renderReviewPage(true);
+            }
+        });
+        nextReviewsButton.setOnClickListener(view -> {
+            int maxPage = Math.max(0, (allReviews.size() - 1) / REVIEWS_PAGE_SIZE);
+            if (reviewPage < maxPage) {
+                reviewPage++;
+                renderReviewPage(true);
+            }
+        });
 
         initDefaultDates();
         renderRoleActions();
@@ -687,15 +711,16 @@ public class HotelDetailActivity extends AppCompatActivity {
                 + "<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>"
                 + "<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>"
                 + "<style>html,body,#map{height:100%;margin:0;background:#d8e4ed;}"
-                + ".leaflet-control-container{display:none}.pin{position:relative;background:#064ea8;color:#fff;border:2px solid #fff;border-radius:5px;"
-                + "padding:6px 10px;font:800 15px Arial;box-shadow:0 2px 8px rgba(0,0,0,.35);white-space:nowrap}"
+                + ".leaflet-control-container{display:none}.pin{position:relative;display:inline-flex;align-items:center;justify-content:center;"
+                + "min-width:76px;height:30px;background:#064ea8;color:#fff;border:2px solid #fff;border-radius:8px;"
+                + "padding:0 12px;font:800 14px Arial;box-sizing:border-box;box-shadow:0 4px 12px rgba(0,0,0,.32);white-space:nowrap}"
                 + ".pin:after{content:'';position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);"
                 + "border-left:7px solid transparent;border-right:7px solid transparent;border-top:8px solid #fff}</style>"
                 + "</head><body><div id='map'></div><script>"
                 + "var map=L.map('map',{zoomControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,touchZoom:false}).setView(["
                 + lat + "," + lng + "],15);"
                 + "L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:20}).addTo(map);"
-                + "L.marker([" + lat + "," + lng + "],{icon:L.divIcon({className:'',html:'<div class=\"pin\">" + js(price) + "</div>',iconAnchor:[34,34]})}).addTo(map);"
+                + "L.marker([" + lat + "," + lng + "],{icon:L.divIcon({className:'',html:'<div class=\"pin\">" + js(price) + "</div>',iconSize:[92,38],iconAnchor:[46,38]})}).addTo(map);"
                 + "</script></body></html>";
     }
 
@@ -703,16 +728,22 @@ public class HotelDetailActivity extends AppCompatActivity {
         cabinService.getRates(cabinId, new SupabaseCallback<List<Rate>>() {
             @Override
             public void onSuccess(List<Rate> rates) {
-                reviewAdapter.submitList(rates);
+                allReviews.clear();
+                if (rates != null) {
+                    allReviews.addAll(rates);
+                }
+                allReviews.sort((left, right) -> safe(right.getCreatedAt(), "").compareTo(safe(left.getCreatedAt(), "")));
+                reviewPage = 0;
+                renderReviewPage(false);
                 double score = currentCabin == null ? 0 : currentCabin.getReviewScore();
-                if (rates != null && !rates.isEmpty()) {
+                if (!allReviews.isEmpty()) {
                     int total = 0;
-                    for (Rate rate : rates) {
+                    for (Rate rate : allReviews) {
                         total += rate.getRating();
                     }
-                    score = Math.round(((total / (double) rates.size()) * 2.0) * 10.0) / 10.0;
+                    score = Math.round(((total / (double) allReviews.size()) * 2.0) * 10.0) / 10.0;
                 }
-                int count = rates == null ? 0 : rates.size();
+                int count = allReviews.size();
                 if (ratingMetaTextView != null) {
                     ratingMetaTextView.setText(ratingLabel(currentCabin, score, count));
                 }
@@ -724,6 +755,35 @@ public class HotelDetailActivity extends AppCompatActivity {
                 statusTextView.setText("Không tải được đánh giá: " + message);
             }
         });
+    }
+
+    private void renderReviewPage(boolean animated) {
+        int total = allReviews.size();
+        if (total == 0) {
+            reviewAdapter.submitList(new ArrayList<>());
+            reviewPageTextView.setText("Chưa có đánh giá");
+            prevReviewsButton.setEnabled(false);
+            nextReviewsButton.setEnabled(false);
+            prevReviewsButton.setAlpha(0.45f);
+            nextReviewsButton.setAlpha(0.45f);
+            return;
+        }
+        int maxPage = Math.max(0, (total - 1) / REVIEWS_PAGE_SIZE);
+        reviewPage = Math.max(0, Math.min(reviewPage, maxPage));
+        int start = reviewPage * REVIEWS_PAGE_SIZE;
+        int end = Math.min(total, start + REVIEWS_PAGE_SIZE);
+        reviewAdapter.submitList(new ArrayList<>(allReviews.subList(start, end)));
+        reviewPageTextView.setText("Trang " + (reviewPage + 1) + "/" + (maxPage + 1)
+                + " · " + (start + 1) + "-" + end + "/" + total + " đánh giá");
+        prevReviewsButton.setEnabled(reviewPage > 0);
+        nextReviewsButton.setEnabled(reviewPage < maxPage);
+        prevReviewsButton.setAlpha(reviewPage > 0 ? 1f : 0.45f);
+        nextReviewsButton.setAlpha(reviewPage < maxPage ? 1f : 0.45f);
+        if (animated && reviewsRecyclerView != null) {
+            reviewsRecyclerView.setAlpha(0.35f);
+            reviewsRecyclerView.setTranslationY(12f);
+            reviewsRecyclerView.animate().alpha(1f).translationY(0f).setDuration(180).start();
+        }
     }
 
     private void loadAvailability() {

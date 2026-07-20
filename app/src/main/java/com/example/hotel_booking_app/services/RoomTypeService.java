@@ -28,19 +28,17 @@ public class RoomTypeService {
         supabaseClient.getList(AppConstants.TABLE_ROOM_TYPES, "*", null, "basePrice.asc", filters, RoomType[].class, new SupabaseCallback<List<RoomType>>() {
             @Override
             public void onSuccess(List<RoomType> roomTypes) {
-                List<RoomType> active = new ArrayList<>();
-                for (RoomType roomType : roomTypes) {
-                    if (roomType.isActive()) {
-                        active.add(roomType);
-                    }
+                List<RoomType> active = activeRoomTypesForCabin(roomTypes, cabinId);
+                if (active.isEmpty()) {
+                    loadRoomTypesForCabinFromFullTable(cabinId, callback);
+                    return;
                 }
-                active.sort(Comparator.comparingDouble(RoomType::getBasePrice));
                 callback.onSuccess(active);
             }
 
             @Override
             public void onError(String message) {
-                callback.onError(message);
+                loadRoomTypesForCabinFromFullTable(cabinId, callback);
             }
         });
     }
@@ -72,6 +70,10 @@ public class RoomTypeService {
                 cabinIds, RoomType[].class, new SupabaseCallback<List<RoomType>>() {
                     @Override
                     public void onSuccess(List<RoomType> roomTypes) {
+                        if ((roomTypes == null || roomTypes.isEmpty()) && !cabins.isEmpty()) {
+                            attachRoomTypesOneByOne(cabins, callback);
+                            return;
+                        }
                         Map<String, List<RoomType>> byCabinId = new HashMap<>();
                         for (RoomType roomType : roomTypes) {
                             if (!roomType.isActive()) {
@@ -88,6 +90,7 @@ public class RoomTypeService {
                             }
                             grouped.add(roomType);
                         }
+                        int assignedCount = 0;
                         for (Cabin cabin : cabins) {
                             List<RoomType> grouped = byCabinId.get(cabin.getId());
                             if (grouped == null) {
@@ -95,16 +98,70 @@ public class RoomTypeService {
                             } else {
                                 grouped.sort(Comparator.comparingDouble(RoomType::getBasePrice));
                             }
+                            assignedCount += grouped.size();
                             cabin.setRoomTypes(grouped);
+                        }
+                        if (assignedCount == 0 && !cabins.isEmpty()) {
+                            attachRoomTypesFromFullTable(cabins, callback);
+                            return;
                         }
                         callback.onSuccess(cabins);
                     }
 
                     @Override
                     public void onError(String message) {
-                        attachRoomTypesOneByOne(cabins, callback);
+                        attachRoomTypesFromFullTable(cabins, callback);
                     }
                 });
+    }
+
+    private void loadRoomTypesForCabinFromFullTable(String cabinId, SupabaseCallback<List<RoomType>> callback) {
+        supabaseClient.getList(AppConstants.TABLE_ROOM_TYPES, "*", null, "basePrice.asc", null, RoomType[].class, new SupabaseCallback<List<RoomType>>() {
+            @Override
+            public void onSuccess(List<RoomType> roomTypes) {
+                callback.onSuccess(activeRoomTypesForCabin(roomTypes, cabinId));
+            }
+
+            @Override
+            public void onError(String message) {
+                callback.onError(message);
+            }
+        });
+    }
+
+    private void attachRoomTypesFromFullTable(List<Cabin> cabins, SupabaseCallback<List<Cabin>> callback) {
+        supabaseClient.getList(AppConstants.TABLE_ROOM_TYPES, "*", null, "basePrice.asc", null, RoomType[].class, new SupabaseCallback<List<RoomType>>() {
+            @Override
+            public void onSuccess(List<RoomType> roomTypes) {
+                Map<String, List<RoomType>> byCabinId = new HashMap<>();
+                for (Cabin cabin : cabins) {
+                    byCabinId.put(cabin.getId(), new ArrayList<>());
+                }
+                for (RoomType roomType : roomTypes) {
+                    if (roomType == null || !roomType.isActive()) {
+                        continue;
+                    }
+                    List<RoomType> grouped = byCabinId.get(roomType.getCabinId());
+                    if (grouped != null) {
+                        grouped.add(roomType);
+                    }
+                }
+                for (Cabin cabin : cabins) {
+                    List<RoomType> grouped = byCabinId.get(cabin.getId());
+                    if (grouped == null) {
+                        grouped = new ArrayList<>();
+                    }
+                    grouped.sort(Comparator.comparingDouble(RoomType::getBasePrice));
+                    cabin.setRoomTypes(grouped);
+                }
+                callback.onSuccess(cabins);
+            }
+
+            @Override
+            public void onError(String message) {
+                attachRoomTypesOneByOne(cabins, callback);
+            }
+        });
     }
 
     private void attachRoomTypesOneByOne(List<Cabin> cabins, SupabaseCallback<List<Cabin>> callback) {
@@ -161,6 +218,9 @@ public class RoomTypeService {
                 && (roomType.effectiveMaxAdults() < guests || roomType.effectiveSleepingCapacity() < guests)) {
             return false;
         }
+        if (guests > 0 && !roomType.fitsRoomSizeForGuests(guests)) {
+            return false;
+        }
         return requestedBeds <= 0 || roomType.effectiveBedCount() >= requestedBeds;
     }
 
@@ -185,6 +245,23 @@ public class RoomTypeService {
         if (completed[0] >= cabins.size()) {
             callback.onSuccess(cabins);
         }
+    }
+
+    private List<RoomType> activeRoomTypesForCabin(List<RoomType> roomTypes, String cabinId) {
+        List<RoomType> active = new ArrayList<>();
+        if (roomTypes == null) {
+            return active;
+        }
+        for (RoomType roomType : roomTypes) {
+            if (roomType == null || !roomType.isActive()) {
+                continue;
+            }
+            if (cabinId == null || cabinId.equals(roomType.getCabinId())) {
+                active.add(roomType);
+            }
+        }
+        active.sort(Comparator.comparingDouble(RoomType::getBasePrice));
+        return active;
     }
 
     private boolean matchesSizeOrCategory(RoomType roomType, String query) {

@@ -2073,8 +2073,9 @@ public class HotelSearchActivity extends AppCompatActivity {
         availabilityRequestVersion++;
         int requestVersion = availabilityRequestVersion;
         if (!criteria.hasDateRange()) {
-            adapter.submitList(result);
-            statusTextView.setText(formatCount(result.size()) + " chỗ nghỉ phù hợp.");
+            List<Cabin> roomResults = expandRoomResults(result, criteria);
+            adapter.submitList(roomResults);
+            statusTextView.setText(formatCount(roomResults.size()) + " loại phòng phù hợp.");
             return;
         }
         if (!criteria.hasValidDateRange()) {
@@ -2145,8 +2146,7 @@ public class HotelSearchActivity extends AppCompatActivity {
                     return;
                 }
                 if (Boolean.TRUE.equals(available)) {
-                    cabin.setMatchedRoomType(roomType);
-                    availableCabins.add(cabin);
+                    availableCabins.add(cabin.copyForMatchedRoom(roomType));
                     completeAvailabilityCheck(expectedCount, completed, availableCabins);
                     return;
                 }
@@ -2170,7 +2170,30 @@ public class HotelSearchActivity extends AppCompatActivity {
         }
         sortCabins(availableCabins);
         adapter.submitList(availableCabins);
-        statusTextView.setText(formatCount(availableCabins.size()) + " chỗ nghỉ còn phòng cho ngày đã chọn.");
+        statusTextView.setText(formatCount(availableCabins.size()) + " loại phòng còn trống cho ngày đã chọn.");
+    }
+
+    private List<Cabin> expandRoomResults(List<Cabin> cabins, SearchCriteria criteria) {
+        List<Cabin> roomResults = new ArrayList<>();
+        for (Cabin cabin : cabins) {
+            List<RoomType> candidates = matchingRoomTypeCandidates(cabin, criteria);
+            if (candidates.isEmpty()) {
+                roomResults.add(cabin);
+                continue;
+            }
+            int added = 0;
+            for (RoomType roomType : candidates) {
+                roomResults.add(cabin.copyForMatchedRoom(roomType));
+                added++;
+                if (added >= 4) {
+                    break;
+                }
+            }
+        }
+        roomResults.sort(Comparator
+                .comparing((Cabin cabin) -> safe(cabin.getName()), String.CASE_INSENSITIVE_ORDER)
+                .thenComparingDouble(Cabin::displayPrice));
+        return roomResults;
     }
 
     private SearchCriteria parseSearch(String input) {

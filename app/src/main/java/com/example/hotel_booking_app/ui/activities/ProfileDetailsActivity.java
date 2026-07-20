@@ -2,6 +2,7 @@ package com.example.hotel_booking_app.ui.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -12,6 +13,7 @@ import com.example.hotel_booking_app.R;
 import com.example.hotel_booking_app.data.models.User;
 import com.example.hotel_booking_app.data.remote.SupabaseCallback;
 import com.example.hotel_booking_app.services.AuthService;
+import com.example.hotel_booking_app.ui.helpers.ManagerNavigationHelper;
 import com.example.hotel_booking_app.utils.SessionManager;
 
 public class ProfileDetailsActivity extends AppCompatActivity {
@@ -51,6 +53,8 @@ public class ProfileDetailsActivity extends AppCompatActivity {
         Button updateButton = findViewById(R.id.button_save_profile);
         Button passwordButton = findViewById(R.id.button_change_password);
 
+        backButton.setVisibility(View.GONE);
+        backBottomButton.setVisibility(View.GONE);
         backButton.setOnClickListener(view -> finish());
         backBottomButton.setOnClickListener(view -> finish());
         updateButton.setOnClickListener(view -> startActivity(new Intent(this, EditProfileActivity.class)));
@@ -59,6 +63,9 @@ public class ProfileDetailsActivity extends AppCompatActivity {
             intent.putExtra("show_password", true);
             startActivity(intent);
         });
+        if (sessionManager.isHostOrAdmin()) {
+            ManagerNavigationHelper.bind(this, ManagerNavigationHelper.TAB_PROFILE);
+        }
         loadProfile();
     }
 

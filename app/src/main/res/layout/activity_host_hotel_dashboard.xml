@@ -4,139 +4,244 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_screen_serein">
 
-    <LinearLayout
+    <ScrollView
+        android:id="@+id/scroll_manager_dashboard"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:paddingStart="16dp"
-        android:paddingTop="16dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="110dp">
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:paddingBottom="96dp">
 
-        <Button
-            android:id="@+id/button_back"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_back_circle"
-            android:drawableTop="@drawable/ic_back_chevron"
-            android:elevation="4dp"
-            android:minWidth="0dp"
-            android:minHeight="0dp"
-            android:padding="0dp"
-            android:text=""
-            android:textAllCaps="false"
-            android:textColor="@color/black"
-            android:textSize="24sp" />
-
-        <TextView
-            android:id="@+id/text_dashboard_title"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center"
-            android:text="Quản lý khách sạn"
-            android:textColor="@color/primary"
-            android:textSize="30sp"
-            android:textStyle="bold" />
-
-        <View
-            android:layout_width="110dp"
-            android:layout_height="3dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="8dp"
-            android:background="@color/primary" />
-
-        <TextView
-            android:id="@+id/text_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:background="@drawable/bg_status"
-            android:padding="10dp"
-            android:textColor="@color/muted"
-            android:textSize="14sp" />
-
-        <Button
-            android:id="@+id/button_new_cabin"
-            android:layout_width="220dp"
-            android:layout_height="52dp"
-            android:layout_marginTop="14dp"
-            android:background="@drawable/bg_button_primary"
-            android:text="+ Thêm khách sạn mới"
-            android:textAllCaps="false"
-            android:textColor="@color/black"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:text="Tất cả khách sạn"
-            android:textColor="@color/primary"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:text="Tìm kiếm:"
-            android:textColor="@color/primary"
-            android:textSize="17sp"
-            android:textStyle="bold" />
-
-        <EditText
-            android:id="@+id/edit_cabin_search"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="6dp"
-            android:background="@drawable/bg_input"
-            android:hint="Tên khách sạn, thành phố, loại phòng, tiện nghi"
+            android:orientation="vertical"
             android:paddingStart="16dp"
+            android:paddingTop="30dp"
             android:paddingEnd="16dp"
-            android:singleLine="true"
-            android:textColor="@color/ink"
-            android:textColorHint="@color/muted" />
+            android:paddingBottom="112dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Lọc theo:"
-            android:textColor="@color/primary"
-            android:textSize="17sp"
-            android:textStyle="bold" />
+            <Button
+                android:id="@+id/button_back"
+                android:layout_width="1dp"
+                android:layout_height="1dp"
+                android:visibility="gone" />
 
-        <Spinner
-            android:id="@+id/spinner_cabin_filter"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="6dp"
-            android:background="@drawable/bg_button_primary"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp" />
+            <TextView
+                android:id="@+id/text_dashboard_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bảng quản lý"
+                android:textColor="@color/primary"
+                android:textSize="28sp"
+                android:textStyle="bold" />
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_host_cabins"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_marginTop="12dp"
-            android:layout_weight="1"
-            android:clipToPadding="false"
-            android:paddingBottom="12dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Theo dõi khách sạn, loại phòng, giao dịch và tin nhắn khách hàng."
+                android:textColor="@color/muted"
+                android:textSize="13sp" />
 
-        <Button
-            android:id="@+id/button_back_bottom"
-            android:layout_width="116dp"
-            android:layout_height="48dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/bg_button_secondary"
-            android:text="Quay lại"
-            android:textAllCaps="false"
-            android:textColor="@color/black"
-            android:textStyle="bold" />
-    </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_manager_panel"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/text_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/ink"
+                    android:textSize="13sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/text_metric_hotels"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_manager_metric"
+                        android:text="0\nKhách sạn"
+                        android:textColor="@color/ink"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/text_metric_rooms"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_manager_metric"
+                        android:text="0\nLoại phòng"
+                        android:textColor="@color/ink"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/text_metric_price"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_manager_metric"
+                        android:text="$0\nGiá từ"
+                        android:textColor="@color/ink"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+                        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/button_new_cabin"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="+ Khách sạn"
+                    android:textAllCaps="false"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/button_open_messages"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_button_secondary"
+                    android:text="Tin nhắn khách"
+                    android:textAllCaps="false"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_manager_panel"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Khách sạn của bạn"
+                    android:textColor="@color/primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/edit_cabin_search"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_manager_search"
+                    android:hint="Tìm tên, thành phố, loại phòng..."
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:singleLine="true"
+                    android:textColor="@color/ink"
+                    android:textColorHint="@color/muted"
+                    android:textSize="14sp" />
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:overScrollMode="never"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/container_hotel_tabs"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </HorizontalScrollView>
+
+                <Spinner
+                    android:id="@+id/spinner_cabin_filter"
+                    android:layout_width="1dp"
+                    android:layout_height="1dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/panel_selected_rooms"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_manager_panel"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/text_selected_rooms_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Loại phòng"
+                    android:textColor="@color/primary"
+                    android:textSize="19sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/text_selected_rooms_hint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/muted"
+                    android:textSize="13sp" />
+
+                <LinearLayout
+                    android:id="@+id/container_selected_rooms"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="vertical" />
+
+                <Button
+                    android:id="@+id/button_manage_selected_hotel"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="Thêm hoặc sửa loại phòng"
+                    android:textAllCaps="false"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_host_cabins"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:paddingBottom="12dp" />
+
+            <Button
+                android:id="@+id/button_back_bottom"
+                android:layout_width="1dp"
+                android:layout_height="1dp"
+                android:visibility="gone" />
+        </LinearLayout>
+    </ScrollView>
 
     <LinearLayout
         android:id="@+id/container_cabin_form"
@@ -231,5 +336,5 @@
         android:layout_height="1dp"
         android:visibility="gone" />
 
-    <include layout="@layout/view_bottom_nav_cabins" />
+    <include layout="@layout/view_bottom_nav_manager" />
 </FrameLayout>

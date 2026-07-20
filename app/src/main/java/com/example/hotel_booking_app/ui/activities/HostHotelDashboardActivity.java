@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -29,11 +30,14 @@ import com.example.hotel_booking_app.services.HostService;
 import com.example.hotel_booking_app.services.RoomTypeService;
 import com.example.hotel_booking_app.ui.adapters.BookingAdapter;
 import com.example.hotel_booking_app.ui.adapters.HostCabinAdapter;
+import com.example.hotel_booking_app.ui.helpers.ManagerNavigationHelper;
 import com.example.hotel_booking_app.utils.AppConstants;
+import com.example.hotel_booking_app.utils.PriceUtils;
 import com.example.hotel_booking_app.utils.SessionManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class HostHotelDashboardActivity extends AppCompatActivity {
@@ -45,6 +49,9 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
     private TextView formTitleTextView;
     private TextView bookingTitleTextView;
     private TextView emptyBookingsTextView;
+    private TextView hotelMetricTextView;
+    private TextView roomMetricTextView;
+    private TextView priceMetricTextView;
     private EditText cabinSearchEditText;
     private EditText nameEditText;
     private EditText locationEditText;
@@ -55,6 +62,12 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
     private EditText imageEditText;
     private LinearLayout cabinFormContainer;
     private LinearLayout amenitiesContainer;
+    private LinearLayout hotelTabsContainer;
+    private LinearLayout selectedRoomsPanel;
+    private LinearLayout selectedRoomsContainer;
+    private TextView selectedRoomsTitleTextView;
+    private TextView selectedRoomsHintTextView;
+    private Button manageSelectedHotelButton;
     private Spinner cabinFilterSpinner;
     private Spinner bookingFilterSpinner;
     private HostCabinAdapter cabinAdapter;
@@ -65,6 +78,7 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
     private SessionManager sessionManager;
     private Cabin editingCabin;
     private String selectedCabinId;
+    private String selectedManagerCabinId;
     private String pendingEditCabinId;
     private boolean pendingEditOpened;
     private boolean amenitiesLoaded;
@@ -97,6 +111,9 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
         formTitleTextView = findViewById(R.id.text_form_title);
         bookingTitleTextView = findViewById(R.id.text_booking_title);
         emptyBookingsTextView = findViewById(R.id.text_empty_bookings);
+        hotelMetricTextView = findViewById(R.id.text_metric_hotels);
+        roomMetricTextView = findViewById(R.id.text_metric_rooms);
+        priceMetricTextView = findViewById(R.id.text_metric_price);
         cabinSearchEditText = findViewById(R.id.edit_cabin_search);
         nameEditText = findViewById(R.id.edit_cabin_name);
         locationEditText = findViewById(R.id.edit_location);
@@ -107,6 +124,12 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
         imageEditText = findViewById(R.id.edit_image);
         cabinFormContainer = findViewById(R.id.container_cabin_form);
         amenitiesContainer = findViewById(R.id.container_amenities);
+        hotelTabsContainer = findViewById(R.id.container_hotel_tabs);
+        selectedRoomsPanel = findViewById(R.id.panel_selected_rooms);
+        selectedRoomsContainer = findViewById(R.id.container_selected_rooms);
+        selectedRoomsTitleTextView = findViewById(R.id.text_selected_rooms_title);
+        selectedRoomsHintTextView = findViewById(R.id.text_selected_rooms_hint);
+        manageSelectedHotelButton = findViewById(R.id.button_manage_selected_hotel);
         cabinFilterSpinner = findViewById(R.id.spinner_cabin_filter);
         bookingFilterSpinner = findViewById(R.id.spinner_booking_filter);
         dashboardTitleTextView.setText("Xin chào, " + displayName());
@@ -118,8 +141,8 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
         cabinAdapter = new HostCabinAdapter(new HostCabinAdapter.HostCabinListener() {
             @Override
             public void onSelect(Cabin cabin) {
-                Intent intent = new Intent(HostHotelDashboardActivity.this, HotelDetailActivity.class);
-                intent.putExtra(AppConstants.EXTRA_CABIN_ID, cabin.getId());
+                Intent intent = new Intent(HostHotelDashboardActivity.this, AdminHotelFormActivity.class);
+                intent.putExtra(AdminHotelFormActivity.EXTRA_CABIN_ID, cabin.getId());
                 startActivity(intent);
             }
 
@@ -142,31 +165,11 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
                 deleteCabin(cabin);
             }
         });
-        bookingAdapter = new BookingAdapter("Confirm", this::confirmBooking);
+        bookingAdapter = new BookingAdapter("Xác nhận", this::confirmBooking);
         cabinsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         cabinsRecyclerView.setAdapter(cabinAdapter);
         bookingsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         bookingsRecyclerView.setAdapter(bookingAdapter);
-
-        String[] cabinFilters = {
-                "Tất cả khách sạn",
-                "Đang giảm giá",
-                "Không giảm giá",
-                "TP. Hồ Chí Minh",
-                "Vũng Tàu",
-                "Hà Nội",
-                "Đà Nẵng",
-                "Đà Lạt",
-                "Có phòng Suite",
-                "Chưa có loại phòng",
-                "Sức chứa: cao đến thấp",
-                "Giá: thấp đến cao",
-                "Giá: cao đến thấp",
-                "Mới nhất trước"
-        };
-        ArrayAdapter<String> cabinFilterAdapter = new ArrayAdapter<>(this, R.layout.item_spinner_on_primary, cabinFilters);
-        cabinFilterAdapter.setDropDownViewResource(R.layout.item_spinner_serein_dropdown);
-        cabinFilterSpinner.setAdapter(cabinFilterAdapter);
 
         String[] filters = {"Tất cả", "Chờ xác nhận", "Đã xác nhận", "Đã hủy", "Đã thanh toán"};
         ArrayAdapter<String> bookingFilterAdapter = new ArrayAdapter<>(this, R.layout.item_spinner_on_primary, filters);
@@ -178,22 +181,16 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
         Button backButton = findViewById(R.id.button_back);
         Button bottomBackButton = findViewById(R.id.button_back_bottom);
         Button newCabinButton = findViewById(R.id.button_new_cabin);
+        Button messagesButton = findViewById(R.id.button_open_messages);
         Button pickImageButton = findViewById(R.id.button_pick_image);
         Button saveCabinButton = findViewById(R.id.button_create_cabin);
         Button clearFormButton = findViewById(R.id.button_clear_form);
-        LinearLayout personalTab = findViewById(R.id.nav_personal);
-        LinearLayout searchTab = findViewById(R.id.nav_cabins);
-        LinearLayout bookingsTab = findViewById(R.id.nav_bookings);
-        LinearLayout wishlistTab = findViewById(R.id.nav_wishlist);
-        LinearLayout messagesTab = findViewById(R.id.nav_messages);
+        ManagerNavigationHelper.bind(this, ManagerNavigationHelper.TAB_DASHBOARD);
         backButton.setOnClickListener(view -> finish());
         bottomBackButton.setOnClickListener(view -> finish());
-        searchTab.setOnClickListener(view -> startActivity(new Intent(this, HostHotelDashboardActivity.class)));
-        bookingsTab.setOnClickListener(view -> startActivity(new Intent(this, AdminBookingManagementActivity.class)));
-        wishlistTab.setOnClickListener(view -> startActivity(new Intent(this, HostHotelDashboardActivity.class)));
-        messagesTab.setOnClickListener(view -> startActivity(new Intent(this, ConversationListActivity.class)));
-        personalTab.setOnClickListener(view -> startActivity(new Intent(this, AccountHubActivity.class)));
         newCabinButton.setOnClickListener(view -> startActivity(new Intent(this, AdminHotelFormActivity.class)));
+        messagesButton.setOnClickListener(view -> startActivity(new Intent(this, ConversationListActivity.class)));
+        manageSelectedHotelButton.setOnClickListener(view -> openSelectedHotelManager());
         pickImageButton.setOnClickListener(view -> openImagePicker());
         saveCabinButton.setOnClickListener(view -> saveCabin());
         clearFormButton.setOnClickListener(view -> clearForm());
@@ -211,17 +208,7 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
             public void afterTextChanged(android.text.Editable s) {
             }
         });
-        cabinFilterSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
-                renderCabins();
-            }
-
-            @Override
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
-            }
-        });
-    }
+   }
 
     private void openImagePicker() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -237,7 +224,7 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
             Uri imageUri = data.getData();
             getContentResolver().takePersistableUriPermission(imageUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
             imageEditText.setText(imageUri.toString());
-            statusTextView.setText("Image selected.");
+            statusTextView.setText("Đã chọn ảnh.");
         }
     }
 
@@ -289,20 +276,13 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
                 roomTypeService.attachRoomTypes(cabins, new SupabaseCallback<List<Cabin>>() {
                     @Override
                     public void onSuccess(List<Cabin> cabinsWithRooms) {
-                        allManagedCabins.clear();
-                        allManagedCabins.addAll(cabinsWithRooms);
-                        assignCheapestRoomTypes(allManagedCabins);
-                        renderCabins();
-                        openPendingEditIfReady();
+                        finishCabinLoad(cabinsWithRooms);
                     }
 
                     @Override
                     public void onError(String message) {
-                        allManagedCabins.clear();
-                        allManagedCabins.addAll(cabins);
-                        renderCabins();
-                        openPendingEditIfReady();
-                        statusTextView.setText("Hotels loaded, but room types are not ready: " + message);
+                        finishCabinLoad(cabins);
+                        statusTextView.setText("Đã tải khách sạn, nhưng loại phòng chưa sẵn sàng: " + message);
                     }
                 });
             }
@@ -315,6 +295,53 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
         hostService.getCabinsForHost(sessionManager.getUserId(), callback);
     }
 
+    private void finishCabinLoad(List<Cabin> cabins) {
+        List<Cabin> loadedCabins = cabins == null ? new ArrayList<>() : cabins;
+        hydrateMissingRoomTypes(loadedCabins, () -> {
+            allManagedCabins.clear();
+            allManagedCabins.addAll(loadedCabins);
+            assignCheapestRoomTypes(allManagedCabins);
+            renderHotelTabs();
+            renderCabins();
+            openPendingEditIfReady();
+        });
+    }
+
+    private void hydrateMissingRoomTypes(List<Cabin> cabins, Runnable done) {
+        List<Cabin> missing = new ArrayList<>();
+        for (Cabin cabin : cabins) {
+            if (cabin.getId() != null && (cabin.getRoomTypes() == null || cabin.getRoomTypes().isEmpty())) {
+                missing.add(cabin);
+            }
+        }
+        if (missing.isEmpty()) {
+            done.run();
+            return;
+        }
+        AtomicInteger completed = new AtomicInteger(0);
+        for (Cabin cabin : missing) {
+            roomTypeService.getRoomTypesForCabin(cabin.getId(), new SupabaseCallback<List<RoomType>>() {
+                @Override
+                public void onSuccess(List<RoomType> roomTypes) {
+                    cabin.setRoomTypes(roomTypes == null ? new ArrayList<>() : roomTypes);
+                    completeRoomHydration(missing.size(), completed, done);
+                }
+
+                @Override
+                public void onError(String message) {
+                    cabin.setRoomTypes(new ArrayList<>());
+                    completeRoomHydration(missing.size(), completed, done);
+                }
+            });
+        }
+    }
+
+    private void completeRoomHydration(int total, AtomicInteger completed, Runnable done) {
+        if (completed.incrementAndGet() >= total) {
+            done.run();
+        }
+    }
+
     private String displayName() {
         String name = sessionManager.getFullName();
         return name == null || name.trim().isEmpty() ? "Quản lý" : name.trim();
@@ -322,23 +349,173 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
 
     private void renderCabins() {
         String query = cabinSearchEditText.getText().toString().trim().toLowerCase(java.util.Locale.US);
-        String filter = cabinFilterSpinner.getSelectedItem() == null
-                ? "Tất cả khách sạn"
-                : String.valueOf(cabinFilterSpinner.getSelectedItem());
         List<Cabin> filtered = allManagedCabins.stream()
+                .filter(cabin -> selectedManagerCabinId == null || selectedManagerCabinId.equals(cabin.getId()))
                 .filter(cabin -> matchesCabinSearch(cabin, query))
-                .filter(cabin -> matchesCabinFilter(cabin, filter))
                 .collect(Collectors.toList());
-        if ("Sức chứa: cao đến thấp".equals(filter)) {
-            filtered.sort((left, right) -> Integer.compare(right.getMaxCapacity(), left.getMaxCapacity()));
-        } else if ("Giá: thấp đến cao".equals(filter)) {
-            filtered.sort((left, right) -> Double.compare(priceAfterDiscount(left), priceAfterDiscount(right)));
-        } else if ("Giá: cao đến thấp".equals(filter)) {
-            filtered.sort((left, right) -> Double.compare(priceAfterDiscount(right), priceAfterDiscount(left)));
-        }
-        cabinAdapter.submitList(filtered);
+        filtered.sort((left, right) -> safe(left.getName()).compareToIgnoreCase(safe(right.getName())));
+        cabinAdapter.submitList(selectedManagerCabinId == null ? filtered : new ArrayList<>());
+        renderSelectedHotelRooms();
+        updateDashboardMetrics(filtered);
+        String scope = selectedManagerCabinId == null ? "tất cả khách sạn" : "khách sạn đang chọn";
         statusTextView.setText("Đang hiển thị " + filtered.size() + "/" + allManagedCabins.size()
-                + " khách sạn. Bấm Sửa để quản lý các loại phòng Tiêu chuẩn, Superior, Deluxe và Suite.");
+                + " " + scope + ". Tab Tất cả dùng để sửa thông tin hotel; bấm từng tab hotel để quản lý room.");
+    }
+
+    private void renderHotelTabs() {
+        hotelTabsContainer.removeAllViews();
+        addHotelTab("Tất cả", null, selectedManagerCabinId == null);
+        for (Cabin cabin : allManagedCabins) {
+            addHotelTab(shortHotelName(cabin), cabin.getId(), cabin.getId().equals(selectedManagerCabinId));
+        }
+    }
+
+    private void addHotelTab(String label, String cabinId, boolean selected) {
+        Button button = new Button(this);
+        button.setText(label);
+        button.setAllCaps(false);
+        button.setMinWidth(0);
+        button.setMinHeight(0);
+        button.setPadding(dp(14), 0, dp(14), 0);
+        button.setTextColor(getColor(selected ? R.color.black : R.color.ink));
+        button.setTextSize(13);
+        button.setBackgroundResource(selected ? R.drawable.bg_button_primary : R.drawable.bg_manager_search);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                dp(42)
+        );
+        params.setMargins(0, 0, dp(8), 0);
+        button.setLayoutParams(params);
+        button.setOnClickListener(view -> {
+            selectedManagerCabinId = cabinId;
+            renderHotelTabs();
+            renderCabins();
+        });
+        hotelTabsContainer.addView(button);
+    }
+
+    private void renderSelectedHotelRooms() {
+        selectedRoomsContainer.removeAllViews();
+        Cabin selectedCabin = findCabinById(selectedManagerCabinId);
+        if (selectedCabin == null) {
+            selectedRoomsPanel.setVisibility(View.GONE);
+            return;
+        }
+        selectedRoomsPanel.setVisibility(View.VISIBLE);
+        selectedRoomsTitleTextView.setText("Loại phòng · " + selectedCabin.getName());
+        List<RoomType> roomTypes = selectedCabin.getRoomTypes();
+        int count = roomTypes == null ? 0 : roomTypes.size();
+        selectedRoomsHintTextView.setText(count + " loại phòng đang hoạt động. Chạm một room để mở đúng form chỉnh loại phòng đó.");
+        if (count == 0) {
+            TextView empty = new TextView(this);
+            empty.setText("Khách sạn này chưa có loại phòng. Bấm nút bên dưới để thêm Solo, Twin, Family, Suite...");
+            empty.setTextColor(getColor(R.color.muted));
+            empty.setTextSize(13f);
+            empty.setLineSpacing(dp(3), 1f);
+            selectedRoomsContainer.addView(empty);
+            return;
+        }
+        for (RoomType roomType : roomTypes) {
+            selectedRoomsContainer.addView(roomTypeCard(selectedCabin, roomType));
+        }
+    }
+
+    private View roomTypeCard(Cabin cabin, RoomType roomType) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackgroundResource(R.drawable.bg_manager_search);
+        card.setPadding(dp(14), dp(12), dp(14), dp(12));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(0, 0, 0, dp(10));
+        card.setLayoutParams(params);
+
+        TextView title = new TextView(this);
+        title.setText(roomType.displayName() + " · " + PriceUtils.formatUsd(roomType.getBasePrice()) + " / đêm");
+        title.setTextColor(getColor(R.color.ink));
+        title.setTextSize(16f);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        card.addView(title);
+
+        TextView meta = new TextView(this);
+        meta.setText(roomType.effectiveMaxAdults() + " khách · " + roomType.effectiveBedCount()
+                + " giường · " + roomType.getTotalRooms() + " phòng · " + roomType.sizeLabel());
+        meta.setTextColor(getColor(R.color.muted));
+        meta.setTextSize(13f);
+        meta.setPadding(0, dp(5), 0, 0);
+        card.addView(meta);
+
+        TextView beds = new TextView(this);
+        beds.setText(roomType.bedLabel());
+        beds.setTextColor(getColor(R.color.primary));
+        beds.setTextSize(13f);
+        beds.setTypeface(null, android.graphics.Typeface.BOLD);
+        beds.setPadding(0, dp(6), 0, 0);
+        card.addView(beds);
+
+        card.setOnClickListener(view -> openRoomManager(cabin.getId(), roomType.getId()));
+        return card;
+    }
+
+    private Cabin findCabinById(String cabinId) {
+        if (cabinId == null) {
+            return null;
+        }
+        for (Cabin cabin : allManagedCabins) {
+            if (cabinId.equals(cabin.getId())) {
+                return cabin;
+            }
+        }
+        return null;
+    }
+
+    private void openSelectedHotelManager() {
+        if (selectedManagerCabinId != null) {
+            openHotelManager(selectedManagerCabinId);
+        }
+    }
+
+    private void openHotelManager(String cabinId) {
+        Intent intent = new Intent(this, AdminHotelFormActivity.class);
+        intent.putExtra(AdminHotelFormActivity.EXTRA_CABIN_ID, cabinId);
+        startActivity(intent);
+    }
+
+    private void openRoomManager(String cabinId, String roomTypeId) {
+        Intent intent = new Intent(this, AdminHotelFormActivity.class);
+        intent.putExtra(AdminHotelFormActivity.EXTRA_CABIN_ID, cabinId);
+        intent.putExtra(AdminHotelFormActivity.EXTRA_ROOM_TYPE_ID, roomTypeId);
+        startActivity(intent);
+    }
+
+    private void updateDashboardMetrics(List<Cabin> visibleCabins) {
+        int hotelCount = allManagedCabins.size();
+        int roomTypeCount = 0;
+        int roomUnitCount = 0;
+        double minPrice = Double.MAX_VALUE;
+        for (Cabin cabin : allManagedCabins) {
+            if (cabin.getRoomTypes() == null || cabin.getRoomTypes().isEmpty()) {
+                minPrice = Math.min(minPrice, cabin.displayPrice());
+                continue;
+            }
+            roomTypeCount += cabin.getRoomTypes().size();
+            for (RoomType roomType : cabin.getRoomTypes()) {
+                roomUnitCount += Math.max(0, roomType.getTotalRooms());
+                if (roomType.getBasePrice() > 0) {
+                    minPrice = Math.min(minPrice, roomType.getBasePrice());
+                }
+            }
+        }
+        hotelMetricTextView.setText(hotelCount + "\nKhách sạn");
+        roomMetricTextView.setText(roomTypeCount + " loại\n" + roomUnitCount + " phòng");
+        priceMetricTextView.setText((minPrice == Double.MAX_VALUE ? "$0" : PriceUtils.formatUsd(minPrice)) + "\nGiá từ");
+        if (visibleCabins.isEmpty() && !allManagedCabins.isEmpty()) {
+            statusTextView.animate().alpha(0.55f).setDuration(90)
+                    .withEndAction(() -> statusTextView.animate().alpha(1f).setDuration(140).start())
+                    .start();
+        }
     }
 
     private void assignCheapestRoomTypes(List<Cabin> cabins) {
@@ -361,7 +538,7 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
             if (pendingEditCabinId.equals(cabin.getId())) {
                 pendingEditOpened = true;
                 fillForm(cabin);
-                statusTextView.setText("Editing " + cabin.getName());
+                statusTextView.setText("Đang sửa " + cabin.getName());
                 return;
             }
         }
@@ -380,7 +557,7 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
             cabin.setAmenities(selectedAmenityNames.isEmpty() ? "WiFi, Kitchen, Private Bathroom" : String.join(", ", selectedAmenityNames));
             cabin.setHostId(sessionManager.getUserId());
         } catch (NumberFormatException e) {
-            statusTextView.setText("Price, discount and capacity must be valid numbers.");
+            statusTextView.setText("Giá, giảm giá và sức chứa phải là số hợp lệ.");
             return;
         }
 
@@ -392,7 +569,7 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
     }
 
     private void createCabin(Cabin cabin) {
-        statusTextView.setText("Creating hotel...");
+        statusTextView.setText("Đang tạo khách sạn...");
         hostService.createCabin(cabin, new SupabaseCallback<Cabin>() {
             @Override
             public void onSuccess(Cabin data) {
@@ -411,7 +588,7 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
     }
 
     private void updateCabin(Cabin cabin) {
-        statusTextView.setText("Updating hotel...");
+        statusTextView.setText("Đang cập nhật khách sạn...");
         hostService.updateCabin(cabin, new SupabaseCallback<Cabin>() {
             @Override
             public void onSuccess(Cabin data) {
@@ -430,7 +607,7 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
     }
 
     private void deleteCabin(Cabin cabin) {
-        statusTextView.setText("Deleting hotel...");
+        statusTextView.setText("Đang xóa khách sạn...");
         hostService.deleteCabin(cabin.getId(), new SupabaseCallback<Boolean>() {
             @Override
             public void onSuccess(Boolean data) {
@@ -441,8 +618,8 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
                     bookingTitleTextView.setText("Quản lý đặt phòng");
                     renderBookings();
                 }
-                Toast.makeText(HostHotelDashboardActivity.this, "Hotel deleted", Toast.LENGTH_SHORT).show();
-                statusTextView.setText("Hotel deleted.");
+                Toast.makeText(HostHotelDashboardActivity.this, "Đã xóa khách sạn", Toast.LENGTH_SHORT).show();
+                statusTextView.setText("Đã xóa khách sạn.");
                 loadCabins();
             }
 
@@ -516,7 +693,7 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
 
                 @Override
                 public void onError(String message) {
-                    statusTextView.setText("Hotel saved, but one amenity could not be attached: " + message);
+                    statusTextView.setText("Đã lưu khách sạn, nhưng một tiện nghi chưa gắn được: " + message);
                 }
             });
         }
@@ -524,7 +701,7 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
 
     private void loadBookingsForCabin(Cabin cabin) {
         selectedCabinId = cabin.getId();
-        bookingTitleTextView.setText("Bookings for " + cabin.getName());
+        bookingTitleTextView.setText("Đặt phòng của " + cabin.getName());
         hostService.getBookingsForCabin(cabin.getId(), new SupabaseCallback<List<Booking>>() {
             @Override
             public void onSuccess(List<Booking> bookings) {
@@ -603,37 +780,6 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
                 || matchesRoomTypeSearch(cabin, query);
     }
 
-    private boolean matchesCabinFilter(Cabin cabin, String filter) {
-        if ("Đang giảm giá".equals(filter)) {
-            return cabin.getDiscount() > 0;
-        }
-        if ("Không giảm giá".equals(filter)) {
-            return cabin.getDiscount() <= 0;
-        }
-        if ("TP. Hồ Chí Minh".equals(filter)) {
-            return containsCabinText(cabin, "ho chi minh");
-        }
-        if ("Vũng Tàu".equals(filter)) {
-            return containsCabinText(cabin, "vung tau");
-        }
-        if ("Hà Nội".equals(filter)) {
-            return containsCabinText(cabin, "hanoi") || containsCabinText(cabin, "ha noi");
-        }
-        if ("Đà Nẵng".equals(filter)) {
-            return containsCabinText(cabin, "da nang");
-        }
-        if ("Đà Lạt".equals(filter)) {
-            return containsCabinText(cabin, "da lat");
-        }
-        if ("Có phòng Suite".equals(filter)) {
-            return matchesRoomTypeSearch(cabin, "suite");
-        }
-        if ("Chưa có loại phòng".equals(filter)) {
-            return cabin.getRoomTypes() == null || cabin.getRoomTypes().isEmpty();
-        }
-        return true;
-    }
-
     private boolean matchesBookingStatusFilter(Booking booking, String filter) {
         if ("Chờ xác nhận".equals(filter)) {
             return AppConstants.BOOKING_PENDING.equalsIgnoreCase(booking.getStatus());
@@ -663,15 +809,17 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
         return false;
     }
 
-    private boolean containsCabinText(Cabin cabin, String query) {
-        String text = (safe(cabin.getName()) + " "
-                + safe(cabin.getLocation()) + " "
-                + safe(cabin.getAmenities())).toLowerCase(java.util.Locale.US);
-        return text.contains(query);
-    }
-
     private double priceAfterDiscount(Cabin cabin) {
         return Math.max(0, cabin.getRegularPrice() - cabin.getDiscount());
+    }
+
+    private String shortHotelName(Cabin cabin) {
+        String name = safe(cabin.getName());
+        return name.length() <= 22 ? name : name.substring(0, 21).trim() + "...";
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private String safe(String value) {
