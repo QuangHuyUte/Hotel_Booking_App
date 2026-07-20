@@ -1,7 +1,7 @@
 package com.example.hotel_booking_app.data.models;
 
-import com.google.gson.annotations.SerializedName;
 import com.google.gson.JsonElement;
+import com.google.gson.annotations.SerializedName;
 
 public class RoomType {
     @SerializedName("_id")

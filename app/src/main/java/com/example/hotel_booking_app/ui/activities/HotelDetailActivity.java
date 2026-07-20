@@ -180,7 +180,7 @@ public class HotelDetailActivity extends AppCompatActivity {
         }
         selectedCheckIn = checkIn.toString();
         selectedCheckOut = checkOut.toString();
-        updateDateViews();
+        updateDateViewsClean();
     }
 
     private void loadCabin() {
@@ -201,6 +201,7 @@ public class HotelDetailActivity extends AppCompatActivity {
                 loadHost(cabin.getHostId());
                 loadAmenities(cabin);
                 loadRoomTypes(cabin);
+                bindCabinContent(cabin);
                 Glide.with(HotelDetailActivity.this).load(cabin.getImage()).centerCrop().into(imageView);
             }
 
@@ -209,6 +210,17 @@ public class HotelDetailActivity extends AppCompatActivity {
                 statusTextView.setText(message);
             }
         });
+    }
+
+    private void bindCabinContent(Cabin cabin) {
+        titleTextView.setText(cabin.getName());
+        heroTitleTextView.setText(cabin.getName());
+        priceTextView.setText(PriceUtils.formatUsd(PriceUtils.priceAfterDiscount(cabin.getRegularPrice(), cabin.getDiscount())) + " / đêm");
+        locationTextView.setText("Vị trí\n" + safe(cabin.getAddress(), safe(cabin.getLocation(), "Serein Stay")));
+        capacityTextView.setText("Sức chứa\nTối đa " + cabin.getMaxCapacity() + " khách");
+        descriptionTextView.setText(displayDescription(cabin));
+        guestSummaryTextView.setText("1 phòng · tối đa " + cabin.getMaxCapacity() + " khách");
+        hostTextView.setText("Quản lý: đang tải...");
     }
 
     private void loadHost(String hostId) {
@@ -233,19 +245,19 @@ public class HotelDetailActivity extends AppCompatActivity {
         new AmenityService().getAmenityNamesForCabin(cabin.getId(), new SupabaseCallback<String>() {
             @Override
             public void onSuccess(String names) {
-                renderAmenities(names == null || names.trim().isEmpty() ? cabin.getAmenities() : names);
+                renderAmenitiesClean(names == null || names.trim().isEmpty() ? cabin.getAmenities() : names);
             }
 
             @Override
             public void onError(String message) {
-                renderAmenities(cabin.getAmenities());
+                renderAmenitiesClean(cabin.getAmenities());
             }
         });
     }
 
     private void renderAmenities(String amenities) {
         amenitiesContainer.removeAllViews();
-        amenitiesTitleTextView.setText("Amenities");
+        amenitiesTitleTextView.setText("Tiện nghi");
         String value = amenities == null || amenities.trim().isEmpty()
                 ? "WiFi, Breakfast, Parking, Balcony"
                 : amenities;
@@ -311,6 +323,75 @@ public class HotelDetailActivity extends AppCompatActivity {
         }
     }
 
+    private void renderAmenitiesClean(String amenities) {
+        amenitiesContainer.removeAllViews();
+        amenitiesTitleTextView.setText("Tiện nghi");
+        String value = amenities == null || amenities.trim().isEmpty()
+                ? "WiFi, Breakfast, Parking, Balcony"
+                : amenities;
+        String[] items = value.split(",");
+        for (int i = 0; i < items.length; i++) {
+            String rawLabel = items[i].trim();
+            if (rawLabel.isEmpty()) {
+                continue;
+            }
+            String label = translateAmenityLabel(rawLabel);
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setBackground(lightSurface(false));
+            row.setPadding(dp(12), dp(10), dp(12), dp(10));
+
+            TextView icon = new TextView(this);
+            int[] colors = {
+                    Color.parseColor("#2E6F95"),
+                    Color.parseColor("#B77A25"),
+                    Color.parseColor("#287E75"),
+                    Color.parseColor("#7A5BA8"),
+                    Color.parseColor("#9A6257"),
+                    Color.parseColor("#3F7FA8")
+            };
+            GradientDrawable circle = new GradientDrawable();
+            circle.setColor(colors[i % colors.length]);
+            circle.setCornerRadius(dp(18));
+            icon.setBackground(circle);
+            icon.setGravity(Gravity.CENTER);
+            icon.setText(amenityBadge(rawLabel));
+            icon.setTextColor(Color.WHITE);
+            icon.setTypeface(null, Typeface.BOLD);
+            icon.setTextSize(11f);
+            row.addView(icon, new LinearLayout.LayoutParams(dp(36), dp(36)));
+
+            LinearLayout textBlock = new LinearLayout(this);
+            textBlock.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            textParams.setMargins(dp(12), 0, 0, 0);
+
+            TextView name = new TextView(this);
+            name.setText(label);
+            name.setTextColor(getColor(R.color.booking_text));
+            name.setTextSize(15f);
+            name.setTypeface(null, Typeface.BOLD);
+
+            TextView hint = new TextView(this);
+            hint.setText(amenityHintVi(rawLabel));
+            hint.setTextColor(getColor(R.color.booking_muted));
+            hint.setTextSize(12f);
+            hint.setLineSpacing(dp(2), 1f);
+
+            textBlock.addView(name);
+            textBlock.addView(hint);
+            row.addView(textBlock, textParams);
+
+            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            rowParams.bottomMargin = dp(8);
+            amenitiesContainer.addView(row, rowParams);
+        }
+    }
+
     private void loadRoomTypes(Cabin cabin) {
         roomTypeService.getRoomTypesForCabin(cabin.getId(), new SupabaseCallback<List<RoomType>>() {
             @Override
@@ -327,8 +408,8 @@ public class HotelDetailActivity extends AppCompatActivity {
                 if (selectedRoomType == null && !roomTypes.isEmpty()) {
                     selectedRoomType = roomTypes.get(0);
                 }
-                renderRoomTypes(roomTypes);
-                updateSelectedRoomSummary();
+                renderRoomTypesClean(roomTypes);
+                updateSelectedRoomSummaryClean();
             }
 
             @Override
@@ -380,6 +461,92 @@ public class HotelDetailActivity extends AppCompatActivity {
         }
     }
 
+    private void renderRoomTypesClean(List<RoomType> roomTypes) {
+        roomTypesContainer.removeAllViews();
+        if (roomTypes == null || roomTypes.isEmpty()) {
+            TextView empty = new TextView(this);
+            empty.setText("Chưa có loại phòng cho khách sạn này. Nếu bạn vừa đổi seed, hãy chạy lại seed.sql để nạp dữ liệu phòng.");
+            empty.setTextColor(getColor(R.color.booking_muted));
+            empty.setTextSize(13f);
+            empty.setLineSpacing(dp(3), 1f);
+            roomTypesContainer.addView(empty);
+            return;
+        }
+        for (RoomType roomType : roomTypes) {
+            boolean selected = roomType == selectedRoomType
+                    || (selectedRoomType != null && selectedRoomType.getId() != null && selectedRoomType.getId().equals(roomType.getId()));
+
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setBackground(lightSurface(selected));
+            card.setPadding(dp(12), dp(11), dp(12), dp(11));
+
+            LinearLayout top = new LinearLayout(this);
+            top.setOrientation(LinearLayout.HORIZONTAL);
+            top.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView title = new TextView(this);
+            title.setText(roomType.displayName());
+            title.setTextColor(getColor(R.color.booking_text));
+            title.setTextSize(16f);
+            title.setTypeface(null, Typeface.BOLD);
+            top.addView(title, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+            TextView price = new TextView(this);
+            price.setText(PriceUtils.formatUsd(roomType.getBasePrice()) + " / đêm");
+            price.setTextColor(getColor(R.color.booking_blue));
+            price.setTextSize(14f);
+            price.setTypeface(null, Typeface.BOLD);
+            top.addView(price);
+            card.addView(top);
+
+            TextView details = new TextView(this);
+            details.setText(roomType.sizeLabel()
+                    + " · " + roomType.bedLabel()
+                    + "\nTối đa " + roomType.effectiveMaxAdults()
+                    + " người lớn · " + roomType.effectiveBedCount()
+                    + " giường · còn " + roomType.getTotalRooms() + " phòng"
+                    + (roomType.hasLivingRoom() ? "\nCó phòng khách riêng" : ""));
+            details.setTextColor(getColor(R.color.booking_text));
+            details.setTextSize(13f);
+            details.setLineSpacing(dp(3), 1f);
+            LinearLayout.LayoutParams detailParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            detailParams.setMargins(0, dp(6), 0, 0);
+            card.addView(details, detailParams);
+
+            String desc = roomType.getDescription();
+            if (desc != null && !desc.trim().isEmpty()) {
+                TextView description = new TextView(this);
+                description.setText(translateRoomDescription(desc));
+                description.setTextColor(getColor(R.color.booking_muted));
+                description.setTextSize(12f);
+                description.setLineSpacing(dp(2), 1f);
+                LinearLayout.LayoutParams descParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+                descParams.setMargins(0, dp(6), 0, 0);
+                card.addView(description, descParams);
+            }
+
+            card.setOnClickListener(view -> {
+                selectedRoomType = roomType;
+                renderRoomTypesClean(roomTypes);
+                updateSelectedRoomSummaryClean();
+            });
+
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            params.bottomMargin = dp(8);
+            roomTypesContainer.addView(card, params);
+        }
+    }
+
     private void updateSelectedRoomSummary() {
         if (selectedRoomType == null) {
             return;
@@ -388,6 +555,17 @@ public class HotelDetailActivity extends AppCompatActivity {
         capacityTextView.setText("Phòng: " + selectedRoomType.displayName()
                 + " · tối đa " + selectedRoomType.effectiveMaxAdults()
                 + " người lớn · " + selectedRoomType.effectiveBedCount() + " giường");
+        guestSummaryTextView.setText("1 phòng · " + selectedRoomType.sizeLabel() + " · " + selectedRoomType.bedLabel());
+    }
+
+    private void updateSelectedRoomSummaryClean() {
+        if (selectedRoomType == null) {
+            return;
+        }
+        priceTextView.setText(PriceUtils.formatUsd(selectedRoomType.getBasePrice()) + " / đêm");
+        capacityTextView.setText("Loại phòng\n" + selectedRoomType.displayName()
+                + " · tối đa " + selectedRoomType.effectiveMaxAdults()
+                + " người lớn");
         guestSummaryTextView.setText("1 phòng · " + selectedRoomType.sizeLabel() + " · " + selectedRoomType.bedLabel());
     }
 
@@ -495,7 +673,7 @@ public class HotelDetailActivity extends AppCompatActivity {
         locationParams.topMargin = dp(74);
         mapPreviewContainer.addView(locationBadge, locationParams);
 
-        mapHintTextView.setText("View map " + resolveCityLabel(cabin));
+        mapHintTextView.setText("Xem bản đồ " + resolveCityLabel(cabin));
     }
 
     private String singleHotelMapHtml(Cabin cabin) {
@@ -606,11 +784,17 @@ public class HotelDetailActivity extends AppCompatActivity {
             }
             selectedCheckOut = date.toString();
         }
-        updateDateViews();
+        updateDateViewsClean();
     }
 
     private void updateDateViews() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE, dd MMM", Locale.US);
+        checkInTextView.setText("Nhận phòng\n" + formatDate(selectedCheckIn, formatter));
+        checkOutTextView.setText("Trả phòng\n" + formatDate(selectedCheckOut, formatter));
+    }
+
+    private void updateDateViewsClean() {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE, dd MMM", Locale.forLanguageTag("vi-VN"));
         checkInTextView.setText("Nhận phòng\n" + formatDate(selectedCheckIn, formatter));
         checkOutTextView.setText("Trả phòng\n" + formatDate(selectedCheckOut, formatter));
     }
@@ -641,7 +825,7 @@ public class HotelDetailActivity extends AppCompatActivity {
             return;
         }
         if (hostId == null || hostId.trim().isEmpty()) {
-            statusTextView.setText("Opening support chat...");
+            statusTextView.setText("Đang mở cuộc trò chuyện hỗ trợ...");
             new AuthService().getSupportUser(new SupabaseCallback<User>() {
                 @Override
                 public void onSuccess(User user) {
@@ -725,7 +909,7 @@ public class HotelDetailActivity extends AppCompatActivity {
                 0,
                 0
         );
-        favoriteButton.setContentDescription(favorite ? "Remove saved stay" : "Save stay");
+        favoriteButton.setContentDescription(favorite ? "Bỏ lưu chỗ nghỉ" : "Lưu chỗ nghỉ");
     }
 
     private void loadWishlistCount() {
@@ -814,7 +998,7 @@ public class HotelDetailActivity extends AppCompatActivity {
         copy.setHostId(currentCabin.getHostId() == null || currentCabin.getHostId().trim().isEmpty()
                 ? sessionManager.getUserId()
                 : currentCabin.getHostId());
-        statusTextView.setText("Duplicating cabin...");
+        statusTextView.setText("Đang nhân bản khách sạn...");
         cabinService.createCabin(copy, new SupabaseCallback<Cabin>() {
             @Override
             public void onSuccess(Cabin data) {
@@ -832,7 +1016,7 @@ public class HotelDetailActivity extends AppCompatActivity {
     }
 
     private void deleteCabin() {
-        statusTextView.setText("Deleting cabin...");
+        statusTextView.setText("Đang xóa khách sạn...");
         cabinService.deleteCabin(cabinId, new SupabaseCallback<Boolean>() {
             @Override
             public void onSuccess(Boolean data) {
@@ -852,35 +1036,53 @@ public class HotelDetailActivity extends AppCompatActivity {
     private String resolveCityLabel(Cabin cabin) {
         String location = safe(cabin.getLocation(), "");
         if (location.toLowerCase(Locale.US).contains("ho chi minh")) {
-            return "Ho Chi Minh City";
+            return "TP. Hồ Chí Minh";
         }
         if (location.toLowerCase(Locale.US).contains("vung tau")) {
-            return "Vung Tau";
+            return "Vũng Tàu";
         }
         if (location.toLowerCase(Locale.US).contains("ha noi") || location.toLowerCase(Locale.US).contains("hanoi")) {
-            return "Hanoi";
+            return "Hà Nội";
         }
-        return "Vietnam";
+        if (location.toLowerCase(Locale.US).contains("da nang")) {
+            return "Đà Nẵng";
+        }
+        if (location.toLowerCase(Locale.US).contains("da lat")) {
+            return "Đà Lạt";
+        }
+        return "Việt Nam";
     }
 
     private double cityLat(Cabin cabin) {
         String city = resolveCityLabel(cabin);
-        if (city.equals("Vung Tau")) {
+        if (city.equals("Vũng Tàu")) {
             return 10.4114;
         }
-        if (city.equals("Hanoi")) {
+        if (city.equals("Hà Nội")) {
             return 21.0278;
+        }
+        if (city.equals("Đà Nẵng")) {
+            return 16.0471;
+        }
+        if (city.equals("Đà Lạt")) {
+            return 11.9404;
         }
         return 10.7769;
     }
 
     private double cityLng(Cabin cabin) {
         String city = resolveCityLabel(cabin);
-        if (city.equals("Vung Tau")) {
+        if (city.equals("Vũng Tàu")) {
             return 107.1362;
         }
-        if (city.equals("Hanoi")) {
+        if (city.equals("Hà Nội")) {
             return 105.8342;
+        }
+        if (city.equals("Đà Nẵng")) {
+            return 108.2068;
+        }
+        if (city.equals("Đà Lạt")) {
+            return 108.4583;
         }
         return 106.7009;
     }
@@ -954,6 +1156,111 @@ public class HotelDetailActivity extends AppCompatActivity {
             return "A cleaner look at the area";
         }
         return "Included in this stay";
+    }
+
+    private GradientDrawable lightSurface(boolean selected) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(Color.parseColor(selected ? "#FFF3D6" : "#FFFDF8"));
+        drawable.setCornerRadius(dp(8));
+        drawable.setStroke(dp(1), Color.parseColor(selected ? "#D4A247" : "#E5D6BA"));
+        return drawable;
+    }
+
+    private String displayDescription(Cabin cabin) {
+        String description = safe(cabin.getDescription(), "");
+        String city = resolveCityLabel(cabin);
+        String lower = description.toLowerCase(Locale.US);
+        if (description.trim().isEmpty() || lower.contains("real-world hotel reference")) {
+            return "Khách sạn tham khảo tại " + city + " với dữ liệu phòng, bản đồ và quản lý được chuẩn bị sẵn để bạn test đặt phòng.";
+        }
+        if (lower.contains("heritage riverside hotel")) {
+            return "Khách sạn ven sông phong cách cổ điển, gần phố đi bộ Nguyễn Huệ, có phòng ban công và các lựa chọn phù hợp cho chuyến đi ngắn ngày.";
+        }
+        if (lower.contains("beachfront vung tau")) {
+            return "Khách sạn gần Bãi Sau Vũng Tàu, có phòng rộng, hồ bơi và lựa chọn hướng biển cho kỳ nghỉ cuối tuần.";
+        }
+        if (lower.contains("landmark hoan kiem")) {
+            return "Khách sạn nổi bật tại Hoàn Kiếm, gần Nhà hát Lớn và khu phố cổ, phù hợp cho lịch trình khám phá Hà Nội.";
+        }
+        if (lower.contains("beach resort")) {
+            return "Khu nghỉ dưỡng gần biển với phòng rộng, hồ bơi, lựa chọn cho gia đình và các hạng phòng hướng biển.";
+        }
+        return description;
+    }
+
+    private String translateAmenityLabel(String label) {
+        String value = label.toLowerCase(Locale.US);
+        if (value.contains("wifi")) {
+            return "WiFi";
+        }
+        if (value.contains("breakfast") || value.contains("coffee")) {
+            return "Bữa sáng";
+        }
+        if (value.contains("parking")) {
+            return "Bãi đỗ xe";
+        }
+        if (value.contains("pool")) {
+            return "Hồ bơi";
+        }
+        if (value.contains("air")) {
+            return "Điều hòa";
+        }
+        if (value.contains("bath")) {
+            return "Phòng tắm riêng";
+        }
+        if (value.contains("balcony")) {
+            return "Ban công";
+        }
+        if (value.contains("view")) {
+            return "Tầm nhìn đẹp";
+        }
+        return label;
+    }
+
+    private String amenityHintVi(String label) {
+        String value = label.toLowerCase(Locale.US);
+        if (value.contains("wifi")) {
+            return "Kết nối ổn định trong phòng và khu vực chung";
+        }
+        if (value.contains("breakfast") || value.contains("coffee")) {
+            return "Có thể thêm bữa sáng khi đặt phòng";
+        }
+        if (value.contains("parking")) {
+            return "Thuận tiện khi đi xe cá nhân";
+        }
+        if (value.contains("pool")) {
+            return "Không gian thư giãn trong khuôn viên";
+        }
+        if (value.contains("air")) {
+            return "Phòng mát và dễ chịu";
+        }
+        if (value.contains("bath")) {
+            return "Riêng tư, sạch sẽ sau chuyến đi";
+        }
+        if (value.contains("balcony")) {
+            return "Có thêm ánh sáng và không khí ngoài trời";
+        }
+        if (value.contains("view")) {
+            return "Dễ ngắm cảnh và kiểm tra vị trí lưu trú";
+        }
+        return "Đã bao gồm trong chỗ nghỉ này";
+    }
+
+    private String translateRoomDescription(String description) {
+        String value = description.toLowerCase(Locale.US);
+        if (value.contains("20-25") || value.contains("quick stays") || value.contains("short city")) {
+            return "Phòng gọn gàng cho chuyến đi ngắn, đủ tiện nghi cơ bản.";
+        }
+        if (value.contains("25-30") || value.contains("extra comfort") || value.contains("desk")) {
+            return "Phòng rộng hơn, có thêm không gian sinh hoạt và làm việc.";
+        }
+        if (value.contains("30-45") || value.contains("balcony") || value.contains("couples")) {
+            return "Phòng rộng, phù hợp cặp đôi hoặc nhóm nhỏ, có lựa chọn ban công.";
+        }
+        if (value.contains("suite") || value.contains("living room")) {
+            return "Hạng suite rộng hơn, phù hợp gia đình hoặc nhóm cần không gian riêng.";
+        }
+        return description;
     }
 
     private String safe(String value, String fallback) {

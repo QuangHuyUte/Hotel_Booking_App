@@ -65,10 +65,10 @@ public class SignInActivity extends AppCompatActivity {
         TextView closeButton = findViewById(R.id.button_close);
         gmailButton = findViewById(R.id.button_gmail_login);
 
-        setLoginMode(false);
-        customerModeButton.setOnClickListener(view -> setLoginMode(false));
-        managerModeButton.setOnClickListener(view -> setLoginMode(true));
-        loginButton.setOnClickListener(view -> login());
+        setLoginModeClean(false);
+        customerModeButton.setOnClickListener(view -> setLoginModeClean(false));
+        managerModeButton.setOnClickListener(view -> setLoginModeClean(true));
+        loginButton.setOnClickListener(view -> loginClean());
         closeButton.setOnClickListener(view -> openGuestSearch());
         gmailButton.setOnClickListener(view -> openGmailLogin());
         registerButton.setOnClickListener(view -> startActivity(new Intent(this, SignUpActivity.class)));
@@ -113,10 +113,10 @@ public class SignInActivity extends AppCompatActivity {
         authService.login(email, password, new SupabaseCallback<User>() {
             @Override
             public void onSuccess(User user) {
-                if (!isExpectedLoginRole(user)) {
+                if (!isExpectedLoginRoleClean(user)) {
                     return;
                 }
-                completeLogin(user, welcomeMessage(user));
+                completeLoginClean(user, welcomeMessageClean(user));
             }
 
             @Override
@@ -138,6 +138,55 @@ public class SignInActivity extends AppCompatActivity {
         setStatus(managerMode
                 ? "Tài khoản quản lý chỉ xem và quản lý các khách sạn được phân quyền."
                 : "Tài khoản khách hàng có thể tìm, đặt phòng, thanh toán và xem chuyến đi.");
+    }
+
+    private void setLoginModeClean(boolean managerMode) {
+        setLoginMode(managerMode);
+        emailEditText.setHint(managerMode ? "Email quản lý" : "Email khách hàng");
+        gmailButton.setVisibility(managerMode ? View.GONE : View.VISIBLE);
+        registerButton.setVisibility(managerMode ? View.GONE : View.VISIBLE);
+        setStatus(managerMode
+                ? "Chế độ quản lý chỉ dành cho tài khoản manager. Huy Gia Lai dùng email huygialai2005@gmail.com để vào trang quản lý."
+                : "Chế độ khách hàng dùng để tìm phòng, đặt phòng và test đăng ký/OTP bằng Gmail mới.");
+    }
+
+    private void loginClean() {
+        String email = emailEditText.getText().toString();
+        String password = passwordEditText.getText().toString();
+        if (!ValidationUtils.isValidEmail(email) || !ValidationUtils.isNotBlank(password)) {
+            setStatus("Vui lòng nhập email và mật khẩu hợp lệ.");
+            return;
+        }
+
+        setStatus("Đang đăng nhập...");
+        authService.login(email, password, new SupabaseCallback<User>() {
+            @Override
+            public void onSuccess(User user) {
+                if (!isExpectedLoginRoleClean(user)) {
+                    return;
+                }
+                completeLoginClean(user, welcomeMessageClean(user));
+            }
+
+            @Override
+            public void onError(String message) {
+                setStatus(message);
+            }
+        });
+    }
+
+    private boolean isExpectedLoginRoleClean(User user) {
+        String role = user == null ? "" : user.getRole();
+        boolean isManager = AppConstants.ROLE_MANAGER.equals(role);
+        if (managerLoginMode && !isManager) {
+            setStatus("Đây là tài khoản khách hàng. Hãy chuyển sang chế độ Khách hàng để đăng nhập.");
+            return false;
+        }
+        if (!managerLoginMode && isManager) {
+            setStatus("Đây là tài khoản quản lý. Hãy chuyển sang chế độ Quản lý để đăng nhập.");
+            return false;
+        }
+        return true;
     }
 
     private boolean isExpectedLoginRole(User user) {
@@ -346,10 +395,10 @@ public class SignInActivity extends AppCompatActivity {
             @Override
             public void onSuccess(User user) {
                 dialog.dismiss();
-                if (!isExpectedLoginRole(user)) {
+                if (!isExpectedLoginRoleClean(user)) {
                     return;
                 }
-                completeLogin(user, welcomeMessage(user));
+                completeLoginClean(user, welcomeMessageClean(user));
             }
 
             @Override
@@ -373,6 +422,39 @@ public class SignInActivity extends AppCompatActivity {
         }
         startActivity(new Intent(this, HotelSearchActivity.class));
         finish();
+    }
+
+    private void completeLoginClean(User user, String toastMessage) {
+        sessionManager.saveUser(user);
+        Toast.makeText(SignInActivity.this, toastMessage, Toast.LENGTH_SHORT).show();
+        boolean isManager = user != null && AppConstants.ROLE_MANAGER.equals(user.getRole());
+        if (isManager) {
+            startActivity(new Intent(SignInActivity.this, HostHotelDashboardActivity.class));
+            finish();
+            return;
+        }
+        if (getIntent().getBooleanExtra("returnToBooking", false)) {
+            Intent intent = new Intent(SignInActivity.this, BookingCreateActivity.class);
+            intent.putExtra(AppConstants.EXTRA_CABIN_ID, getIntent().getStringExtra(AppConstants.EXTRA_CABIN_ID));
+            intent.putExtra("checkIn", getIntent().getStringExtra("checkIn"));
+            intent.putExtra("checkOut", getIntent().getStringExtra("checkOut"));
+            startActivity(intent);
+            finish();
+            return;
+        }
+        startActivity(new Intent(SignInActivity.this, AccountHubActivity.class));
+        finish();
+    }
+
+    private String welcomeMessageClean(User user) {
+        String name = user == null ? "" : user.getFullName();
+        if (name == null || name.trim().isEmpty()) {
+            name = user == null ? "" : user.getEmail();
+        }
+        if (name == null || name.trim().isEmpty()) {
+            name = "bạn";
+        }
+        return "Xin chào, " + name.trim();
     }
 
     private void completeLogin(User user, String toastMessage) {
@@ -436,10 +518,10 @@ public class SignInActivity extends AppCompatActivity {
             authService.loginWithOAuthSession(name, email, subject, accessToken, refreshToken, new SupabaseCallback<User>() {
                 @Override
                 public void onSuccess(User user) {
-                    if (!isExpectedLoginRole(user)) {
+                    if (!isExpectedLoginRoleClean(user)) {
                         return;
                     }
-                    completeLogin(user, welcomeMessage(user));
+                    completeLoginClean(user, welcomeMessageClean(user));
                 }
 
                 @Override
