@@ -1249,12 +1249,12 @@ public class HotelSearchActivity extends AppCompatActivity {
         addFilter("budget", "budget_120", "US$80 - US$120", cabin -> price(cabin) > 80 && price(cabin) <= 120);
         addFilter("budget", "budget_200", "US$120 - US$200+", cabin -> price(cabin) > 120);
 
-        addFilter("popular", "popular_9", "Tuyệt hảo: từ 9 điểm", cabin -> cabin.getDiscount() >= 10);
+        addFilter("popular", "popular_9", "Tuyệt hảo: từ 9 điểm", cabin -> reviewScore(cabin) >= 9.0);
         addFilter("popular", "popular_hotel", "Khách sạn", cabin -> true);
         addFilter("popular", "popular_breakfast", "Bao gồm bữa sáng", cabin -> text(cabin).contains("breakfast"));
         addFilter("popular", "popular_d1", "Quận 1", cabin -> contains(cabin, "district 1"));
         addFilter("popular", "popular_pool", "Hồ bơi", cabin -> contains(cabin, "pool"));
-        addFilter("popular", "popular_four", "4 sao", cabin -> cabin.getMaxCapacity() >= 4);
+        addFilter("popular", "popular_four", "4 sao", cabin -> cabin.getStarRating() >= 4);
 
         addFilter("area", "area_d1", "Quận 1", cabin -> contains(cabin, "district 1"));
         addFilter("area", "area_centre", "Trung tâm TP. Hồ Chí Minh", cabin -> contains(cabin, "ho chi minh"));
@@ -1293,9 +1293,9 @@ public class HotelSearchActivity extends AppCompatActivity {
         addFilter("meal", "meal_all", "Bao gồm nhiều bữa", cabin -> contains(cabin, "breakfast") && contains(cabin, "kitchen"));
         addFilter("meal", "meal_breakfast_lunch", "Breakfast and lunch included", cabin -> contains(cabin, "breakfast") && cabin.getMaxCapacity() >= 4);
 
-        addFilter("bed", "bed_double", "Giường đôi / Queen / King", cabin -> containsAny(cabin, "double", "queen", "king"));
-        addFilter("bed", "bed_twin", "2 giường đơn", cabin -> containsAny(cabin, "2 single", "single beds"));
-        addFilter("bed", "bed_sofa", "Giường sofa", cabin -> contains(cabin, "sofa"));
+        addFilter("bed", "bed_double", "Giường đôi / Queen / King", cabin -> hasBedTerm(cabin, "double", "queen", "king"));
+        addFilter("bed", "bed_twin", "2 giường đơn", cabin -> hasTwinSingle(cabin));
+        addFilter("bed", "bed_sofa", "Giường sofa", cabin -> hasBedTerm(cabin, "sofa"));
 
         addFilter("brand", "brand_hilton", "Hilton Hotels & Resorts", cabin -> contains(cabin, "skyline"));
         addFilter("brand", "brand_marriott", "Marriott Hotels & Resorts", cabin -> contains(cabin, "landmark"));
@@ -1303,22 +1303,22 @@ public class HotelSearchActivity extends AppCompatActivity {
         addFilter("brand", "brand_novotel", "Novotel", cabin -> contains(cabin, "central"));
         addFilter("brand", "brand_holiday", "Holiday Inn Hotels & Resorts", cabin -> contains(cabin, "family"));
 
-        addFilter("review", "review_9", "Tuyệt hảo: từ 9 điểm", cabin -> cabin.getDiscount() >= 15);
-        addFilter("review", "review_8", "Rất tốt: từ 8 điểm", cabin -> cabin.getDiscount() >= 8);
-        addFilter("review", "review_7", "Tốt: từ 7 điểm", cabin -> cabin.getDiscount() >= 5);
-        addFilter("review", "review_6", "Dễ chịu: từ 6 điểm", cabin -> cabin.getRegularPrice() <= 150);
-        addFilter("review", "review_5", "Ổn: từ 5 điểm", cabin -> true);
+        addFilter("review", "review_9", "Tuyệt hảo: từ 9 điểm", cabin -> reviewScore(cabin) >= 9.0);
+        addFilter("review", "review_8", "Rất tốt: từ 8 điểm", cabin -> reviewScore(cabin) >= 8.0);
+        addFilter("review", "review_7", "Tốt: từ 7 điểm", cabin -> reviewScore(cabin) >= 7.0);
+        addFilter("review", "review_6", "Dễ chịu: từ 6 điểm", cabin -> reviewScore(cabin) >= 6.0);
+        addFilter("review", "review_5", "Ổn: từ 5 điểm", cabin -> reviewScore(cabin) >= 5.0);
 
         addFilter("location", "location_1", "Dưới 1 km", cabin -> containsAny(cabin, "market", "walking", "lake"));
         addFilter("location", "location_3", "Dưới 3 km", cabin -> containsAny(cabin, "district 1", "hoan kiem", "front beach", "back beach"));
         addFilter("location", "location_5", "Dưới 5 km", cabin -> true);
 
-        addFilter("star", "star_0", "Chưa xếp hạng", cabin -> cabin.getRegularPrice() < 85);
-        addFilter("star", "star_1", "1 sao", cabin -> cabin.getRegularPrice() >= 85 && cabin.getRegularPrice() < 100);
-        addFilter("star", "star_2", "2 sao", cabin -> cabin.getRegularPrice() >= 100 && cabin.getRegularPrice() < 120);
-        addFilter("star", "star_3", "3 sao", cabin -> cabin.getRegularPrice() >= 120 && cabin.getRegularPrice() < 145);
-        addFilter("star", "star_4", "4 sao", cabin -> cabin.getRegularPrice() >= 145 && cabin.getRegularPrice() < 170);
-        addFilter("star", "star_5", "5 sao", cabin -> cabin.getRegularPrice() >= 170);
+        addFilter("star", "star_0", "Chưa xếp hạng", cabin -> cabin.getStarRating() <= 0);
+        addFilter("star", "star_1", "1 sao", cabin -> cabin.getStarRating() == 1);
+        addFilter("star", "star_2", "2 sao", cabin -> cabin.getStarRating() == 2);
+        addFilter("star", "star_3", "3 sao", cabin -> cabin.getStarRating() == 3);
+        addFilter("star", "star_4", "4 sao", cabin -> cabin.getStarRating() == 4);
+        addFilter("star", "star_5", "5 sao", cabin -> cabin.getStarRating() >= 5);
     }
 
     private void addBudgetSection(LinearLayout content, Set<String> draft, List<FacetRow> rows, Runnable[] refresh) {
@@ -1551,6 +1551,39 @@ public class HotelSearchActivity extends AppCompatActivity {
             }
         }
         return false;
+    }
+
+    private boolean hasBedTerm(Cabin cabin, String... terms) {
+        if (cabin.getRoomTypes() != null) {
+            for (RoomType roomType : cabin.getRoomTypes()) {
+                String bedText = normalizeSearchText(safe(roomType.getBedType()) + " "
+                        + safe(roomType.getBeds()) + " "
+                        + safe(roomType.getBedSummary()) + " "
+                        + roomType.bedLabel());
+                for (String term : terms) {
+                    if (bedText.contains(normalizeSearchText(term))) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return containsAny(cabin, terms);
+    }
+
+    private boolean hasTwinSingle(Cabin cabin) {
+        if (cabin.getRoomTypes() != null) {
+            for (RoomType roomType : cabin.getRoomTypes()) {
+                String bedText = normalizeSearchText(safe(roomType.getBedType()) + " "
+                        + safe(roomType.getBeds()) + " "
+                        + safe(roomType.getBedSummary()) + " "
+                        + roomType.bedLabel());
+                if (bedText.contains("2 single") || bedText.contains("2 giuong don")
+                        || (bedText.contains("single") && roomType.effectiveBedCount() >= 2)) {
+                    return true;
+                }
+            }
+        }
+        return containsAny(cabin, "2 single", "single beds", "2 giuong don");
     }
 
     private String text(Cabin cabin) {
@@ -2033,7 +2066,7 @@ public class HotelSearchActivity extends AppCompatActivity {
     }
 
     private double reviewScore(Cabin cabin) {
-        return 6 + Math.min(3.5, cabin.getDiscount() / 5.0) + Math.min(0.5, cabin.getMaxCapacity() / 10.0);
+        return cabin.getReviewScore() > 0 ? cabin.getReviewScore() : 6.0;
     }
 
     private void applyAvailabilityFilter(List<Cabin> result, SearchCriteria criteria) {

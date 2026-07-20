@@ -6,9 +6,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -39,6 +41,7 @@ public class AiChatActivity extends AppCompatActivity {
     private LinearLayout messagesContainer;
     private ScrollView messagesScroll;
     private EditText messageEditText;
+    private LinearLayout quickSuggestionsBar;
     private boolean isSearching;
 
     @Override
@@ -55,6 +58,7 @@ public class AiChatActivity extends AppCompatActivity {
         messagesContainer = findViewById(R.id.container_messages);
         messagesScroll = findViewById(R.id.scroll_messages);
         messageEditText = findViewById(R.id.edit_message);
+        installQuickSuggestions();
 
         titleTextView.setText("Trợ lý Serein");
         statusTextView.setText("Tìm khách sạn bằng dữ liệu thật");
@@ -64,6 +68,52 @@ public class AiChatActivity extends AppCompatActivity {
         sendButton.setOnClickListener(view -> submitCurrentMessage());
 
         renderWelcome();
+    }
+
+    private void installQuickSuggestions() {
+        LinearLayout root = (LinearLayout) messagesScroll.getParent();
+        HorizontalScrollView scroller = new HorizontalScrollView(this);
+        scroller.setHorizontalScrollBarEnabled(false);
+        scroller.setFillViewport(false);
+        scroller.setBackgroundResource(R.drawable.bg_chat_suggestion_bar);
+        scroller.setPadding(dp(8), dp(8), dp(8), dp(8));
+
+        quickSuggestionsBar = new LinearLayout(this);
+        quickSuggestionsBar.setOrientation(LinearLayout.HORIZONTAL);
+        scroller.addView(quickSuggestionsBar, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+        addSuggestionPill("Đà Nẵng · 2 người · hồ bơi", "Tìm khách sạn ở Đà Nẵng cho 2 người có hồ bơi");
+        addSuggestionPill("TP.HCM · 1 đêm · 2 người", "Phòng ở TP. Hồ Chí Minh 25-26/7 cho 2 người");
+        addSuggestionPill("Vũng Tàu · suite · 4 người", "Tôi muốn phòng suite ở Vũng Tàu cho 4 người");
+
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(dp(10), dp(4), dp(10), dp(8));
+        root.addView(scroller, Math.max(0, root.getChildCount() - 1), params);
+    }
+
+    private void addSuggestionPill(String label, String message) {
+        Button button = new Button(this);
+        button.setAllCaps(false);
+        button.setText(label);
+        button.setTextColor(getColor(R.color.booking_blue));
+        button.setTextSize(12);
+        button.setGravity(Gravity.CENTER);
+        button.setBackgroundResource(R.drawable.bg_booking_secondary);
+        button.setMinWidth(0);
+        button.setMinHeight(0);
+        button.setPadding(dp(12), 0, dp(12), 0);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                dp(38)
+        );
+        params.setMargins(0, 0, dp(8), 0);
+        quickSuggestionsBar.addView(button, params);
+        button.setOnClickListener(view -> submitMessage(message));
     }
 
     private void renderWelcome() {
@@ -125,9 +175,14 @@ public class AiChatActivity extends AppCompatActivity {
         messageEditText.setText("");
         addMessageRow(message, true, "Bây giờ");
         TextView progress = addMessageRow("Đang phân tích nhu cầu...", false, "");
+        progress.setAlpha(0.3f);
+        progress.animate().alpha(1f).setDuration(220).start();
         scrollToBottom();
 
-        handler.postDelayed(() -> progress.setText("Đang kiểm tra khách sạn phù hợp..."), 450);
+        handler.postDelayed(() -> animateProgress(progress, "Đang nhận diện điểm đến, ngày ở và số người..."), 350);
+        handler.postDelayed(() -> animateProgress(progress, "Đang tìm được nhóm phòng phù hợp (1/3)..."), 760);
+        handler.postDelayed(() -> animateProgress(progress, "Đang so khớp tiện nghi, giường và giá (2/3)..."), 1120);
+        handler.postDelayed(() -> animateProgress(progress, "Đang xếp hạng lựa chọn tốt nhất (3/3)..."), 1460);
         aiAssistantService.searchHotels(message, new SupabaseCallback<AiSearchResult>() {
             @Override
             public void onSuccess(AiSearchResult result) {
@@ -143,6 +198,18 @@ public class AiChatActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    private void animateProgress(TextView progress, String text) {
+        if (!isSearching) {
+            return;
+        }
+        progress.animate().alpha(0.35f).translationY(dp(2)).setDuration(90)
+                .withEndAction(() -> {
+                    progress.setText(text);
+                    progress.animate().alpha(1f).translationY(0).setDuration(150).start();
+                })
+                .start();
     }
 
     private void renderResult(TextView progress, AiSearchResult result) {
@@ -161,6 +228,9 @@ public class AiChatActivity extends AppCompatActivity {
         addMessageRow(buildQuerySummary(result.getQuery()), false, "");
         for (int i = 0; i < recommendations.size(); i++) {
             addRecommendationCard(recommendations.get(i), result.getQuery(), i + 1);
+        }
+        if (quickSuggestionsBar != null) {
+            quickSuggestionsBar.animate().alpha(1f).setDuration(180).start();
         }
         scrollToBottom();
     }

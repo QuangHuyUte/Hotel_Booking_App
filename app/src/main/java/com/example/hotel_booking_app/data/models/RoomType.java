@@ -262,6 +262,12 @@ public class RoomType {
         if ("standard".equalsIgnoreCase(value)) {
             return "Tiêu chuẩn";
         }
+        if ("solo".equalsIgnoreCase(value)) {
+            return "Phòng đơn";
+        }
+        if ("twin".equalsIgnoreCase(value)) {
+            return "Phòng 2 giường đơn";
+        }
         if ("superior".equalsIgnoreCase(value)) {
             return "Cao cấp";
         }
@@ -270,6 +276,9 @@ public class RoomType {
         }
         if ("suite".equalsIgnoreCase(value)) {
             return "Suite";
+        }
+        if ("family".equalsIgnoreCase(value)) {
+            return "Gia đình";
         }
         if ("room".equalsIgnoreCase(value)) {
             return "Phòng";

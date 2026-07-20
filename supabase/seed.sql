@@ -372,9 +372,12 @@ select
 from public.cabins c
 cross join lateral (
   values
-    ('Standard', '20-25 m2 room for quick stays', 2, 2, 7, 0.88, '1 Queen bed', 'Queen', 1, 2, '1 Queen bed', '[{"type":"Queen","quantity":1,"adultCapacity":2}]', 1.6, 24, false, 'WiFi, Air conditioning, Private bathroom'),
-    ('Superior', '25-30 m2 room with extra comfort', 2, 2, 5, 1.00, '2 Single beds', 'Single', 2, 2, '2 Single beds', '[{"type":"Single","quantity":2,"adultCapacity":1}]', 1.0, 29, false, 'WiFi, Breakfast, Air conditioning, Private bathroom'),
-    ('Deluxe', '30-45 m2 room for couples or small groups', 3, 3, 4, 1.24, '1 King bed and 1 sofa bed', 'King', 2, 3, '1 King bed and 1 sofa bed', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Sofa Single","quantity":1,"adultCapacity":1}]', 1.8, 38, false, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony'),
+    ('Solo', '18-22 m2 compact room for one adult', 1, 1, 5, 0.72, '1 Single bed', 'Single', 1, 1, '1 Single bed', '[{"type":"Single","quantity":1,"adultCapacity":1}]', 1.0, 20, false, 'WiFi, Air conditioning, Private bathroom'),
+    ('Standard', '20-25 m2 room for quick stays', 2, 2, 7, 0.88, '1 Double bed', 'Double', 1, 2, '1 Double bed', '[{"type":"Double","quantity":1,"adultCapacity":2}]', 1.5, 24, false, 'WiFi, Air conditioning, Private bathroom'),
+    ('Twin', '24-30 m2 room with two separate beds', 2, 2, 5, 0.98, '2 Single beds', 'Single', 2, 2, '2 Single beds', '[{"type":"Single","quantity":2,"adultCapacity":1}]', 1.0, 28, false, 'WiFi, Breakfast, Air conditioning, Private bathroom'),
+    ('Superior', '28-34 m2 queen room with extra comfort', 2, 2, 5, 1.08, '1 Queen bed', 'Queen', 1, 2, '1 Queen bed', '[{"type":"Queen","quantity":1,"adultCapacity":2}]', 1.6, 32, false, 'WiFi, Breakfast, Air conditioning, Private bathroom'),
+    ('Deluxe', '34-45 m2 room for couples or small groups', 3, 3, 4, 1.24, '1 King bed and 1 sofa bed', 'King', 2, 3, '1 King bed and 1 sofa bed', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Sofa Single","quantity":1,"adultCapacity":1}]', 1.8, 38, false, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony'),
+    ('Family', '40-52 m2 family room with flexible bedding', 4, 4, 3, 1.46, '2 Double beds', 'Double', 2, 4, '2 Double beds', '[{"type":"Double","quantity":2,"adultCapacity":2}]', 1.5, 46, false, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony'),
     ('Suite', '50 m2+ suite with separate living room', 5, 5, 2, 1.72, '1 King bed, 1 Double bed and 1 sofa bed', 'King', 3, 5, '1 King bed, 1 Double bed and 1 sofa bed', '[{"type":"King","quantity":1,"adultCapacity":2},{"type":"Double","quantity":1,"adultCapacity":2},{"type":"Sofa Single","quantity":1,"adultCapacity":1}]', 1.8, 58, true, 'WiFi, Breakfast, Air conditioning, Private bathroom, Balcony')
 ) as room(category, description, max_guests, max_adults, total_rooms, price_multiplier, beds, bed_type, bed_count, sleeping_capacity, bed_summary, bed_config, bed_width, size_m2, has_living_room, amenities)
 where not exists (
@@ -382,7 +385,7 @@ where not exists (
   from public.room_types rt
   where rt."cabinId" = c."_id"
 )
-  and (room.category <> 'Suite' or c."maxCapacity" >= 4);
+  and (room.category not in ('Family', 'Suite') or c."maxCapacity" >= 4);
 
 insert into public.room_inventory (
   "_id", "roomTypeId", date, "availableRooms", "priceOverride", "isClosed", "createdAt", "updatedAt"
@@ -460,6 +463,65 @@ insert into public.rates (
 ) values
   ('82000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000104', '20000000-0000-4000-8000-000000000004', '80000000-0000-4000-8000-000000000004', 5, 'Clean deluxe room and easy beach access.', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
   ('82000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000103', '20000000-0000-4000-8000-000000000003', '80000000-0000-4000-8000-000000000003', 4, 'Good location and quick check-in.', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
+
+with review_targets as (
+  select
+    c."_id" as cabin_id,
+    row_number() over (order by c.name) as hotel_index,
+    10 + ((row_number() over (order by c.name))::integer % 6) as target_count,
+    coalesce(existing.count_existing, 0) as existing_count
+  from public.cabins c
+  left join (
+    select "cabinId", count(*)::integer as count_existing
+    from public.rates
+    group by "cabinId"
+  ) existing on existing."cabinId" = c."_id"
+)
+insert into public.rates (
+  "_id", "userId", "cabinId", "bookingId", rating, comment, "createdAt", "updatedAt"
+)
+select
+  gen_random_uuid(),
+  case ((rt.hotel_index + g.n) % 5)
+    when 0 then '10000000-0000-4000-8000-000000000101'::uuid
+    when 1 then '10000000-0000-4000-8000-000000000102'::uuid
+    when 2 then '10000000-0000-4000-8000-000000000103'::uuid
+    when 3 then '10000000-0000-4000-8000-000000000104'::uuid
+    else '10000000-0000-4000-8000-000000000105'::uuid
+  end,
+  rt.cabin_id,
+  null,
+  case
+    when (rt.hotel_index + g.n) % 11 = 0 then 3
+    when (rt.hotel_index + g.n) % 4 = 0 then 4
+    else 5
+  end,
+  case (rt.hotel_index + g.n) % 6
+    when 0 then 'Room was clean, easy to find, and close to the main area.'
+    when 1 then 'Good room layout, comfortable bed, and helpful hotel team.'
+    when 2 then 'Amenities matched the listing and check-in was smooth.'
+    when 3 then 'Nice stay for the price with reliable WiFi and quiet room.'
+    when 4 then 'Convenient location and the room type was exactly as described.'
+    else 'Pleasant short stay, good service, and useful room facilities.'
+  end,
+  timestamp '2026-07-20 08:00:00' + (g.n || ' hours')::interval,
+  timestamp '2026-07-20 08:00:00'
+from review_targets rt
+cross join lateral generate_series(1, greatest(0, rt.target_count - rt.existing_count)) as g(n);
+
+update public.cabins c
+set "reviewCount" = stats.review_count,
+    "reviewScore" = stats.review_score,
+    "updatedAt" = timestamp '2026-07-20 08:00:00'
+from (
+  select
+    "cabinId",
+    count(*)::integer as review_count,
+    round((avg(rating) * 2)::numeric, 1) as review_score
+  from public.rates
+  group by "cabinId"
+) stats
+where stats."cabinId" = c."_id";
 
 insert into public.wishlists ("_id", "userId", "cabinId", "createdAt") values
   ('83000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', '20000000-0000-4000-8000-000000000002', timestamp '2026-07-20 08:00:00'),

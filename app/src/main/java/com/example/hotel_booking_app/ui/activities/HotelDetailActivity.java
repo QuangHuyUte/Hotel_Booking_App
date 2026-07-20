@@ -58,6 +58,7 @@ public class HotelDetailActivity extends AppCompatActivity {
     private TextView locationTextView;
     private TextView capacityTextView;
     private TextView descriptionTextView;
+    private TextView ratingMetaTextView;
     private TextView checkInTextView;
     private TextView checkOutTextView;
     private TextView guestSummaryTextView;
@@ -112,6 +113,7 @@ public class HotelDetailActivity extends AppCompatActivity {
         locationTextView = findViewById(R.id.text_location);
         capacityTextView = findViewById(R.id.text_capacity);
         descriptionTextView = findViewById(R.id.text_description);
+        ratingMetaTextView = findViewById(R.id.text_rating_meta);
         checkInTextView = findViewById(R.id.text_check_in);
         checkOutTextView = findViewById(R.id.text_check_out);
         guestSummaryTextView = findViewById(R.id.text_guest_summary);
@@ -216,6 +218,7 @@ public class HotelDetailActivity extends AppCompatActivity {
         titleTextView.setText(cabin.getName());
         heroTitleTextView.setText(cabin.getName());
         priceTextView.setText(PriceUtils.formatUsd(PriceUtils.priceAfterDiscount(cabin.getRegularPrice(), cabin.getDiscount())) + " / đêm");
+        ratingMetaTextView.setText(ratingLabel(cabin, 0, 0));
         locationTextView.setText("Vị trí\n" + safe(cabin.getAddress(), safe(cabin.getLocation(), "Serein Stay")));
         capacityTextView.setText("Sức chứa\nTối đa " + cabin.getMaxCapacity() + " khách");
         descriptionTextView.setText(displayDescription(cabin));
@@ -325,7 +328,7 @@ public class HotelDetailActivity extends AppCompatActivity {
 
     private void renderAmenitiesClean(String amenities) {
         amenitiesContainer.removeAllViews();
-        amenitiesTitleTextView.setText("Tiện nghi");
+        amenitiesTitleTextView.setText("Tiện nghi nổi bật");
         String value = amenities == null || amenities.trim().isEmpty()
                 ? "WiFi, Breakfast, Parking, Balcony"
                 : amenities;
@@ -339,27 +342,10 @@ public class HotelDetailActivity extends AppCompatActivity {
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setBackground(lightSurface(false));
-            row.setPadding(dp(12), dp(10), dp(12), dp(10));
+            row.setBackgroundResource(R.drawable.bg_detail_chip);
+            row.setPadding(dp(12), dp(11), dp(12), dp(11));
 
-            TextView icon = new TextView(this);
-            int[] colors = {
-                    Color.parseColor("#2E6F95"),
-                    Color.parseColor("#B77A25"),
-                    Color.parseColor("#287E75"),
-                    Color.parseColor("#7A5BA8"),
-                    Color.parseColor("#9A6257"),
-                    Color.parseColor("#3F7FA8")
-            };
-            GradientDrawable circle = new GradientDrawable();
-            circle.setColor(colors[i % colors.length]);
-            circle.setCornerRadius(dp(18));
-            icon.setBackground(circle);
-            icon.setGravity(Gravity.CENTER);
-            icon.setText(amenityBadge(rawLabel));
-            icon.setTextColor(Color.WHITE);
-            icon.setTypeface(null, Typeface.BOLD);
-            icon.setTextSize(11f);
+            ImageView icon = iconTile(amenityIconRes(rawLabel), amenityColor(rawLabel));
             row.addView(icon, new LinearLayout.LayoutParams(dp(36), dp(36)));
 
             LinearLayout textBlock = new LinearLayout(this);
@@ -376,7 +362,7 @@ public class HotelDetailActivity extends AppCompatActivity {
             TextView hint = new TextView(this);
             hint.setText(amenityHintVi(rawLabel));
             hint.setTextColor(getColor(R.color.booking_muted));
-            hint.setTextSize(12f);
+            hint.setTextSize(12.5f);
             hint.setLineSpacing(dp(2), 1f);
 
             textBlock.addView(name);
@@ -478,44 +464,60 @@ public class HotelDetailActivity extends AppCompatActivity {
 
             LinearLayout card = new LinearLayout(this);
             card.setOrientation(LinearLayout.VERTICAL);
-            card.setBackground(lightSurface(selected));
-            card.setPadding(dp(12), dp(11), dp(12), dp(11));
+            card.setBackgroundResource(selected ? R.drawable.bg_detail_selected : R.drawable.bg_detail_chip);
+            card.setPadding(dp(12), dp(12), dp(12), dp(12));
 
             LinearLayout top = new LinearLayout(this);
             top.setOrientation(LinearLayout.HORIZONTAL);
             top.setGravity(Gravity.CENTER_VERTICAL);
+
+            ImageView roomIcon = iconTile(roomIconRes(roomType), selected ? Color.parseColor("#B77A25") : Color.parseColor("#003580"));
+            top.addView(roomIcon, new LinearLayout.LayoutParams(dp(38), dp(38)));
+
+            LinearLayout titleBlock = new LinearLayout(this);
+            titleBlock.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams titleBlockParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            titleBlockParams.setMargins(dp(10), 0, dp(8), 0);
 
             TextView title = new TextView(this);
             title.setText(roomType.displayName());
             title.setTextColor(getColor(R.color.booking_text));
             title.setTextSize(16f);
             title.setTypeface(null, Typeface.BOLD);
-            top.addView(title, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+            TextView subTitle = new TextView(this);
+            subTitle.setText(roomType.bedLabel());
+            subTitle.setTextColor(getColor(R.color.booking_muted));
+            subTitle.setTextSize(12.5f);
+            subTitle.setMaxLines(2);
+
+            titleBlock.addView(title);
+            titleBlock.addView(subTitle);
+            top.addView(titleBlock, titleBlockParams);
 
             TextView price = new TextView(this);
-            price.setText(PriceUtils.formatUsd(roomType.getBasePrice()) + " / đêm");
+            price.setText(PriceUtils.formatUsd(roomType.getBasePrice()) + "\n/ đêm");
             price.setTextColor(getColor(R.color.booking_blue));
             price.setTextSize(14f);
             price.setTypeface(null, Typeface.BOLD);
+            price.setGravity(Gravity.END);
             top.addView(price);
             card.addView(top);
 
-            TextView details = new TextView(this);
-            details.setText(roomType.sizeLabel()
-                    + " · " + roomType.bedLabel()
-                    + "\nTối đa " + roomType.effectiveMaxAdults()
-                    + " người lớn · " + roomType.effectiveBedCount()
-                    + " giường · còn " + roomType.getTotalRooms() + " phòng"
-                    + (roomType.hasLivingRoom() ? "\nCó phòng khách riêng" : ""));
-            details.setTextColor(getColor(R.color.booking_text));
-            details.setTextSize(13f);
-            details.setLineSpacing(dp(3), 1f);
-            LinearLayout.LayoutParams detailParams = new LinearLayout.LayoutParams(
+            LinearLayout facts = new LinearLayout(this);
+            facts.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams factParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
             );
-            detailParams.setMargins(0, dp(6), 0, 0);
-            card.addView(details, detailParams);
+            factParams.setMargins(0, dp(10), 0, 0);
+            addRoomFact(facts, R.drawable.ic_room_size, roomType.sizeLabel());
+            addRoomFact(facts, R.drawable.ic_room_users, "Tối đa " + roomType.effectiveMaxAdults() + " người lớn");
+            addRoomFact(facts, R.drawable.ic_room_bed, roomType.effectiveBedCount() + " giường · còn " + roomType.getTotalRooms() + " phòng");
+            if (roomType.hasLivingRoom()) {
+                addRoomFact(facts, R.drawable.ic_room_size, "Có phòng khách riêng");
+            }
+            card.addView(facts, factParams);
 
             String desc = roomType.getDescription();
             if (desc != null && !desc.trim().isEmpty()) {
@@ -702,7 +704,19 @@ public class HotelDetailActivity extends AppCompatActivity {
             @Override
             public void onSuccess(List<Rate> rates) {
                 reviewAdapter.submitList(rates);
-                statusTextView.setText("Đánh giá: " + rates.size() + " - sẵn sàng đặt phòng");
+                double score = currentCabin == null ? 0 : currentCabin.getReviewScore();
+                if (rates != null && !rates.isEmpty()) {
+                    int total = 0;
+                    for (Rate rate : rates) {
+                        total += rate.getRating();
+                    }
+                    score = Math.round(((total / (double) rates.size()) * 2.0) * 10.0) / 10.0;
+                }
+                int count = rates == null ? 0 : rates.size();
+                if (ratingMetaTextView != null) {
+                    ratingMetaTextView.setText(ratingLabel(currentCabin, score, count));
+                }
+                statusTextView.setText(count + " đánh giá · sẵn sàng đặt phòng");
             }
 
             @Override
@@ -916,12 +930,12 @@ public class HotelDetailActivity extends AppCompatActivity {
         wishlistService.getWishlistForCabin(cabinId, new SupabaseCallback<List<Wishlist>>() {
             @Override
             public void onSuccess(List<Wishlist> wishlists) {
-                wishlistTextView.setText("Đã lưu: " + wishlists.size());
+                wishlistTextView.setText(wishlists.size() + " lưu");
             }
 
             @Override
             public void onError(String message) {
-                wishlistTextView.setText("Chưa tải được lượt lưu");
+                wishlistTextView.setText("0 lưu");
             }
         });
     }
@@ -1164,6 +1178,108 @@ public class HotelDetailActivity extends AppCompatActivity {
         drawable.setCornerRadius(dp(8));
         drawable.setStroke(dp(1), Color.parseColor(selected ? "#D4A247" : "#E5D6BA"));
         return drawable;
+    }
+
+    private ImageView iconTile(int iconRes, int backgroundColor) {
+        ImageView icon = new ImageView(this);
+        GradientDrawable tile = new GradientDrawable();
+        tile.setColor(backgroundColor);
+        tile.setCornerRadius(dp(10));
+        icon.setBackground(tile);
+        icon.setImageResource(iconRes);
+        icon.setColorFilter(Color.WHITE);
+        icon.setPadding(dp(8), dp(8), dp(8), dp(8));
+        return icon;
+    }
+
+    private void addRoomFact(LinearLayout parent, int iconRes, String text) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, dp(3), 0, dp(3));
+
+        ImageView icon = iconTile(iconRes, Color.parseColor("#355C7D"));
+        row.addView(icon, new LinearLayout.LayoutParams(dp(28), dp(28)));
+
+        TextView label = new TextView(this);
+        label.setText(text);
+        label.setTextColor(getColor(R.color.booking_text));
+        label.setTextSize(13f);
+        label.setLineSpacing(dp(2), 1f);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        params.setMargins(dp(9), 0, 0, 0);
+        row.addView(label, params);
+        parent.addView(row);
+    }
+
+    private int roomIconRes(RoomType roomType) {
+        return roomType != null && roomType.effectiveMaxAdults() >= 3
+                ? R.drawable.ic_room_users
+                : R.drawable.ic_room_bed;
+    }
+
+    private int amenityIconRes(String label) {
+        String value = label == null ? "" : label.toLowerCase(Locale.US);
+        if (value.contains("wifi")) {
+            return R.drawable.ic_amenity_wifi;
+        }
+        if (value.contains("breakfast") || value.contains("coffee")) {
+            return R.drawable.ic_amenity_breakfast;
+        }
+        if (value.contains("parking")) {
+            return R.drawable.ic_amenity_parking;
+        }
+        if (value.contains("pool")) {
+            return R.drawable.ic_amenity_pool;
+        }
+        if (value.contains("air")) {
+            return R.drawable.ic_amenity_ac;
+        }
+        if (value.contains("bath")) {
+            return R.drawable.ic_amenity_bath;
+        }
+        if (value.contains("balcony")) {
+            return R.drawable.ic_amenity_balcony;
+        }
+        if (value.contains("view")) {
+            return R.drawable.ic_amenity_view;
+        }
+        return R.drawable.ic_room_size;
+    }
+
+    private int amenityColor(String label) {
+        String value = label == null ? "" : label.toLowerCase(Locale.US);
+        if (value.contains("wifi")) {
+            return Color.parseColor("#2E6F95");
+        }
+        if (value.contains("breakfast") || value.contains("coffee")) {
+            return Color.parseColor("#B77A25");
+        }
+        if (value.contains("parking")) {
+            return Color.parseColor("#6F58A8");
+        }
+        if (value.contains("pool") || value.contains("view")) {
+            return Color.parseColor("#287E75");
+        }
+        if (value.contains("air")) {
+            return Color.parseColor("#3F7FA8");
+        }
+        if (value.contains("bath")) {
+            return Color.parseColor("#9A6257");
+        }
+        if (value.contains("balcony")) {
+            return Color.parseColor("#A96F23");
+        }
+        return Color.parseColor("#355C7D");
+    }
+
+    private String ratingLabel(Cabin cabin, double ratingFromRates, int countFromRates) {
+        double score = ratingFromRates > 0 ? ratingFromRates : (cabin == null ? 0 : cabin.getReviewScore());
+        int count = countFromRates > 0 ? countFromRates : (cabin == null ? 0 : cabin.getReviewCount());
+        if (score <= 0) {
+            return "Chưa có đánh giá";
+        }
+        return String.format(Locale.US, "%.1f/10 · %d đánh giá · %d sao", score, count, cabin == null ? 0 : cabin.getStarRating());
     }
 
     private String displayDescription(Cabin cabin) {

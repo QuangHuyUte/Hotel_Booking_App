@@ -98,25 +98,27 @@
         android:paddingStart="12dp"
         android:paddingTop="10dp"
         android:paddingEnd="12dp"
-        android:paddingBottom="10dp">
+        android:paddingBottom="18dp">
 
         <EditText
             android:id="@+id/edit_message"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="50dp"
             android:layout_weight="1"
             android:background="@drawable/bg_chat_input"
             android:hint="Tin nhắn"
             android:inputType="textMultiLine|textCapSentences"
-            android:maxLines="4"
-            android:minHeight="48dp"
+            android:maxLines="3"
+            android:minHeight="50dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
             android:textColor="@color/booking_text"
             android:textColorHint="@color/booking_muted" />
 
         <Button
             android:id="@+id/button_send"
-            android:layout_width="52dp"
-            android:layout_height="48dp"
+            android:layout_width="54dp"
+            android:layout_height="50dp"
             android:layout_marginStart="8dp"
             android:background="@drawable/bg_chat_send"
             android:minWidth="0dp"
