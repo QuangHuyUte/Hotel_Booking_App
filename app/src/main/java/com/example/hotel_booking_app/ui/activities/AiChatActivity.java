@@ -1,6 +1,7 @@
 package com.example.hotel_booking_app.ui.activities;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
@@ -127,7 +128,7 @@ public class AiChatActivity extends AppCompatActivity {
         TextView progress = addMessageRow("Đang phân tích nhu cầu...", false, "");
         scrollToBottom();
 
-        handler.postDelayed(() -> progress.setText("Đang kiểm tra khách sạn phù hợp..."), 450);
+        handler.postDelayed(() -> progress.setText("Đang đối chiếu booking, ngày khóa và số phòng còn lại..."), 450);
         aiAssistantService.searchHotels(message, new SupabaseCallback<AiSearchResult>() {
             @Override
             public void onSuccess(AiSearchResult result) {
@@ -149,9 +150,22 @@ public class AiChatActivity extends AppCompatActivity {
         isSearching = false;
         List<AiRecommendation> recommendations = result.getRecommendations();
         int count = recommendations == null ? 0 : recommendations.size();
+        int availableCount = 0;
+        if (recommendations != null) {
+            for (AiRecommendation recommendation : recommendations) {
+                if (recommendation.isAvailabilityChecked()
+                        && !recommendation.isAvailabilityUnknown()
+                        && recommendation.isAvailable()) {
+                    availableCount++;
+                }
+            }
+        }
         progress.setText(count == 0
                 ? "Mình chưa tìm thấy khách sạn khớp đúng yêu cầu. Bạn thử nới bớt giá, tiện nghi hoặc đổi khu vực nhé."
-                : "Đã tìm thấy " + count + " lựa chọn phù hợp. Đây là các khách sạn lấy trực tiếp từ dữ liệu phòng hiện có:");
+                : !result.getQuery().hasDateRange()
+                ? "Mình đã tìm thấy " + count + " lựa chọn phù hợp. Hãy cho mình ngày nhận và trả phòng để kiểm tra còn phòng chính xác."
+                : "Đã đối chiếu lịch thật: " + availableCount + "/" + count
+                + " lựa chọn còn đủ phòng trong toàn bộ khoảng bạn yêu cầu.");
         if (count == 0) {
             addMessageRow(buildQuerySummary(result.getQuery()), false, "");
             scrollToBottom();
@@ -170,8 +184,11 @@ public class AiChatActivity extends AppCompatActivity {
         String price = query.getMaxPricePerNight() > 0
                 ? " · tối đa " + PriceUtils.formatUsd(query.getMaxPricePerNight()) + " / đêm"
                 : "";
+        String dates = query.hasDateRange()
+                ? " · " + formatDate(query.getCheckIn()) + " - " + formatDate(query.getCheckOut())
+                : " · chưa có ngày ở";
         return "Bộ lọc: " + destination
-                + " · " + formatDate(query.getCheckIn()) + " - " + formatDate(query.getCheckOut())
+                + dates
                 + " · " + query.getRooms() + " phòng"
                 + " · " + query.getAdults() + " người lớn"
                 + price;
@@ -222,13 +239,15 @@ public class AiChatActivity extends AppCompatActivity {
         meta.setMaxLines(2);
         content.addView(meta);
 
-        TextView room = makeText(roomType.displayName()
-                + " · " + roomType.sizeLabel()
-                + " · " + roomType.bedLabel(), 12, R.color.booking_text, false);
+        TextView room = makeText(roomType == null
+                ? "Cabin nguyên căn · tối đa " + cabin.getMaxCapacity() + " khách"
+                : roomType.displayName() + " · " + roomType.sizeLabel() + " · " + roomType.bedLabel(),
+                12, R.color.booking_text, false);
         room.setMaxLines(2);
         content.addView(room);
 
-        TextView price = makeText(PriceUtils.formatUsd(roomType.getBasePrice()) + " / đêm", 16, R.color.booking_blue, true);
+        double nightlyPrice = roomType == null ? cabin.displayPrice() : roomType.getBasePrice();
+        TextView price = makeText(PriceUtils.formatUsd(nightlyPrice) + " / đêm", 16, R.color.booking_blue, true);
         LinearLayout.LayoutParams priceParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -236,13 +255,24 @@ public class AiChatActivity extends AppCompatActivity {
         priceParams.setMargins(0, dp(4), 0, 0);
         content.addView(price, priceParams);
 
+        TextView availability = makeText(buildAvailabilityText(recommendation, query), 13, R.color.booking_text, true);
+        availability.setTextColor(availabilityColor(recommendation));
+        availability.setPadding(0, dp(8), 0, 0);
+        card.addView(availability);
+
         TextView reasons = makeText(join(recommendation.getReasons(), " · "), 12, R.color.booking_muted, false);
         reasons.setPadding(0, dp(8), 0, 0);
         card.addView(reasons);
 
         Button button = new Button(this);
         button.setAllCaps(false);
-        button.setText("Xem chi tiết và chọn phòng");
+        boolean canBook = !recommendation.isAvailabilityChecked()
+                || recommendation.isAvailabilityUnknown()
+                || recommendation.isAvailable();
+        button.setText(recommendation.isAvailabilityChecked() && !recommendation.isAvailabilityUnknown()
+                && !recommendation.isAvailable()
+                ? "Không còn đủ phòng trong khoảng này"
+                : "Xem chi tiết và chọn phòng");
         button.setTextColor(getColor(R.color.white));
         button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         button.setBackgroundResource(R.drawable.bg_booking_cta);
@@ -252,14 +282,54 @@ public class AiChatActivity extends AppCompatActivity {
         );
         buttonParams.setMargins(0, dp(10), 0, 0);
         card.addView(button, buttonParams);
-        button.setOnClickListener(view -> openHotel(cabin, roomType, query));
-        card.setOnClickListener(view -> openHotel(cabin, roomType, query));
+        button.setEnabled(canBook);
+        button.setAlpha(canBook ? 1f : 0.55f);
+        if (canBook) {
+            button.setOnClickListener(view -> openHotel(cabin, roomType, query));
+            card.setOnClickListener(view -> openHotel(cabin, roomType, query));
+        }
+    }
+
+    private String buildAvailabilityText(AiRecommendation recommendation, AiSearchQuery query) {
+        if (!query.hasDateRange() || !recommendation.isAvailabilityChecked()) {
+            return "Chưa kiểm tra lịch · vui lòng nhập ngày nhận và trả phòng";
+        }
+        if (recommendation.isAvailabilityUnknown()) {
+            return "Chưa xác minh được lịch phòng lúc này";
+        }
+        if (!recommendation.isAvailable()) {
+            String detail = cleanAvailabilityMessage(recommendation.getAvailabilityMessage());
+            return "Không còn phòng" + (detail.isEmpty() ? "" : " · " + detail);
+        }
+        int nights = recommendation.getNights(query);
+        return "Còn phòng " + formatDate(query.getCheckIn()) + " - " + formatDate(query.getCheckOut())
+                + " · " + nights + " đêm · tạm tính "
+                + PriceUtils.formatUsd(recommendation.getEstimatedTotal(query));
+    }
+
+    private String cleanAvailabilityMessage(String message) {
+        if (message == null) {
+            return "";
+        }
+        int suggestionStart = message.indexOf(" Ngày gần nhất còn trống");
+        return (suggestionStart >= 0 ? message.substring(0, suggestionStart) : message).trim();
+    }
+
+    private int availabilityColor(AiRecommendation recommendation) {
+        if (!recommendation.isAvailabilityChecked() || recommendation.isAvailabilityUnknown()) {
+            return Color.parseColor("#8A5A00");
+        }
+        return recommendation.isAvailable()
+                ? Color.parseColor("#16803A")
+                : Color.parseColor("#C62828");
     }
 
     private void openHotel(Cabin cabin, RoomType roomType, AiSearchQuery query) {
         Intent intent = new Intent(this, HotelDetailActivity.class);
         intent.putExtra(AppConstants.EXTRA_CABIN_ID, cabin.getId());
-        intent.putExtra(AppConstants.EXTRA_ROOM_TYPE_ID, roomType.getId());
+        if (roomType != null) {
+            intent.putExtra(AppConstants.EXTRA_ROOM_TYPE_ID, roomType.getId());
+        }
         intent.putExtra("checkIn", query.getCheckIn());
         intent.putExtra("checkOut", query.getCheckOut());
         startActivity(intent);

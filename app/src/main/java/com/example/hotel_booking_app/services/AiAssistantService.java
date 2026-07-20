@@ -6,10 +6,12 @@ import com.example.hotel_booking_app.data.remote.SupabaseCallback;
 
 import java.text.Normalizer;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,11 +21,13 @@ public class AiAssistantService {
     private final CabinService cabinService;
     private final RoomTypeService roomTypeService;
     private final GeminiQueryService geminiQueryService;
+    private final BookingService bookingService;
 
     public AiAssistantService() {
         cabinService = new CabinService();
         roomTypeService = new RoomTypeService();
         geminiQueryService = new GeminiQueryService();
+        bookingService = new BookingService();
     }
 
     public void searchHotels(String message, SupabaseCallback<AiSearchResult> callback) {
@@ -48,7 +52,8 @@ public class AiAssistantService {
                 roomTypeService.attachRoomTypes(cabins, new SupabaseCallback<List<Cabin>>() {
                     @Override
                     public void onSuccess(List<Cabin> enrichedCabins) {
-                        callback.onSuccess(new AiSearchResult(query, buildRecommendations(query, enrichedCabins)));
+                        List<AiRecommendation> recommendations = buildRecommendations(query, enrichedCabins);
+                        attachAvailability(query, recommendations, callback);
                     }
 
                     @Override
@@ -95,9 +100,15 @@ public class AiAssistantService {
                     query.getRoomQuery()
             );
             if (roomType == null) {
-                continue;
+                if (cabin.getMaxCapacity() > 0 && cabin.getMaxCapacity() < query.getAdults()) {
+                    continue;
+                }
+                if (!query.getRoomQuery().isEmpty() || query.getRequestedBeds() > 0) {
+                    continue;
+                }
             }
-            if (query.getMaxPricePerNight() > 0 && roomType.getBasePrice() > query.getMaxPricePerNight()) {
+            double nightlyPrice = roomType == null ? cabin.displayPrice() : roomType.getBasePrice();
+            if (query.getMaxPricePerNight() > 0 && nightlyPrice > query.getMaxPricePerNight()) {
                 continue;
             }
             cabin.setMatchedRoomType(roomType);
@@ -108,6 +119,68 @@ public class AiAssistantService {
             return new ArrayList<>(recommendations.subList(0, MAX_RESULTS));
         }
         return recommendations;
+    }
+
+    private void attachAvailability(
+            AiSearchQuery query,
+            List<AiRecommendation> recommendations,
+            SupabaseCallback<AiSearchResult> callback
+    ) {
+        if (recommendations.isEmpty() || !query.hasDateRange()) {
+            callback.onSuccess(new AiSearchResult(query, recommendations));
+            return;
+        }
+
+        AtomicInteger remaining = new AtomicInteger(recommendations.size());
+        for (AiRecommendation recommendation : recommendations) {
+            SupabaseCallback<BookingService.AvailabilityStatus> availabilityCallback =
+                    new SupabaseCallback<BookingService.AvailabilityStatus>() {
+                        @Override
+                        public void onSuccess(BookingService.AvailabilityStatus status) {
+                            recommendation.setAvailability(status.isAvailable(), status.getMessage());
+                            finishAvailabilityCheck(query, recommendations, remaining, callback);
+                        }
+
+                        @Override
+                        public void onError(String message) {
+                            recommendation.setAvailabilityUnknown(message);
+                            finishAvailabilityCheck(query, recommendations, remaining, callback);
+                        }
+                    };
+            if (recommendation.getRoomType() == null) {
+                bookingService.getCabinAvailability(
+                        recommendation.getCabin().getId(),
+                        query.getCheckIn(),
+                        query.getCheckOut(),
+                        availabilityCallback
+                );
+                continue;
+            }
+            bookingService.getRoomTypeAvailability(
+                    recommendation.getCabin().getId(),
+                    recommendation.getRoomType().getId(),
+                    query.getCheckIn(),
+                    query.getCheckOut(),
+                    query.getRooms(),
+                    availabilityCallback
+            );
+        }
+    }
+
+    private void finishAvailabilityCheck(
+            AiSearchQuery query,
+            List<AiRecommendation> recommendations,
+            AtomicInteger remaining,
+            SupabaseCallback<AiSearchResult> callback
+    ) {
+        if (remaining.decrementAndGet() != 0) {
+            return;
+        }
+        recommendations.sort(
+                Comparator.comparingInt(AiRecommendation::availabilityRank).reversed()
+                        .thenComparing(Comparator.comparingDouble(AiRecommendation::getScore).reversed())
+        );
+        callback.onSuccess(new AiSearchResult(query, recommendations));
     }
 
     private boolean matchesDestination(AiSearchQuery query, Cabin cabin) {
@@ -136,11 +209,13 @@ public class AiAssistantService {
         score += cabin.getStarRating() * 2;
         score += query.getDestination().isEmpty() ? 0 : 12;
         score += query.getAmenities().size() * 5;
-        score += Math.max(0, 220 - roomType.getBasePrice()) * 0.04;
-        if (roomType.effectiveMaxAdults() == query.getAdults()) {
+        double nightlyPrice = roomType == null ? cabin.displayPrice() : roomType.getBasePrice();
+        score += Math.max(0, 220 - nightlyPrice) * 0.04;
+        if (roomType != null && roomType.effectiveMaxAdults() == query.getAdults()) {
             score += 4;
         }
-        if (!query.getRoomQuery().isEmpty() && normalize(roomType.getCategory()).contains(normalize(query.getRoomQuery()))) {
+        if (roomType != null && !query.getRoomQuery().isEmpty()
+                && normalize(roomType.getCategory()).contains(normalize(query.getRoomQuery()))) {
             score += 6;
         }
         return score;
@@ -151,10 +226,13 @@ public class AiAssistantService {
         if (!query.getDestination().isEmpty()) {
             reasons.add("Đúng khu vực " + query.getDestination());
         }
-        if (roomType.effectiveMaxAdults() >= query.getAdults()) {
+        if (roomType != null && roomType.effectiveMaxAdults() >= query.getAdults()) {
             reasons.add("Phù hợp " + query.getAdults() + " người lớn");
+        } else if (roomType == null && cabin.getMaxCapacity() >= query.getAdults()) {
+            reasons.add("Cabin phù hợp " + query.getAdults() + " khách");
         }
-        if (query.getRequestedBeds() > 0 && roomType.effectiveBedCount() >= query.getRequestedBeds()) {
+        if (roomType != null && query.getRequestedBeds() > 0
+                && roomType.effectiveBedCount() >= query.getRequestedBeds()) {
             reasons.add("Đủ " + query.getRequestedBeds() + " giường");
         }
         if (!query.getAmenities().isEmpty()) {
@@ -230,29 +308,28 @@ public class AiAssistantService {
     }
 
     private void parseDates(String normalized, AiSearchQuery query, LocalDate today) {
-        LocalDate checkIn = today.plusDays(1);
-        LocalDate checkOut = today.plusDays(2);
+        LocalDate checkIn = null;
+        LocalDate checkOut = null;
 
         Matcher sameMonthRange = Pattern.compile("(\\d{1,2})\\s*-\\s*(\\d{1,2})\\s*/\\s*(\\d{1,2})").matcher(normalized);
         if (sameMonthRange.find()) {
-            int startDay = parseInt(sameMonthRange.group(1), checkIn.getDayOfMonth());
-            int endDay = parseInt(sameMonthRange.group(2), checkOut.getDayOfMonth());
-            int month = parseInt(sameMonthRange.group(3), checkIn.getMonthValue());
-            checkIn = safeDate(today.getYear(), month, startDay, checkIn);
-            checkOut = safeDate(today.getYear(), month, endDay, checkIn.plusDays(1));
+            int startDay = parseInt(sameMonthRange.group(1), today.getDayOfMonth());
+            int endDay = parseInt(sameMonthRange.group(2), today.plusDays(1).getDayOfMonth());
+            int month = parseInt(sameMonthRange.group(3), today.getMonthValue());
+            checkIn = safeDate(today.getYear(), month, startDay, null);
+            checkOut = safeDate(today.getYear(), month, endDay, null);
         } else {
             Matcher fullRange = Pattern.compile("(\\d{1,2})\\s*/\\s*(\\d{1,2})\\s*(?:-|den|toi|to)\\s*(\\d{1,2})\\s*/\\s*(\\d{1,2})").matcher(normalized);
             if (fullRange.find()) {
-                checkIn = safeDate(today.getYear(), parseInt(fullRange.group(2), checkIn.getMonthValue()), parseInt(fullRange.group(1), checkIn.getDayOfMonth()), checkIn);
-                checkOut = safeDate(today.getYear(), parseInt(fullRange.group(4), checkOut.getMonthValue()), parseInt(fullRange.group(3), checkOut.getDayOfMonth()), checkIn.plusDays(1));
+                checkIn = safeDate(today.getYear(), parseInt(fullRange.group(2), today.getMonthValue()), parseInt(fullRange.group(1), today.getDayOfMonth()), null);
+                checkOut = safeDate(today.getYear(), parseInt(fullRange.group(4), today.getMonthValue()), parseInt(fullRange.group(3), today.plusDays(1).getDayOfMonth()), null);
             }
         }
 
-        if (!checkOut.isAfter(checkIn)) {
-            checkOut = checkIn.plusDays(1);
+        if (checkIn != null && checkOut != null && checkOut.isAfter(checkIn)) {
+            query.setCheckIn(checkIn.toString());
+            query.setCheckOut(checkOut.toString());
         }
-        query.setCheckIn(checkIn.toString());
-        query.setCheckOut(checkOut.toString());
     }
 
     private int parseNumberBeforeUnit(String normalized, String unitRegex, int fallback) {
@@ -449,6 +526,14 @@ public class AiAssistantService {
         public void setAmenities(List<String> amenities) {
             this.amenities = amenities == null ? new ArrayList<>() : amenities;
         }
+
+        public boolean hasDateRange() {
+            try {
+                return LocalDate.parse(checkOut).isAfter(LocalDate.parse(checkIn));
+            } catch (Exception ignored) {
+                return false;
+            }
+        }
     }
 
     public static class AiRecommendation {
@@ -456,6 +541,10 @@ public class AiAssistantService {
         private final RoomType roomType;
         private final double score;
         private final List<String> reasons;
+        private boolean availabilityChecked;
+        private boolean available;
+        private boolean availabilityUnknown;
+        private String availabilityMessage = "";
 
         public AiRecommendation(Cabin cabin, RoomType roomType, double score, List<String> reasons) {
             this.cabin = cabin;
@@ -478,6 +567,62 @@ public class AiAssistantService {
 
         public List<String> getReasons() {
             return reasons;
+        }
+
+        private void setAvailability(boolean available, String message) {
+            this.availabilityChecked = true;
+            this.available = available;
+            this.availabilityUnknown = false;
+            this.availabilityMessage = message == null ? "" : message;
+        }
+
+        private void setAvailabilityUnknown(String message) {
+            this.availabilityChecked = true;
+            this.available = false;
+            this.availabilityUnknown = true;
+            this.availabilityMessage = message == null ? "" : message;
+        }
+
+        private int availabilityRank() {
+            if (!availabilityChecked) {
+                return 1;
+            }
+            if (availabilityUnknown) {
+                return 0;
+            }
+            return available ? 2 : -1;
+        }
+
+        public boolean isAvailabilityChecked() {
+            return availabilityChecked;
+        }
+
+        public boolean isAvailable() {
+            return available;
+        }
+
+        public boolean isAvailabilityUnknown() {
+            return availabilityUnknown;
+        }
+
+        public String getAvailabilityMessage() {
+            return availabilityMessage;
+        }
+
+        public int getNights(AiSearchQuery query) {
+            if (query == null || !query.hasDateRange()) {
+                return 0;
+            }
+            return (int) ChronoUnit.DAYS.between(
+                    LocalDate.parse(query.getCheckIn()),
+                    LocalDate.parse(query.getCheckOut())
+            );
+        }
+
+        public double getEstimatedTotal(AiSearchQuery query) {
+            double nightlyPrice = roomType == null ? cabin.displayPrice() : roomType.getBasePrice();
+            int units = roomType == null ? 1 : Math.max(1, query.getRooms());
+            return nightlyPrice * units * getNights(query);
         }
     }
 
