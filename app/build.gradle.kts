@@ -43,10 +43,18 @@ android {
     val supabaseAnonKey = providers.gradleProperty("SUPABASE_ANON_KEY")
         .orElse("PASTE_YOUR_SUPABASE_ANON_KEY_HERE")
         .get()
+    val geminiApiKey = providers.gradleProperty("GEMINI_API_KEY")
+        .orElse("")
+        .get()
+    val geminiModel = providers.gradleProperty("GEMINI_MODEL")
+        .orElse("gemini-3.1-flash-lite")
+        .get()
 
     defaultConfig {
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+        buildConfigField("String", "GEMINI_MODEL", "\"$geminiModel\"")
     }
 }
 

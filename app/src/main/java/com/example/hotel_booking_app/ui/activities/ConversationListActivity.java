@@ -15,7 +15,6 @@ import com.example.hotel_booking_app.data.models.Conversation;
 import com.example.hotel_booking_app.data.remote.SupabaseCallback;
 import com.example.hotel_booking_app.services.CabinService;
 import com.example.hotel_booking_app.services.ChatService;
-import com.example.hotel_booking_app.utils.AppConstants;
 import com.example.hotel_booking_app.utils.SessionManager;
 
 import java.util.List;
@@ -64,11 +63,13 @@ public class ConversationListActivity extends AppCompatActivity {
             @Override
             public void onSuccess(List<Conversation> conversations) {
                 conversationsContainer.removeAllViews();
-                if (conversations.isEmpty()) {
-                    statusTextView.setText("Chưa có tin nhắn.");
+                addAiConversationCard();
+                int conversationCount = conversations == null ? 0 : conversations.size();
+                if (conversationCount == 0) {
+                    statusTextView.setText("Trợ lý AI luôn sẵn sàng. Bạn chưa có chat khách sạn nào.");
                     return;
                 }
-                statusTextView.setText(conversations.size() + " conversation" + (conversations.size() == 1 ? "" : "s") + ".");
+                statusTextView.setText("Trợ lý AI và " + conversationCount + " cuộc trò chuyện khách sạn.");
                 for (Conversation conversation : conversations) {
                     addConversationCard(conversation, "Cuộc trò chuyện với khách sạn");
                     loadCabinName(conversation);
@@ -77,6 +78,8 @@ public class ConversationListActivity extends AppCompatActivity {
 
             @Override
             public void onError(String message) {
+                conversationsContainer.removeAllViews();
+                addAiConversationCard();
                 statusTextView.setText(message);
             }
         };
@@ -88,18 +91,36 @@ public class ConversationListActivity extends AppCompatActivity {
         }
     }
 
+    private void addAiConversationCard() {
+        Button button = new Button(this);
+        button.setText("Trợ lý Serein\nTìm khách sạn, loại phòng và giá bằng câu bạn mô tả");
+        button.setAllCaps(false);
+        button.setTextColor(getColor(R.color.white));
+        button.setBackgroundResource(R.drawable.bg_button_primary);
+        button.setPadding(dp(18), dp(16), dp(18), dp(16));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(0, 0, 0, dp(12));
+        button.setLayoutParams(params);
+        button.setTag("ai-assistant");
+        button.setOnClickListener(view -> startActivity(new Intent(this, AiChatActivity.class)));
+        conversationsContainer.addView(button);
+    }
+
     private void addConversationCard(Conversation conversation, String title) {
         Button button = new Button(this);
         button.setText(title + "\nChạm để mở trò chuyện");
         button.setAllCaps(false);
         button.setTextColor(getColor(R.color.black));
         button.setBackgroundResource(R.drawable.bg_button_secondary);
-        button.setPadding(18, 14, 18, 14);
+        button.setPadding(dp(18), dp(14), dp(18), dp(14));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
         );
-        params.setMargins(0, 0, 0, 12);
+        params.setMargins(0, 0, 0, dp(12));
         button.setLayoutParams(params);
         button.setTag(conversation.getId());
         button.setOnClickListener(view -> {
@@ -130,5 +151,9 @@ public class ConversationListActivity extends AppCompatActivity {
             public void onError(String message) {
             }
         });
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 }

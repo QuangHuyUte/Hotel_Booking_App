@@ -1,7 +1,7 @@
 package com.example.hotel_booking_app.ui.activities;
 
-import android.os.Bundle;
 import android.graphics.Typeface;
+import android.os.Bundle;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -20,6 +20,7 @@ import com.example.hotel_booking_app.data.models.User;
 import com.example.hotel_booking_app.data.remote.SupabaseCallback;
 import com.example.hotel_booking_app.services.AuthService;
 import com.example.hotel_booking_app.services.ChatService;
+import com.example.hotel_booking_app.utils.AppConstants;
 import com.example.hotel_booking_app.utils.SessionManager;
 
 import java.util.List;
@@ -62,8 +63,8 @@ public class ChatThreadActivity extends AppCompatActivity {
 
     private void createConversation() {
         String hostId = getIntent().getStringExtra(EXTRA_HOST_ID);
-        String cabinId = getIntent().getStringExtra(com.example.hotel_booking_app.utils.AppConstants.EXTRA_CABIN_ID);
-        statusTextView.setText("Opening chat...");
+        String cabinId = getIntent().getStringExtra(AppConstants.EXTRA_CABIN_ID);
+        statusTextView.setText("Đang mở cuộc trò chuyện...");
         if (hostId == null || hostId.trim().isEmpty()) {
             new AuthService().getSupportUser(new SupabaseCallback<User>() {
                 @Override
@@ -115,12 +116,12 @@ public class ChatThreadActivity extends AppCompatActivity {
     private void renderMessages(List<Message> messages) {
         messagesContainer.removeAllViews();
         if (messages == null || messages.isEmpty()) {
-            addSystemHint("Start the conversation with your host.");
+            addSystemHint("Bắt đầu cuộc trò chuyện với quản lý khách sạn.");
             return;
         }
         for (Message message : messages) {
             boolean isMine = sessionManager.getUserId().equals(message.getSenderId());
-            String receipt = isMine ? (message.isRead() ? "Seen" : "Sent") : "";
+            String receipt = isMine ? (message.isRead() ? "Đã xem" : "Đã gửi") : "";
             addMessageRow(message.getMessage(), isMine, formatTime(message.getCreatedAt()), receipt);
         }
         scrollToBottom();
@@ -160,11 +161,10 @@ public class ChatThreadActivity extends AppCompatActivity {
         row.setGravity(isMine ? Gravity.END : Gravity.START);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setPadding(0, dp(4), 0, dp(8));
-        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+        messagesContainer.addView(row, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-        row.setLayoutParams(rowParams);
+        ));
 
         TextView avatar = makeAvatar(isMine);
         LinearLayout stack = new LinearLayout(this);
@@ -175,7 +175,6 @@ public class ChatThreadActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.WRAP_CONTENT
         );
         stackParams.setMargins(dp(8), 0, dp(8), 0);
-        stack.setLayoutParams(stackParams);
 
         TextView bubble = new TextView(this);
         bubble.setText(body);
@@ -184,10 +183,6 @@ public class ChatThreadActivity extends AppCompatActivity {
         bubble.setLineSpacing(0, 1.08f);
         bubble.setMaxWidth((int) (getResources().getDisplayMetrics().widthPixels * 0.68f));
         bubble.setBackgroundResource(isMine ? R.drawable.bg_chat_bubble_mine : R.drawable.bg_chat_bubble_theirs);
-        bubble.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        ));
 
         TextView meta = new TextView(this);
         String metaText = receipt == null || receipt.isEmpty() ? time : time + " - " + receipt;
@@ -195,24 +190,18 @@ public class ChatThreadActivity extends AppCompatActivity {
         meta.setTextColor(getColor(R.color.booking_muted));
         meta.setTextSize(11);
         meta.setGravity(isMine ? Gravity.END : Gravity.START);
-        LinearLayout.LayoutParams metaParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-        metaParams.setMargins(0, dp(4), 0, 0);
-        meta.setLayoutParams(metaParams);
+        meta.setPadding(0, dp(4), 0, 0);
 
         stack.addView(bubble);
         stack.addView(meta);
 
         if (isMine) {
-            row.addView(stack);
+            row.addView(stack, stackParams);
             row.addView(avatar);
         } else {
             row.addView(avatar);
-            row.addView(stack);
+            row.addView(stack, stackParams);
         }
-        messagesContainer.addView(row);
     }
 
     private TextView makeAvatar(boolean isMine) {
@@ -220,9 +209,9 @@ public class ChatThreadActivity extends AppCompatActivity {
         avatar.setWidth(dp(34));
         avatar.setHeight(dp(34));
         avatar.setGravity(Gravity.CENTER);
-        avatar.setText(isMine ? "Me" : "H");
+        avatar.setText(isMine ? "Tôi" : "QL");
         avatar.setTextColor(getColor(isMine ? R.color.black : R.color.white));
-        avatar.setTextSize(isMine ? 11 : 14);
+        avatar.setTextSize(11);
         avatar.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         avatar.setBackgroundResource(isMine ? R.drawable.bg_chat_avatar_mine : R.drawable.bg_chat_avatar_theirs);
         return avatar;

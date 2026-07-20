@@ -29,6 +29,9 @@
             android:name=".ui.activities.ChatThreadActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.activities.AiChatActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.activities.ConversationListActivity"
             android:exported="false" />
         <activity

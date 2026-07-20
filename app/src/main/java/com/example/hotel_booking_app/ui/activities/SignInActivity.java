@@ -1,9 +1,9 @@
 package com.example.hotel_booking_app.ui.activities;
 
-import android.app.Activity;
 import android.app.Dialog;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -23,7 +23,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.hotel_booking_app.R;
 import com.example.hotel_booking_app.data.models.User;
 import com.example.hotel_booking_app.data.remote.SupabaseCallback;
-import com.example.hotel_booking_app.data.remote.SupabaseConfig;
 import com.example.hotel_booking_app.services.AuthService;
 import com.example.hotel_booking_app.utils.AppConstants;
 import com.example.hotel_booking_app.utils.SessionManager;
@@ -34,7 +33,6 @@ import org.json.JSONObject;
 import java.nio.charset.StandardCharsets;
 
 public class SignInActivity extends AppCompatActivity {
-    private static final int REQUEST_GMAIL_LOGIN = 2407;
     private EditText emailEditText;
     private EditText passwordEditText;
     private TextView statusTextView;
@@ -65,15 +63,16 @@ public class SignInActivity extends AppCompatActivity {
         TextView closeButton = findViewById(R.id.button_close);
         gmailButton = findViewById(R.id.button_gmail_login);
 
-        setLoginModeClean(false);
-        customerModeButton.setOnClickListener(view -> setLoginModeClean(false));
-        managerModeButton.setOnClickListener(view -> setLoginModeClean(true));
-        loginButton.setOnClickListener(view -> loginClean());
+        customerModeButton.setOnClickListener(view -> setLoginMode(false));
+        managerModeButton.setOnClickListener(view -> setLoginMode(true));
+        loginButton.setOnClickListener(view -> loginWithPassword());
         closeButton.setOnClickListener(view -> openGuestSearch());
-        gmailButton.setOnClickListener(view -> openGmailLogin());
+        gmailButton.setOnClickListener(view -> openGmailOtpDialog());
         registerButton.setOnClickListener(view -> startActivity(new Intent(this, SignUpActivity.class)));
         forgotButton.setOnClickListener(view -> startActivity(new Intent(this, PasswordResetActivity.class)));
         guestButton.setOnClickListener(view -> openGuestSearch());
+
+        setLoginMode(false);
         handleOAuthRedirect(getIntent() == null ? null : getIntent().getData());
     }
 
@@ -84,74 +83,24 @@ public class SignInActivity extends AppCompatActivity {
         handleOAuthRedirect(intent == null ? null : intent.getData());
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != REQUEST_GMAIL_LOGIN) {
-            return;
-        }
-        if (resultCode != Activity.RESULT_OK || data == null) {
-            return;
-        }
-        String callbackUrl = data.getStringExtra(OAuthBrowserActivity.EXTRA_CALLBACK_URL);
-        if (callbackUrl == null || callbackUrl.trim().isEmpty()) {
-            handleOAuthRedirect(data.getData());
-            return;
-        }
-        handleOAuthRedirect(Uri.parse(callbackUrl));
-    }
-
-    private void login() {
-        String email = emailEditText.getText().toString();
-        String password = passwordEditText.getText().toString();
-        if (!ValidationUtils.isValidEmail(email) || !ValidationUtils.isNotBlank(password)) {
-            setStatus("Vui lòng nhập email và mật khẩu hợp lệ.");
-            return;
-        }
-
-        setStatus("Đang đăng nhập...");
-        authService.login(email, password, new SupabaseCallback<User>() {
-            @Override
-            public void onSuccess(User user) {
-                if (!isExpectedLoginRoleClean(user)) {
-                    return;
-                }
-                completeLoginClean(user, welcomeMessageClean(user));
-            }
-
-            @Override
-            public void onError(String message) {
-                setStatus(message);
-            }
-        });
-    }
-
     private void setLoginMode(boolean managerMode) {
         managerLoginMode = managerMode;
+        customerModeButton.setText("Khách hàng");
+        managerModeButton.setText("Quản lý");
         customerModeButton.setBackgroundResource(managerMode ? R.drawable.bg_google_button : R.drawable.bg_button_primary);
         customerModeButton.setTextColor(getColor(managerMode ? R.color.booking_text : R.color.black));
         managerModeButton.setBackgroundResource(managerMode ? R.drawable.bg_button_primary : R.drawable.bg_google_button);
         managerModeButton.setTextColor(getColor(managerMode ? R.color.black : R.color.booking_text));
-        emailEditText.setHint(managerMode ? "Email quản lý" : "Email");
-        gmailButton.setVisibility(managerMode ? View.GONE : View.VISIBLE);
-        registerButton.setVisibility(managerMode ? View.GONE : View.VISIBLE);
-        setStatus(managerMode
-                ? "Tài khoản quản lý chỉ xem và quản lý các khách sạn được phân quyền."
-                : "Tài khoản khách hàng có thể tìm, đặt phòng, thanh toán và xem chuyến đi.");
-    }
-
-    private void setLoginModeClean(boolean managerMode) {
-        setLoginMode(managerMode);
         emailEditText.setHint(managerMode ? "Email quản lý" : "Email khách hàng");
         gmailButton.setVisibility(managerMode ? View.GONE : View.VISIBLE);
         registerButton.setVisibility(managerMode ? View.GONE : View.VISIBLE);
         setStatus(managerMode
-                ? "Chế độ quản lý chỉ dành cho tài khoản manager. Huy Gia Lai dùng email huygialai2005@gmail.com để vào trang quản lý."
-                : "Chế độ khách hàng dùng để tìm phòng, đặt phòng và test đăng ký/OTP bằng Gmail mới.");
+                ? "Chế độ Quản lý dành cho tài khoản manager, ví dụ huygialai2005@gmail.com."
+                : "Chế độ Khách hàng dùng để tìm phòng, đặt phòng và đăng nhập nhanh bằng Google/OTP.");
     }
 
-    private void loginClean() {
-        String email = emailEditText.getText().toString();
+    private void loginWithPassword() {
+        String email = emailEditText.getText().toString().trim();
         String password = passwordEditText.getText().toString();
         if (!ValidationUtils.isValidEmail(email) || !ValidationUtils.isNotBlank(password)) {
             setStatus("Vui lòng nhập email và mật khẩu hợp lệ.");
@@ -162,10 +111,10 @@ public class SignInActivity extends AppCompatActivity {
         authService.login(email, password, new SupabaseCallback<User>() {
             @Override
             public void onSuccess(User user) {
-                if (!isExpectedLoginRoleClean(user)) {
+                if (!isExpectedLoginRole(user)) {
                     return;
                 }
-                completeLoginClean(user, welcomeMessageClean(user));
+                completeLogin(user);
             }
 
             @Override
@@ -175,39 +124,26 @@ public class SignInActivity extends AppCompatActivity {
         });
     }
 
-    private boolean isExpectedLoginRoleClean(User user) {
-        String role = user == null ? "" : user.getRole();
-        boolean isManager = AppConstants.ROLE_MANAGER.equals(role);
-        if (managerLoginMode && !isManager) {
-            setStatus("Đây là tài khoản khách hàng. Hãy chuyển sang chế độ Khách hàng để đăng nhập.");
-            return false;
-        }
-        if (!managerLoginMode && isManager) {
-            setStatus("Đây là tài khoản quản lý. Hãy chuyển sang chế độ Quản lý để đăng nhập.");
-            return false;
-        }
-        return true;
-    }
-
     private boolean isExpectedLoginRole(User user) {
-        String role = user == null ? "" : user.getRole();
-        boolean isManager = AppConstants.ROLE_MANAGER.equals(role);
+        String role = user == null || user.getRole() == null ? "" : user.getRole();
+        boolean isManager = AppConstants.ROLE_MANAGER.equalsIgnoreCase(role);
         if (managerLoginMode && !isManager) {
-            setStatus("Đây là tài khoản khách hàng. Vui lòng chọn chế độ Khách hàng.");
+            setStatus("Đây là tài khoản khách hàng. Hãy chuyển sang tab Khách hàng để đăng nhập.");
             return false;
         }
         if (!managerLoginMode && isManager) {
-            setStatus("Đây là tài khoản quản lý. Vui lòng chọn chế độ Quản lý.");
+            setStatus("Đây là tài khoản quản lý. Hãy chuyển sang tab Quản lý để đăng nhập.");
             return false;
         }
         return true;
     }
 
-    private void openGmailLogin() {
-        showGmailAccountDialog();
-    }
+    private void openGmailOtpDialog() {
+        if (managerLoginMode) {
+            setStatus("Google/OTP chỉ dùng cho tài khoản khách hàng. Quản lý đăng nhập bằng email và mật khẩu.");
+            return;
+        }
 
-    private void showGmailAccountDialog() {
         Dialog dialog = new Dialog(this);
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
@@ -221,16 +157,16 @@ public class SignInActivity extends AppCompatActivity {
         TextView close = new TextView(this);
         close.setText("X");
         close.setTextColor(getColor(R.color.booking_blue));
-        close.setTextSize(30);
+        close.setTextSize(28);
         close.setGravity(Gravity.CENTER);
         header.addView(close, new LinearLayout.LayoutParams(dp(44), dp(44)));
 
         TextView title = new TextView(this);
-        title.setText("Đăng nhập bằng Gmail");
+        title.setText("Đăng nhập bằng Google");
         title.setTextColor(getColor(R.color.booking_text));
         title.setTextSize(21);
         title.setGravity(Gravity.CENTER);
-        title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
+        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         header.addView(title, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
 
         TextView spacer = new TextView(this);
@@ -238,30 +174,25 @@ public class SignInActivity extends AppCompatActivity {
         panel.addView(header);
 
         TextView helper = new TextView(this);
-        helper.setText("Nhập Gmail của bạn. Chúng tôi sẽ gửi mã đăng nhập vào hộp thư này.");
+        helper.setText("Nhập Gmail của bạn. App sẽ gửi mã OTP 6 số, xác nhận xong là đăng nhập khách hàng luôn.");
         helper.setTextColor(getColor(R.color.booking_muted));
         helper.setTextSize(13);
         helper.setGravity(Gravity.CENTER);
         helper.setPadding(0, dp(8), 0, dp(14));
         panel.addView(helper);
 
-        TextView status = new TextView(this);
-        status.setTextColor(getColor(R.color.danger));
-        status.setTextSize(12);
-        status.setVisibility(View.GONE);
-
-        EditText customEmail = new EditText(this);
-        customEmail.setHint("yourname@gmail.com");
-        customEmail.setSingleLine(true);
-        customEmail.setTextColor(getColor(R.color.booking_text));
-        customEmail.setHintTextColor(getColor(R.color.booking_muted));
-        customEmail.setPadding(dp(14), 0, dp(14), 0);
-        customEmail.setBackgroundResource(R.drawable.bg_booking_field);
-        LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(
+        EditText emailInput = new EditText(this);
+        emailInput.setHint("yourname@gmail.com");
+        emailInput.setSingleLine(true);
+        emailInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        emailInput.setTextColor(getColor(R.color.booking_text));
+        emailInput.setHintTextColor(getColor(R.color.booking_muted));
+        emailInput.setPadding(dp(14), 0, dp(14), 0);
+        emailInput.setBackgroundResource(R.drawable.bg_booking_field);
+        panel.addView(emailInput, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(52)
-        );
-        panel.addView(customEmail, inputParams);
+        ));
 
         EditText otpInput = new EditText(this);
         otpInput.setHint("Mã OTP 6 số");
@@ -280,9 +211,10 @@ public class SignInActivity extends AppCompatActivity {
         panel.addView(otpInput, otpParams);
 
         Button continueButton = new Button(this);
-        continueButton.setText("Tiếp tục");
+        continueButton.setText("Gửi OTP");
         continueButton.setTextColor(getColor(R.color.booking_text));
         continueButton.setAllCaps(false);
+        continueButton.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         continueButton.setBackgroundResource(R.drawable.bg_booking_cta);
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -291,25 +223,28 @@ public class SignInActivity extends AppCompatActivity {
         buttonParams.setMargins(0, dp(12), 0, 0);
         panel.addView(continueButton, buttonParams);
 
+        TextView dialogStatus = new TextView(this);
+        dialogStatus.setTextColor(getColor(R.color.danger));
+        dialogStatus.setTextSize(12);
+        dialogStatus.setVisibility(View.GONE);
         LinearLayout.LayoutParams statusParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
         );
         statusParams.setMargins(0, dp(10), 0, 0);
-        panel.addView(status, statusParams);
+        panel.addView(dialogStatus, statusParams);
 
-        close.setOnClickListener(view -> dialog.dismiss());
         final boolean[] otpSent = {false};
         final String[] pendingEmail = {""};
         final String[] pendingName = {""};
+
+        close.setOnClickListener(view -> dialog.dismiss());
         continueButton.setOnClickListener(view -> {
             if (!otpSent[0]) {
-                String email = customEmail.getText().toString().trim();
-                String name = email.contains("@") ? email.substring(0, email.indexOf("@")) : "Gmail guest";
-                requestGmailOtp(name, email, customEmail, otpInput, continueButton, status, otpSent, pendingEmail, pendingName);
+                requestGmailOtp(emailInput, otpInput, continueButton, dialogStatus, otpSent, pendingEmail, pendingName);
                 return;
             }
-            verifyGmailOtp(pendingName[0], pendingEmail[0], otpInput.getText().toString(), dialog, continueButton, status);
+            verifyGmailOtp(pendingName[0], pendingEmail[0], otpInput.getText().toString(), dialog, continueButton, dialogStatus);
         });
 
         dialog.setContentView(panel);
@@ -323,12 +258,10 @@ public class SignInActivity extends AppCompatActivity {
             }
         });
         dialog.show();
-        customEmail.requestFocus();
+        emailInput.requestFocus();
     }
 
     private void requestGmailOtp(
-            String name,
-            String email,
             EditText emailInput,
             EditText otpInput,
             Button continueButton,
@@ -337,68 +270,32 @@ public class SignInActivity extends AppCompatActivity {
             String[] pendingEmail,
             String[] pendingName
     ) {
-        if (email == null || !email.trim().toLowerCase().endsWith("@gmail.com")) {
+        String email = emailInput.getText().toString().trim();
+        if (!email.toLowerCase().endsWith("@gmail.com") || !ValidationUtils.isValidEmail(email)) {
             dialogStatus.setText("Vui lòng nhập địa chỉ @gmail.com hợp lệ.");
             dialogStatus.setVisibility(View.VISIBLE);
             return;
         }
-        String cleanEmail = email.trim();
-        String cleanName = name == null || name.trim().isEmpty()
-                ? cleanEmail.substring(0, cleanEmail.indexOf("@"))
-                : name.trim();
 
+        String name = email.substring(0, email.indexOf("@"));
         dialogStatus.setText("Đang gửi OTP tới Gmail...");
         dialogStatus.setVisibility(View.VISIBLE);
+        continueButton.setEnabled(false);
         setStatus("Đang gửi OTP tới Gmail...");
-        if (continueButton != null) {
-            continueButton.setEnabled(false);
-        }
-        authService.requestGmailOtp(cleanEmail, new SupabaseCallback<Boolean>() {
+
+        authService.requestGmailOtp(email, new SupabaseCallback<Boolean>() {
             @Override
             public void onSuccess(Boolean ok) {
-                pendingEmail[0] = cleanEmail;
-                pendingName[0] = cleanName;
+                pendingEmail[0] = email;
+                pendingName[0] = name;
                 otpSent[0] = true;
-                if (emailInput != null) {
-                    emailInput.setEnabled(false);
-                }
-                if (otpInput != null) {
-                    otpInput.setVisibility(View.VISIBLE);
-                    otpInput.requestFocus();
-                }
-                if (continueButton != null) {
-                    continueButton.setText("Xác nhận OTP");
-                    continueButton.setEnabled(true);
-                }
-                dialogStatus.setText("Đã gửi OTP. Kiểm tra Gmail và nhập mã 6 số.");
-                setStatus("Đã gửi OTP tới " + cleanEmail + ".");
-            }
-
-            @Override
-            public void onError(String message) {
-                if (continueButton != null) {
-                    continueButton.setEnabled(true);
-                }
-                dialogStatus.setText(message);
-                dialogStatus.setVisibility(View.VISIBLE);
-                setStatus(message);
-            }
-        });
-    }
-
-    private void verifyGmailOtp(String name, String email, String otp, Dialog dialog, Button continueButton, TextView dialogStatus) {
-        dialogStatus.setText("Đang xác nhận OTP...");
-        dialogStatus.setVisibility(View.VISIBLE);
-        setStatus("Đang xác nhận OTP Gmail...");
-        continueButton.setEnabled(false);
-        authService.verifyGmailOtp(name, email, otp, new SupabaseCallback<User>() {
-            @Override
-            public void onSuccess(User user) {
-                dialog.dismiss();
-                if (!isExpectedLoginRoleClean(user)) {
-                    return;
-                }
-                completeLoginClean(user, welcomeMessageClean(user));
+                emailInput.setEnabled(false);
+                otpInput.setVisibility(View.VISIBLE);
+                otpInput.requestFocus();
+                continueButton.setText("Xác nhận OTP");
+                continueButton.setEnabled(true);
+                dialogStatus.setText("Đã gửi OTP. Nhập mã 6 số trong Gmail để vào app.");
+                setStatus("Đã gửi OTP tới " + email + ".");
             }
 
             @Override
@@ -411,30 +308,55 @@ public class SignInActivity extends AppCompatActivity {
         });
     }
 
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
-    }
-
-    private void openGuestSearch() {
-        if (getIntent().getBooleanExtra("returnToBooking", false)) {
-            finish();
+    private void verifyGmailOtp(String name, String email, String otp, Dialog dialog, Button continueButton, TextView dialogStatus) {
+        if (otp == null || otp.trim().length() < 6) {
+            dialogStatus.setText("Vui lòng nhập mã OTP 6 số.");
+            dialogStatus.setVisibility(View.VISIBLE);
             return;
         }
-        startActivity(new Intent(this, HotelSearchActivity.class));
-        finish();
+
+        dialogStatus.setText("Đang xác nhận OTP...");
+        dialogStatus.setVisibility(View.VISIBLE);
+        continueButton.setEnabled(false);
+        setStatus("Đang xác nhận OTP Gmail...");
+
+        authService.verifyGmailOtp(name, email, otp, new SupabaseCallback<User>() {
+            @Override
+            public void onSuccess(User user) {
+                boolean isManager = user != null
+                        && user.getRole() != null
+                        && AppConstants.ROLE_MANAGER.equalsIgnoreCase(user.getRole());
+                if (isManager) {
+                    continueButton.setEnabled(true);
+                    dialogStatus.setText("Email này đang là tài khoản quản lý. Hãy dùng tab Quản lý để đăng nhập bằng mật khẩu.");
+                    setStatus("Email này thuộc tài khoản quản lý, không dùng OTP khách hàng.");
+                    return;
+                }
+                dialog.dismiss();
+                completeLogin(user);
+            }
+
+            @Override
+            public void onError(String message) {
+                continueButton.setEnabled(true);
+                dialogStatus.setText(message);
+                dialogStatus.setVisibility(View.VISIBLE);
+                setStatus(message);
+            }
+        });
     }
 
-    private void completeLoginClean(User user, String toastMessage) {
+    private void completeLogin(User user) {
         sessionManager.saveUser(user);
-        Toast.makeText(SignInActivity.this, toastMessage, Toast.LENGTH_SHORT).show();
-        boolean isManager = user != null && AppConstants.ROLE_MANAGER.equals(user.getRole());
+        Toast.makeText(this, welcomeMessage(user), Toast.LENGTH_SHORT).show();
+        boolean isManager = user != null && AppConstants.ROLE_MANAGER.equalsIgnoreCase(user.getRole());
         if (isManager) {
-            startActivity(new Intent(SignInActivity.this, HostHotelDashboardActivity.class));
+            startActivity(new Intent(this, HostHotelDashboardActivity.class));
             finish();
             return;
         }
         if (getIntent().getBooleanExtra("returnToBooking", false)) {
-            Intent intent = new Intent(SignInActivity.this, BookingCreateActivity.class);
+            Intent intent = new Intent(this, BookingCreateActivity.class);
             intent.putExtra(AppConstants.EXTRA_CABIN_ID, getIntent().getStringExtra(AppConstants.EXTRA_CABIN_ID));
             intent.putExtra("checkIn", getIntent().getStringExtra("checkIn"));
             intent.putExtra("checkOut", getIntent().getStringExtra("checkOut"));
@@ -442,34 +364,7 @@ public class SignInActivity extends AppCompatActivity {
             finish();
             return;
         }
-        startActivity(new Intent(SignInActivity.this, AccountHubActivity.class));
-        finish();
-    }
-
-    private String welcomeMessageClean(User user) {
-        String name = user == null ? "" : user.getFullName();
-        if (name == null || name.trim().isEmpty()) {
-            name = user == null ? "" : user.getEmail();
-        }
-        if (name == null || name.trim().isEmpty()) {
-            name = "bạn";
-        }
-        return "Xin chào, " + name.trim();
-    }
-
-    private void completeLogin(User user, String toastMessage) {
-        sessionManager.saveUser(user);
-        Toast.makeText(SignInActivity.this, toastMessage, Toast.LENGTH_SHORT).show();
-        if (getIntent().getBooleanExtra("returnToBooking", false)) {
-            Intent intent = new Intent(SignInActivity.this, BookingCreateActivity.class);
-            intent.putExtra(AppConstants.EXTRA_CABIN_ID, getIntent().getStringExtra(AppConstants.EXTRA_CABIN_ID));
-            intent.putExtra("checkIn", getIntent().getStringExtra("checkIn"));
-            intent.putExtra("checkOut", getIntent().getStringExtra("checkOut"));
-            startActivity(intent);
-            finish();
-            return;
-        }
-        startActivity(new Intent(SignInActivity.this, AccountHubActivity.class));
+        startActivity(new Intent(this, AccountHubActivity.class));
         finish();
     }
 
@@ -482,6 +377,15 @@ public class SignInActivity extends AppCompatActivity {
             name = "bạn";
         }
         return "Xin chào, " + name.trim();
+    }
+
+    private void openGuestSearch() {
+        if (getIntent().getBooleanExtra("returnToBooking", false)) {
+            finish();
+            return;
+        }
+        startActivity(new Intent(this, HotelSearchActivity.class));
+        finish();
     }
 
     private void handleOAuthRedirect(Uri data) {
@@ -502,7 +406,7 @@ public class SignInActivity extends AppCompatActivity {
         String refreshToken = getCallbackValue(data, "refresh_token");
         String code = getCallbackValue(data, "code");
         if (accessToken == null && code != null) {
-            setStatus("Google đã trả về mã xác thực. Vui lòng kiểm tra lại cấu hình đăng nhập Gmail trong Supabase.");
+            setStatus("Google đã trả về mã xác thực. Hãy kiểm tra lại cấu hình Supabase Auth callback.");
             return;
         }
         if (accessToken == null) {
@@ -514,14 +418,14 @@ public class SignInActivity extends AppCompatActivity {
             String email = claims.optString("email", "");
             String name = claims.optString("name", email);
             String subject = claims.optString("sub", "");
-            setStatus("Đang hoàn tất đăng nhập Gmail...");
+            setStatus("Đang hoàn tất đăng nhập Google...");
             authService.loginWithOAuthSession(name, email, subject, accessToken, refreshToken, new SupabaseCallback<User>() {
                 @Override
                 public void onSuccess(User user) {
-                    if (!isExpectedLoginRoleClean(user)) {
+                    if (!isExpectedLoginRole(user)) {
                         return;
                     }
-                    completeLoginClean(user, welcomeMessageClean(user));
+                    completeLogin(user);
                 }
 
                 @Override
@@ -530,7 +434,7 @@ public class SignInActivity extends AppCompatActivity {
                 }
             });
         } catch (Exception e) {
-            setStatus("Không thể hoàn tất đăng nhập Gmail: " + e.getMessage());
+            setStatus("Không thể hoàn tất đăng nhập Google: " + e.getMessage());
         }
     }
 
@@ -564,5 +468,9 @@ public class SignInActivity extends AppCompatActivity {
     private void setStatus(String message) {
         statusTextView.setVisibility(View.VISIBLE);
         statusTextView.setText(message);
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 }
