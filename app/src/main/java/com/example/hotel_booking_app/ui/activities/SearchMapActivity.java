@@ -85,7 +85,7 @@ public class SearchMapActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
         ));
-        mapImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        mapImage.setScaleType(ImageView.ScaleType.FIT_CENTER);
         mapImage.setImageResource(R.drawable.vietnam_official_map);
         mapCanvas.addView(mapImage);
 
@@ -96,10 +96,9 @@ public class SearchMapActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT
         ));
 
-        int[][] fallbackPositions = {
-                {48, 42}, {58, 47}, {42, 51}, {65, 55}, {52, 61}, {36, 66},
-                {70, 70}, {45, 76}, {60, 81}, {78, 58}, {31, 47}, {54, 70}
-        };
+        addIslandLabel("Hoang Sa", width * 0.76f, height * 0.44f);
+        addIslandLabel("Truong Sa", width * 0.70f, height * 0.70f);
+
         for (int i = 0; i < cabins.size(); i++) {
             Cabin cabin = cabins.get(i);
             TextView marker = new TextView(this);
@@ -116,17 +115,53 @@ public class SearchMapActivity extends AppCompatActivity {
                 startActivity(intent);
             });
 
-            int[] point = fallbackPositions[i % fallbackPositions.length];
-            int left = Math.round(width * point[0] / 100f);
-            int top = Math.round(height * point[1] / 100f);
+            int left = Math.round(projectLongitude(cabin.getLongitude(), width));
+            int top = Math.round(projectLatitude(cabin.getLatitude(), height));
             FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     dp(34)
             );
             params.leftMargin = Math.max(8, Math.min(width - dp(116), left));
-            params.topMargin = Math.max(dp(112), Math.min(height - dp(52), top));
+            params.topMargin = Math.max(dp(42), Math.min(height - dp(52), top));
             mapCanvas.addView(marker, params);
         }
+    }
+
+    private float projectLongitude(double longitude, int width) {
+        if (longitude <= 0) {
+            return width * 0.52f;
+        }
+        double minLon = 102.0;
+        double maxLon = 110.6;
+        double normalized = (longitude - minLon) / (maxLon - minLon);
+        return (float) (width * (0.10 + clamp(normalized, 0, 1) * 0.78));
+    }
+
+    private float projectLatitude(double latitude, int height) {
+        if (latitude <= 0) {
+            return height * 0.62f;
+        }
+        double minLat = 8.0;
+        double maxLat = 23.6;
+        double normalized = (maxLat - latitude) / (maxLat - minLat);
+        return (float) (height * (0.06 + clamp(normalized, 0, 1) * 0.88));
+    }
+
+    private double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private void addIslandLabel(String label, float x, float y) {
+        TextView island = new TextView(this);
+        island.setText(label);
+        island.setTextColor(0xEEFFFFFF);
+        island.setTextSize(11);
+        island.setTypeface(null, android.graphics.Typeface.BOLD);
+        island.setGravity(Gravity.CENTER);
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(dp(92), dp(32));
+        params.leftMargin = Math.round(x - dp(46));
+        params.topMargin = Math.round(y);
+        mapCanvas.addView(island, params);
     }
 
     private String normalizeCity(String value) {

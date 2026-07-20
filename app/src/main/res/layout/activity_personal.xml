@@ -7,7 +7,12 @@
     <com.example.hotel_booking_app.ui.views.AnimatedVietnamBackgroundView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:alpha="0.36" />
+        android:alpha="0.46" />
+
+    <com.example.hotel_booking_app.ui.views.ProfileDecorView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0.92" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -117,15 +122,42 @@
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
-            <TextView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="54dp"
                 android:layout_marginTop="12dp"
                 android:background="@drawable/bg_profile_dark_row"
                 android:gravity="center_vertical"
-                android:text="No credit or voucher                                      VND 0  >"
-                android:textColor="@color/white"
-                android:textSize="16sp" />
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="No credit or voucher"
+                    android:textColor="@color/white"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:text="VND 0"
+                    android:textColor="#D8D8D8"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:text=">"
+                    android:textColor="@color/booking_yellow"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/container_guest_actions"

@@ -10,10 +10,14 @@ import com.example.hotel_booking_app.utils.AppConstants;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
 
 public class AuthService {
     private final SupabaseClient supabaseClient;
@@ -56,6 +60,86 @@ public class AuthService {
         supabaseClient.setAccessToken(accessToken);
         String resolvedName = fullName == null || fullName.trim().isEmpty() ? email.trim() : fullName.trim();
         ensurePublicUser(resolvedName, email.trim(), "GOOGLE_OAUTH", "", AppConstants.ROLE_CUSTOMER, session, callback);
+    }
+
+    public void loginOrCreateGoogleAccount(String fullName, String email, SupabaseCallback<User> callback) {
+        if (email == null || !email.trim().toLowerCase().endsWith("@gmail.com")) {
+            callback.onError("Please choose a valid Gmail account.");
+            return;
+        }
+        String cleanEmail = email.trim();
+        String cleanName = fullName == null || fullName.trim().isEmpty()
+                ? cleanEmail.substring(0, cleanEmail.indexOf("@"))
+                : fullName.trim();
+        Map<String, String> filters = new HashMap<>();
+        filters.put("email", cleanEmail);
+        supabaseClient.getList(AppConstants.TABLE_USERS, "*", 1, null, filters, User[].class, new SupabaseCallback<List<User>>() {
+            @Override
+            public void onSuccess(List<User> users) {
+                if (!users.isEmpty()) {
+                    User existing = users.get(0);
+                    attachDemoGoogleSession(existing, cleanEmail);
+                    createOtpThenReturn(existing, callback);
+                    return;
+                }
+                createGooglePublicUser(cleanName, cleanEmail, callback);
+            }
+
+            @Override
+            public void onError(String message) {
+                callback.onError(message);
+            }
+        });
+    }
+
+    private void createGooglePublicUser(String fullName, String email, SupabaseCallback<User> callback) {
+        User user = new User();
+        user.setFullName(fullName);
+        user.setEmail(email);
+        user.setPassword(BCrypt.hashpw("GOOGLE_ACCOUNT_LINKED", BCrypt.gensalt()));
+        user.setPhone("");
+        user.setNationalId("GOOGLE-" + Math.abs(email.hashCode()));
+        user.setAddress("Google account");
+        user.setNationality("Vietnamese");
+        user.setRole(AppConstants.ROLE_CUSTOMER);
+        attachDemoGoogleSession(user, email);
+        supabaseClient.insert(AppConstants.TABLE_USERS, user, User[].class, new SupabaseCallback<User>() {
+            @Override
+            public void onSuccess(User createdUser) {
+                attachDemoGoogleSession(createdUser, email);
+                callback.onSuccess(createdUser);
+            }
+
+            @Override
+            public void onError(String message) {
+                callback.onError(message);
+            }
+        });
+    }
+
+    private void createOtpThenReturn(User user, SupabaseCallback<User> callback) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("email", user.getEmail());
+        payload.put("otp", String.format("%06d", new Random().nextInt(1_000_000)));
+        payload.put("userId", user.getId());
+        payload.put("expiresAt", LocalDateTime.now().plusMinutes(10).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        supabaseClient.insertNoReturn(AppConstants.TABLE_OTPS, payload, new SupabaseCallback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean ok) {
+                callback.onSuccess(user);
+            }
+
+            @Override
+            public void onError(String message) {
+                callback.onSuccess(user);
+            }
+        });
+    }
+
+    private void attachDemoGoogleSession(User user, String email) {
+        user.setAuthUserId("google-demo-" + UUID.nameUUIDFromBytes(email.getBytes()).toString());
+        user.setAuthAccessToken("google-demo-token");
+        user.setAuthRefreshToken("google-demo-refresh");
     }
 
     private void loginWithPublicUsersFallback(String email, String password, SupabaseCallback<User> callback) {

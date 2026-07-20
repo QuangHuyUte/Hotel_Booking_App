@@ -17,10 +17,13 @@
         android:padding="24dp">
 
         <ImageView
-            android:layout_width="184dp"
-            android:layout_height="184dp"
+            android:layout_width="148dp"
+            android:layout_height="148dp"
+            android:background="@drawable/bg_glass_panel"
             android:contentDescription="@string/app_name"
-            android:src="@drawable/vietnam_red_logo" />
+            android:padding="28dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_logo_book_vietnam" />
 
         <TextView
             android:layout_width="wrap_content"

@@ -197,29 +197,32 @@
             android:visibility="gone">
 
             <LinearLayout
+                android:id="@+id/container_result_search_summary"
                 android:layout_width="match_parent"
                 android:layout_height="54dp"
                 android:background="@drawable/bg_result_search_compact"
+                android:clickable="true"
+                android:focusable="true"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <Button
+                <TextView
                     android:id="@+id/button_result_back"
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    android:background="@drawable/bg_back_circle"
-                    android:drawableTop="@drawable/ic_back_chevron"
-                    android:minWidth="0dp"
-                    android:minHeight="0dp"
-                    android:padding="0dp"
-                    android:text=""
-                    android:textAllCaps="false" />
+                    android:layout_width="34dp"
+                    android:layout_height="match_parent"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="&lt;"
+                    android:textColor="@color/booking_yellow"
+                    android:textSize="30sp"
+                    android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/text_result_summary"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:layout_marginStart="10dp"
+                    android:layout_marginStart="6dp"
                     android:layout_weight="1"
                     android:ellipsize="end"
                     android:gravity="center_vertical"

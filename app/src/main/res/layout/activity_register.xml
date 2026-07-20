@@ -33,12 +33,14 @@
                 android:orientation="vertical">
 
                 <ImageView
-                    android:layout_width="104dp"
+                    android:layout_width="118dp"
                     android:layout_height="118dp"
                     android:layout_gravity="center_horizontal"
+                    android:background="@drawable/bg_glass_panel_soft"
                     android:contentDescription="@string/app_name"
+                    android:padding="24dp"
                     android:scaleType="fitCenter"
-                    android:src="@drawable/vietnam_red_logo" />
+                    android:src="@drawable/ic_logo_book_vietnam" />
 
                 <TextView
                     android:layout_width="match_parent"

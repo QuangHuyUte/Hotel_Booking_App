@@ -61,6 +61,7 @@ public class CabinListActivity extends AppCompatActivity {
     private View bottomNav;
     private RecyclerView recyclerView;
     private TextView resultSummaryTextView;
+    private View resultSearchContainer;
     private View continueSection;
     private TextView continueCityTextView;
     private TextView continueMetaTextView;
@@ -108,7 +109,8 @@ public class CabinListActivity extends AppCompatActivity {
         guestsEditText = findViewById(R.id.edit_guests);
         sortSpinner = findViewById(R.id.spinner_sort);
         Button applyFiltersButton = findViewById(R.id.button_apply_filters);
-        Button resultBackButton = findViewById(R.id.button_result_back);
+        TextView resultBackButton = findViewById(R.id.button_result_back);
+        resultSearchContainer = findViewById(R.id.container_result_search_summary);
         TextView sortResultsButton = findViewById(R.id.button_sort_results);
         TextView filterResultsButton = findViewById(R.id.button_filter_results);
         TextView mapResultsButton = findViewById(R.id.button_result_map);
@@ -150,6 +152,8 @@ public class CabinListActivity extends AppCompatActivity {
 
         applyFiltersButton.setOnClickListener(view -> showResults());
         resultBackButton.setOnClickListener(view -> showHome());
+        resultSearchContainer.setOnClickListener(view -> showSearchEditDialog());
+        resultSummaryTextView.setOnClickListener(view -> showSearchEditDialog());
         sortResultsButton.setOnClickListener(view -> showSortDialog());
         filterResultsButton.setOnClickListener(view -> showFilterDialog());
         mapResultsButton.setOnClickListener(view -> openResultMap());
@@ -431,6 +435,123 @@ public class CabinListActivity extends AppCompatActivity {
         root.addView(applyButton, buttonParams);
         dialog.setContentView(root);
         dialog.show();
+    }
+
+    private void showSearchEditDialog() {
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(18), dp(18), dp(18), dp(18));
+        root.setBackgroundResource(R.drawable.bg_calendar_dialog);
+
+        LinearLayout header = new LinearLayout(this);
+        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+
+        TextView close = new TextView(this);
+        close.setText("X");
+        close.setTextColor(getColor(R.color.booking_blue));
+        close.setTextSize(30);
+        close.setGravity(android.view.Gravity.CENTER);
+        close.setOnClickListener(view -> dialog.dismiss());
+        header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(48)));
+
+        TextView title = new TextView(this);
+        title.setText("Chinh sua tim kiem");
+        title.setTextColor(getColor(R.color.booking_text));
+        title.setTextSize(23);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setGravity(android.view.Gravity.CENTER);
+        header.addView(title, new LinearLayout.LayoutParams(0, dp(48), 1));
+
+        View spacer = new View(this);
+        header.addView(spacer, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        root.addView(header);
+
+        EditText destinationInput = dialogField("TP. Ho Chi Minh, Viet Nam");
+        destinationInput.setText(destinationEditText.getText().toString());
+        root.addView(destinationInput, dialogFieldParams(14));
+
+        TextView dateInput = dialogTextRow(formatIsoDate(selectedCheckIn) + " - " + formatIsoDate(selectedCheckOut));
+        dateInput.setOnClickListener(view -> {
+            dialog.dismiss();
+            showDatePicker(true);
+        });
+        root.addView(dateInput, dialogFieldParams(0));
+
+        EditText guestsInput = dialogField("1 phong - 2 nguoi lon");
+        guestsInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        guestsInput.setText(guestsEditText.getText().toString());
+        root.addView(guestsInput, dialogFieldParams(0));
+
+        Button searchButton = new Button(this);
+        searchButton.setText("Tim");
+        searchButton.setAllCaps(false);
+        searchButton.setTextColor(getColor(R.color.white));
+        searchButton.setTextSize(18);
+        searchButton.setTypeface(null, android.graphics.Typeface.BOLD);
+        searchButton.setBackgroundResource(R.drawable.bg_button_primary);
+        searchButton.setOnClickListener(view -> {
+            String destination = destinationInput.getText().toString().trim();
+            if (!destination.isEmpty()) {
+                destinationEditText.setText(destination);
+            }
+            String guests = guestsInput.getText().toString().trim();
+            if (!guests.isEmpty()) {
+                guestsEditText.setText(guests);
+            }
+            dialog.dismiss();
+            showResults();
+        });
+        root.addView(searchButton, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(54)
+        ));
+
+        dialog.setContentView(root);
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            window.setDimAmount(0.72f);
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            window.setLayout(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        }
+        dialog.show();
+    }
+
+    private EditText dialogField(String hint) {
+        EditText input = new EditText(this);
+        input.setHint(hint);
+        input.setSingleLine(true);
+        input.setTextColor(getColor(R.color.booking_text));
+        input.setHintTextColor(getColor(R.color.booking_muted));
+        input.setTextSize(18);
+        input.setBackgroundResource(R.drawable.bg_booking_field);
+        input.setPadding(dp(14), 0, dp(14), 0);
+        return input;
+    }
+
+    private TextView dialogTextRow(String text) {
+        TextView row = new TextView(this);
+        row.setText(text);
+        row.setTextColor(getColor(R.color.booking_text));
+        row.setTextSize(18);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setBackgroundResource(R.drawable.bg_booking_field);
+        row.setPadding(dp(14), 0, dp(14), 0);
+        row.setClickable(true);
+        row.setFocusable(true);
+        return row;
+    }
+
+    private LinearLayout.LayoutParams dialogFieldParams(int topMarginDp) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(58)
+        );
+        params.setMargins(0, dp(topMarginDp), 0, 0);
+        return params;
     }
 
     private void openResultMap() {

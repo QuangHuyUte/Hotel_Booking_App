@@ -5,10 +5,13 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ColorFilter;
 import android.graphics.DashPathEffect;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.util.AttributeSet;
@@ -22,9 +25,14 @@ public class AnimatedVietnamBackgroundView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint logoPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
+    private final Path borderPath = new Path();
     private final RectF rect = new RectF();
+    private final RectF mapRect = new RectF();
     private final long cycleMs = 36000L;
+    private final long openingMs = 3200L;
+    private long startMs;
     private Bitmap logoBitmap;
 
     public AnimatedVietnamBackgroundView(Context context) {
@@ -48,7 +56,9 @@ public class AnimatedVietnamBackgroundView extends View {
         strokePaint.setStrokeCap(Paint.Cap.ROUND);
         strokePaint.setStrokeJoin(Paint.Join.ROUND);
         logoPaint.setFilterBitmap(true);
+        glowPaint.setFilterBitmap(true);
         logoBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.vietnam_red_logo);
+        startMs = System.currentTimeMillis();
     }
 
     @Override
@@ -58,6 +68,8 @@ public class AnimatedVietnamBackgroundView extends View {
         drawSeaGradient(canvas);
         drawSeaWaves(canvas, progress);
         drawVietnamLogo(canvas, progress);
+        drawBorderHighlight(canvas, progress);
+        drawIslandLabels(canvas, progress);
         drawDashedRoutes(canvas, progress);
         drawMovingTravelIcons(canvas, progress);
         drawLocationPins(canvas, progress);
@@ -103,18 +115,86 @@ public class AnimatedVietnamBackgroundView extends View {
         }
         float w = getWidth();
         float h = getHeight();
-        float pulse = 0.985f + 0.015f * (float) Math.sin(progress * Math.PI * 2f);
-        float targetH = h * 0.78f;
+        float pulse = 0.99f + 0.01f * (float) Math.sin(progress * Math.PI * 2f);
+        float targetH = h * 0.86f;
         float targetW = logoBitmap.getWidth() * (targetH / logoBitmap.getHeight());
-        if (targetW > w * 0.72f) {
-            targetW = w * 0.72f;
+        if (targetW > w * 0.78f) {
+            targetW = w * 0.78f;
             targetH = logoBitmap.getHeight() * (targetW / logoBitmap.getWidth());
         }
-        float left = (w - targetW) / 2f - w * 0.03f;
-        float top = (h - targetH) / 2f + h * 0.02f;
+        float left = (w - targetW) / 2f - w * 0.02f;
+        float top = (h - targetH) / 2f + h * 0.01f;
         rect.set(left, top, left + targetW, top + targetH);
+        mapRect.set(rect);
+
+        float opening = 1f - Math.min(1f, (System.currentTimeMillis() - startMs) / (float) openingMs);
+        if (opening > 0.02f) {
+            float inflate = dp(8 + 10 * opening);
+            rect.inset(-inflate, -inflate);
+            glowPaint.setAlpha((int) (120 * opening));
+            ColorFilter oldFilter = glowPaint.getColorFilter();
+            glowPaint.setColorFilter(new PorterDuffColorFilter(0xFFFFD54A, PorterDuff.Mode.SRC_ATOP));
+            canvas.drawBitmap(logoBitmap, null, rect, glowPaint);
+            glowPaint.setColorFilter(oldFilter);
+            rect.set(mapRect);
+        }
+
         logoPaint.setAlpha((int) (238 * pulse));
         canvas.drawBitmap(logoBitmap, null, rect, logoPaint);
+    }
+
+    private void drawBorderHighlight(Canvas canvas, float progress) {
+        if (mapRect.isEmpty()) {
+            return;
+        }
+        buildBorderPath();
+        float opening = 1f - Math.min(1f, (System.currentTimeMillis() - startMs) / (float) openingMs);
+        int alpha = opening > 0.02f ? (int) (245 * opening) : 120;
+        strokePaint.setStyle(Paint.Style.STROKE);
+        strokePaint.setStrokeWidth(dp(opening > 0.02f ? 3.2f : 1.6f));
+        strokePaint.setColor(Color.argb(alpha, 255, 215, 74));
+        strokePaint.setPathEffect(new DashPathEffect(new float[]{dp(16), dp(10)}, -progress * dp(96)));
+        canvas.drawPath(borderPath, strokePaint);
+        strokePaint.setPathEffect(null);
+    }
+
+    private void buildBorderPath() {
+        float l = mapRect.left;
+        float t = mapRect.top;
+        float w = mapRect.width();
+        float h = mapRect.height();
+        borderPath.reset();
+        borderPath.moveTo(l + w * 0.48f, t + h * 0.04f);
+        borderPath.cubicTo(l + w * 0.36f, t + h * 0.12f, l + w * 0.42f, t + h * 0.24f, l + w * 0.50f, t + h * 0.30f);
+        borderPath.cubicTo(l + w * 0.59f, t + h * 0.38f, l + w * 0.50f, t + h * 0.47f, l + w * 0.58f, t + h * 0.56f);
+        borderPath.cubicTo(l + w * 0.68f, t + h * 0.68f, l + w * 0.55f, t + h * 0.78f, l + w * 0.50f, t + h * 0.91f);
+        borderPath.cubicTo(l + w * 0.43f, t + h * 0.77f, l + w * 0.40f, t + h * 0.64f, l + w * 0.43f, t + h * 0.52f);
+        borderPath.cubicTo(l + w * 0.45f, t + h * 0.40f, l + w * 0.34f, t + h * 0.28f, l + w * 0.38f, t + h * 0.16f);
+        borderPath.cubicTo(l + w * 0.40f, t + h * 0.09f, l + w * 0.43f, t + h * 0.06f, l + w * 0.48f, t + h * 0.04f);
+    }
+
+    private void drawIslandLabels(Canvas canvas, float progress) {
+        if (mapRect.isEmpty()) {
+            return;
+        }
+        float w = getWidth();
+        float h = getHeight();
+        drawIslandCluster(canvas, w * 0.78f, h * 0.43f, "Hoang Sa", progress, 0.1f);
+        drawIslandCluster(canvas, w * 0.73f, h * 0.68f, "Truong Sa", progress, 0.52f);
+    }
+
+    private void drawIslandCluster(Canvas canvas, float x, float y, String label, float progress, float phase) {
+        float pulse = 0.55f + 0.45f * (float) Math.sin((progress + phase) * Math.PI * 2f);
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(Color.argb((int) (112 + 42 * pulse), 255, 255, 255));
+        canvas.drawCircle(x, y, dp(2.2f), paint);
+        canvas.drawCircle(x + dp(8), y + dp(7), dp(1.8f), paint);
+        canvas.drawCircle(x - dp(6), y + dp(10), dp(1.5f), paint);
+        paint.setTextAlign(Paint.Align.CENTER);
+        paint.setTextSize(dp(9));
+        paint.setFakeBoldText(true);
+        canvas.drawText(label, x, y + dp(26), paint);
+        paint.setFakeBoldText(false);
     }
 
     private void drawDashedRoutes(Canvas canvas, float progress) {
@@ -139,9 +219,15 @@ public class AnimatedVietnamBackgroundView extends View {
     private void drawLocationPins(Canvas canvas, float progress) {
         float w = getWidth();
         float h = getHeight();
-        drawLocationPin(canvas, w * 0.54f, h * 0.28f, "Ha Noi", "city stay", progress, 0.10f, 0xFF1D4ED8, 0xFFDBEAFE);
-        drawLocationPin(canvas, w * 0.50f, h * 0.61f, "Sai Gon", "hotel", progress, 0.45f, 0xFF0F766E, 0xFFCFFAFE);
-        drawLocationPin(canvas, w * 0.68f, h * 0.76f, "Vung Tau", "beach", progress, 0.72f, 0xFFF59E0B, 0xFFFFF7CC);
+        if (!mapRect.isEmpty()) {
+            drawLocationPin(canvas, mapRect.left + mapRect.width() * 0.44f, mapRect.top + mapRect.height() * 0.14f, "Ha Noi", "city stay", progress, 0.10f, 0xFF1D4ED8, 0xFFDBEAFE);
+            drawLocationPin(canvas, mapRect.left + mapRect.width() * 0.48f, mapRect.top + mapRect.height() * 0.79f, "Sai Gon", "hotel", progress, 0.45f, 0xFF0F766E, 0xFFCFFAFE);
+            drawLocationPin(canvas, mapRect.left + mapRect.width() * 0.56f, mapRect.top + mapRect.height() * 0.83f, "Vung Tau", "beach", progress, 0.72f, 0xFFF59E0B, 0xFFFFF7CC);
+            return;
+        }
+        drawLocationPin(canvas, w * 0.46f, h * 0.25f, "Ha Noi", "city stay", progress, 0.10f, 0xFF1D4ED8, 0xFFDBEAFE);
+        drawLocationPin(canvas, w * 0.48f, h * 0.68f, "Sai Gon", "hotel", progress, 0.45f, 0xFF0F766E, 0xFFCFFAFE);
+        drawLocationPin(canvas, w * 0.56f, h * 0.73f, "Vung Tau", "beach", progress, 0.72f, 0xFFF59E0B, 0xFFFFF7CC);
     }
 
     private void drawLocationPin(Canvas canvas, float cx, float cy, String label, String subtitle, float progress, float phase, int fillColor, int accentColor) {

@@ -57,20 +57,4 @@
             android:layout_weight="1" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/button_close"
-        android:layout_width="42dp"
-        android:layout_height="42dp"
-        android:layout_gravity="top|start"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="34dp"
-        android:background="@drawable/bg_auth_close"
-        android:clickable="true"
-        android:elevation="20dp"
-        android:focusable="true"
-        android:gravity="center"
-        android:text="X"
-        android:textColor="@color/white"
-        android:textSize="18sp"
-        android:textStyle="bold" />
 </FrameLayout>
