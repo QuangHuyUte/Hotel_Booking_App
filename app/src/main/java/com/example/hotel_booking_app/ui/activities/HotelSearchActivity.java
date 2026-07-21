@@ -314,6 +314,14 @@ public class HotelSearchActivity extends AppCompatActivity {
         if (cabin.getMatchedRoomType() != null) {
             intent.putExtra(AppConstants.EXTRA_ROOM_TYPE_ID, cabin.getMatchedRoomType().getId());
         }
+        syncGuestStateFromInput();
+        intent.putExtra("destination", destinationEditText.getText().toString());
+        intent.putExtra("checkIn", selectedCheckIn);
+        intent.putExtra("checkOut", selectedCheckOut);
+        intent.putExtra("guests", Math.max(1, selectedAdults));
+        intent.putExtra("rooms", Math.max(1, selectedRooms));
+        intent.putExtra("beds", Math.max(0, selectedBeds));
+        intent.putExtra("roomQuery", searchEditText.getText().toString());
         startActivity(intent);
     }
 
@@ -1600,11 +1608,15 @@ public class HotelSearchActivity extends AppCompatActivity {
     }
 
     private void openResultMap() {
+        syncGuestStateFromInput();
         Intent intent = new Intent(this, HotelMapActivity.class);
         intent.putExtra("destination", destinationEditText.getText().toString());
         intent.putExtra("checkIn", selectedCheckIn);
         intent.putExtra("checkOut", selectedCheckOut);
-        intent.putExtra("guests", guestCountFromInput(guestsEditText.getText().toString()));
+        intent.putExtra("guests", Math.max(1, selectedAdults));
+        intent.putExtra("rooms", Math.max(1, selectedRooms));
+        intent.putExtra("beds", Math.max(0, selectedBeds));
+        intent.putExtra("roomQuery", searchEditText.getText().toString());
         startActivity(intent);
     }
 

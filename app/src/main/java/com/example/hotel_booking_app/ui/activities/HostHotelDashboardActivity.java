@@ -438,7 +438,7 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
         selectedRoomsTitleTextView.setText("Loại phòng · " + selectedCabin.getName());
         List<RoomType> roomTypes = selectedCabin.getRoomTypes();
         int count = roomTypes == null ? 0 : roomTypes.size();
-        selectedRoomsHintTextView.setText(count + " loại phòng đang hoạt động. Bấm + Phòng để thêm phòng mới, hoặc chạm một phòng để sửa.");
+        selectedRoomsHintTextView.setText(count + " loại phòng đang hoạt động. Bấm một loại phòng để sửa cấu hình; + Phòng chỉ dùng để thêm loại phòng mới.");
         if (count == 0) {
             TextView empty = new TextView(this);
             empty.setText("Khách sạn này chưa có loại phòng. Bấm + Phòng để thêm loại phòng đầu tiên.");

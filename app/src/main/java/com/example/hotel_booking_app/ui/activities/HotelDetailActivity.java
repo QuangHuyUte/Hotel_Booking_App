@@ -931,9 +931,17 @@ public class HotelDetailActivity extends AppCompatActivity {
         }
         Intent intent = new Intent(this, HotelMapActivity.class);
         intent.putExtra(AppConstants.EXTRA_CABIN_ID, currentCabin.getId());
+        if (selectedRoomType != null) {
+            intent.putExtra(AppConstants.EXTRA_ROOM_TYPE_ID, selectedRoomType.getId());
+        }
         intent.putExtra("destination", resolveCityLabel(currentCabin));
         intent.putExtra("checkIn", selectedCheckIn);
         intent.putExtra("checkOut", selectedCheckOut);
+        intent.putExtra("guests", getIntent().getIntExtra("guests",
+                selectedRoomType == null ? Math.max(1, currentCabin.getMaxCapacity()) : selectedRoomType.effectiveMaxAdults()));
+        intent.putExtra("rooms", Math.max(1, getIntent().getIntExtra("rooms", 1)));
+        intent.putExtra("beds", Math.max(0, getIntent().getIntExtra("beds", 0)));
+        intent.putExtra("roomQuery", getIntent().getStringExtra("roomQuery"));
         startActivity(intent);
     }
 

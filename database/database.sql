@@ -298,12 +298,14 @@ create table if not exists blocked_dates (
   "roomTypeId" uuid references room_types(_id) on delete cascade,
   "hostId" uuid references users(_id),
   "numRooms" integer not null default 1,
+  "roomUnitNumber" integer,
   "startDate" date not null,
   "endDate" date not null,
   reason text,
   "createdAt" timestamp without time zone default now(),
   "updatedAt" timestamp without time zone default now(),
   constraint blocked_dates_valid_rooms check ("numRooms" > 0),
+  constraint blocked_dates_valid_room_unit check ("roomUnitNumber" is null or "roomUnitNumber" > 0),
   constraint blocked_dates_valid_dates check ("endDate" > "startDate")
 );
 
@@ -444,8 +446,11 @@ alter table bookings add column if not exists "roomTypeId" uuid references room_
 alter table bookings add column if not exists "numRooms" integer not null default 1;
 alter table blocked_dates add column if not exists "roomTypeId" uuid references room_types(_id) on delete cascade;
 alter table blocked_dates add column if not exists "numRooms" integer not null default 1;
+alter table blocked_dates add column if not exists "roomUnitNumber" integer;
 alter table blocked_dates drop constraint if exists blocked_dates_valid_rooms;
 alter table blocked_dates add constraint blocked_dates_valid_rooms check ("numRooms" > 0);
+alter table blocked_dates drop constraint if exists blocked_dates_valid_room_unit;
+alter table blocked_dates add constraint blocked_dates_valid_room_unit check ("roomUnitNumber" is null or "roomUnitNumber" > 0);
 alter table room_types add column if not exists category varchar not null default 'Standard';
 alter table room_types add column if not exists "bedType" varchar default 'Queen';
 alter table room_types add column if not exists "maxAdults" integer not null default 2;

@@ -37,11 +37,16 @@ public class BlockedDateService {
     }
 
     public void blockDates(String cabinId, String roomTypeId, String hostId, String startDate, String endDate, int numRooms, String reason, SupabaseCallback<BlockedDate> callback) {
+        blockDates(cabinId, roomTypeId, hostId, startDate, endDate, numRooms, 0, reason, callback);
+    }
+
+    public void blockDates(String cabinId, String roomTypeId, String hostId, String startDate, String endDate, int numRooms, int roomUnitNumber, String reason, SupabaseCallback<BlockedDate> callback) {
         BlockedDate blockedDate = new BlockedDate();
         blockedDate.setCabinId(cabinId);
         blockedDate.setRoomTypeId(roomTypeId);
         blockedDate.setHostId(hostId);
         blockedDate.setNumRooms(numRooms);
+        blockedDate.setRoomUnitNumber(roomUnitNumber);
         blockedDate.setStartDate(startDate);
         blockedDate.setEndDate(endDate);
         blockedDate.setReason(reason);

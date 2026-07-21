@@ -17,6 +17,9 @@
             android:name=".ui.activities.AdminHotelFormActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.activities.RoomUnitManagementActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.activities.AdminBookingManagementActivity"
             android:exported="false" />
         <activity

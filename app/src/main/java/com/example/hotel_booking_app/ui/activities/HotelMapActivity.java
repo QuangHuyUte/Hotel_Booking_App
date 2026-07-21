@@ -18,9 +18,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.bumptech.glide.Glide;
 import com.example.hotel_booking_app.R;
 import com.example.hotel_booking_app.data.models.Cabin;
+import com.example.hotel_booking_app.data.models.RoomType;
 import com.example.hotel_booking_app.data.models.Wishlist;
 import com.example.hotel_booking_app.data.remote.SupabaseCallback;
+import com.example.hotel_booking_app.services.BookingService;
 import com.example.hotel_booking_app.services.CabinService;
+import com.example.hotel_booking_app.services.RoomTypeService;
 import com.example.hotel_booking_app.services.WishlistService;
 import com.example.hotel_booking_app.utils.AppConstants;
 import com.example.hotel_booking_app.utils.PriceUtils;
@@ -29,6 +32,7 @@ import com.example.hotel_booking_app.utils.SessionManager;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -54,15 +58,26 @@ public class HotelMapActivity extends AppCompatActivity {
     private Button favoriteButton;
     private String destination;
     private String focusCabinId;
+    private String focusRoomTypeId;
+    private String checkIn;
+    private String checkOut;
+    private String roomQuery;
+    private int guests;
+    private int rooms;
+    private int beds;
     private List<Cabin> visibleCabins = new ArrayList<>();
     private final Set<String> favoriteCabinIds = new HashSet<>();
     private Cabin selectedCabin;
     private WishlistService wishlistService;
+    private RoomTypeService roomTypeService;
+    private BookingService bookingService;
     private SessionManager sessionManager;
     private boolean pickLocationMode;
     private double pickedLatitude;
     private double pickedLongitude;
     private Button directionsButton;
+    private long lastPickerUpdateAt;
+    private static final long PICKER_UPDATE_INTERVAL_MS = 80;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +86,13 @@ public class HotelMapActivity extends AppCompatActivity {
 
         destination = getIntent().getStringExtra("destination");
         focusCabinId = getIntent().getStringExtra(AppConstants.EXTRA_CABIN_ID);
+        focusRoomTypeId = getIntent().getStringExtra(AppConstants.EXTRA_ROOM_TYPE_ID);
+        checkIn = safe(getIntent().getStringExtra("checkIn"), "");
+        checkOut = safe(getIntent().getStringExtra("checkOut"), "");
+        roomQuery = safe(getIntent().getStringExtra("roomQuery"), "");
+        guests = Math.max(0, getIntent().getIntExtra("guests", 0));
+        rooms = Math.max(1, getIntent().getIntExtra("rooms", 1));
+        beds = Math.max(0, getIntent().getIntExtra("beds", 0));
         pickLocationMode = getIntent().getBooleanExtra(EXTRA_PICK_LOCATION, false);
         pickedLatitude = getIntent().getDoubleExtra(EXTRA_PICK_LATITUDE, 0);
         pickedLongitude = getIntent().getDoubleExtra(EXTRA_PICK_LONGITUDE, 0);
@@ -86,6 +108,8 @@ public class HotelMapActivity extends AppCompatActivity {
         selectedDescriptionTextView = findViewById(R.id.text_selected_description);
         favoriteButton = findViewById(R.id.button_map_favorite);
         wishlistService = new WishlistService();
+        roomTypeService = new RoomTypeService();
+        bookingService = new BookingService();
         sessionManager = new SessionManager(this);
 
         Button backButton = findViewById(R.id.button_back);
@@ -108,7 +132,7 @@ public class HotelMapActivity extends AppCompatActivity {
         if (pickLocationMode) {
             setupLocationPicker();
         } else {
-            summaryTextView.setText(safe(destination, "Ho Chi Minh City") + " - " + compactDateRange());
+            summaryTextView.setText(buildMapSummary());
             loadMarkers();
         }
     }
@@ -134,26 +158,41 @@ public class HotelMapActivity extends AppCompatActivity {
         settings.setSupportZoom(true);
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
+        if (pickLocationMode) {
+            settings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        }
         mapWebView.setWebViewClient(new WebViewClient());
         mapWebView.addJavascriptInterface(new MapBridge(), "HotelMap");
     }
 
     private void loadMarkers() {
+        statusTextView.setText("Đang tải loại phòng phù hợp trên bản đồ...");
         new CabinService().getCabins(new SupabaseCallback<List<Cabin>>() {
             @Override
             public void onSuccess(List<Cabin> cabins) {
-                visibleCabins = filterCabins(cabins);
-                if (visibleCabins.isEmpty()) {
+                List<Cabin> cityCabins = filterCabins(cabins);
+                if (cityCabins.isEmpty()) {
                     statusTextView.setText("Chưa có chỗ nghỉ trên bản đồ");
                     selectedCard.setVisibility(View.GONE);
                     loadMapHtml();
                     return;
                 }
-                statusTextView.setText(formatCount(visibleCabins.size()) + " chỗ nghỉ trên bản đồ");
-                selectedCabin = resolveInitialCabin();
-                renderSelectedCabin();
-                loadMapHtml();
-                loadFavoriteState();
+                roomTypeService.attachRoomTypes(cityCabins, new SupabaseCallback<List<Cabin>>() {
+                    @Override
+                    public void onSuccess(List<Cabin> cabinsWithRooms) {
+                        List<Cabin> matchedCabins = matchRoomTypesForMap(cabinsWithRooms);
+                        if (hasComparableDateRange()) {
+                            filterAvailableRoomMatches(matchedCabins);
+                            return;
+                        }
+                        showMatchedCabins(matchedCabins);
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        showMatchedCabins(matchRoomTypesForMap(cityCabins));
+                    }
+                });
             }
 
             @Override
@@ -161,6 +200,80 @@ public class HotelMapActivity extends AppCompatActivity {
                 statusTextView.setText(message);
             }
         });
+    }
+
+    private void showMatchedCabins(List<Cabin> cabins) {
+        visibleCabins = cabins;
+        if (visibleCabins.isEmpty()) {
+            statusTextView.setText("Không có loại phòng phù hợp để so sánh trên bản đồ.");
+            selectedCabin = null;
+            selectedCard.setVisibility(View.GONE);
+            loadMapHtml();
+            return;
+        }
+        visibleCabins.sort(Comparator.comparingDouble(Cabin::displayPrice));
+        statusTextView.setText(formatCount(visibleCabins.size()) + " loại phòng phù hợp trên bản đồ");
+        selectedCabin = resolveInitialCabin();
+        renderSelectedCabin();
+        loadMapHtml();
+        loadFavoriteState();
+    }
+
+    private List<Cabin> matchRoomTypesForMap(List<Cabin> cabins) {
+        List<Cabin> matched = new ArrayList<>();
+        for (Cabin cabin : cabins) {
+            RoomType preferred = focusCabinId != null && focusCabinId.equals(cabin.getId())
+                    ? roomTypeById(cabin, focusRoomTypeId)
+                    : null;
+            RoomType roomType = preferred == null
+                    ? roomTypeService.findBestRoomType(cabin, guests, beds, roomQuery)
+                    : preferred;
+            if (roomType != null) {
+                matched.add(cabin.copyForMatchedRoom(roomType));
+            } else if (cabin.getRoomTypes() == null || cabin.getRoomTypes().isEmpty()) {
+                matched.add(cabin);
+            }
+        }
+        return matched;
+    }
+
+    private void filterAvailableRoomMatches(List<Cabin> matchedCabins) {
+        if (matchedCabins.isEmpty()) {
+            showMatchedCabins(matchedCabins);
+            return;
+        }
+        statusTextView.setText("Đang kiểm tra phòng trống theo ngày đã chọn...");
+        List<Cabin> available = new ArrayList<>();
+        final int[] completed = {0};
+        final int expected = matchedCabins.size();
+        for (Cabin cabin : matchedCabins) {
+            RoomType roomType = cabin.getMatchedRoomType();
+            if (roomType == null) {
+                completeAvailabilityCheck(available, completed, expected, cabin);
+                continue;
+            }
+            bookingService.ensureRangeIsAvailable(cabin.getId(), roomType.getId(), checkIn, checkOut, rooms, new SupabaseCallback<Boolean>() {
+                @Override
+                public void onSuccess(Boolean data) {
+                    completeAvailabilityCheck(available, completed, expected, Boolean.TRUE.equals(data) ? cabin : null);
+                }
+
+                @Override
+                public void onError(String message) {
+                    completeAvailabilityCheck(available, completed, expected, null);
+                }
+            });
+        }
+    }
+
+    private void completeAvailabilityCheck(List<Cabin> available, int[] completed, int expected, Cabin cabin) {
+        if (cabin != null) {
+            available.add(cabin);
+        }
+        completed[0]++;
+        if (completed[0] >= expected) {
+            showMatchedCabins(available);
+        }
     }
 
     private List<Cabin> filterCabins(List<Cabin> cabins) {
@@ -197,9 +310,12 @@ public class HotelMapActivity extends AppCompatActivity {
         selectedCard.setVisibility(View.VISIBLE);
         selectedNameTextView.setText(selectedCabin.getName());
         selectedLocationTextView.setText(safe(selectedCabin.getAddress(), selectedCabin.getLocation()));
-        selectedPriceTextView.setText("Từ " + PriceUtils.formatUsd(price(selectedCabin)) + " / đêm");
+        selectedPriceTextView.setText(PriceUtils.formatUsd(price(selectedCabin)) + " / đêm");
         selectedMetaTextView.setText(buildSelectedMeta(selectedCabin));
-        selectedDescriptionTextView.setText(safe(selectedCabin.getDescription(), "Chỗ nghỉ có vị trí thuận tiện, thông tin phòng rõ ràng và dễ đặt."));
+        RoomType matchedRoomType = selectedCabin.getMatchedRoomType();
+        selectedDescriptionTextView.setText(matchedRoomType == null
+                ? safe(selectedCabin.getDescription(), "Chỗ nghỉ có vị trí thuận tiện, thông tin phòng rõ ràng và dễ đặt.")
+                : matchedRoomType.displayName() + " · " + matchedRoomType.sizeLabel() + " · " + matchedRoomType.bedLabel());
         renderFavoriteButton();
         Glide.with(this)
                 .load(selectedCabin.getImage())
@@ -210,7 +326,7 @@ public class HotelMapActivity extends AppCompatActivity {
 
     private void loadMapHtml() {
         mapWebView.loadDataWithBaseURL(
-                "https://leafletjs.com/",
+                pickLocationMode ? "https://serein.local/" : "https://leafletjs.com/",
                 buildMapHtml(),
                 "text/html",
                 "UTF-8",
@@ -220,6 +336,7 @@ public class HotelMapActivity extends AppCompatActivity {
 
     private void setupLocationPicker() {
         selectedCard.setVisibility(View.GONE);
+        statusTextView.setVisibility(View.GONE);
         directionsButton.setText("Lưu");
         destination = safe(getIntent().getStringExtra(EXTRA_PICK_LOCATION_LABEL), destination);
         if (pickedLatitude == 0 || pickedLongitude == 0) {
@@ -292,29 +409,38 @@ public class HotelMapActivity extends AppCompatActivity {
         double centerLng = pickedLongitude == 0 ? fallbackLng() : pickedLongitude;
         return "<!doctype html><html><head>"
                 + "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
-                + "<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>"
-                + "<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>"
                 + "<style>"
-                + "html,body,#map{height:100%;margin:0;background:#d8e4ed;font-family:Arial,sans-serif;}"
-                + ".leaflet-control-attribution{font-size:10px;}"
-                + ".leaflet-control-zoom a{background:#202020;color:#fff;border-color:#444;}"
-                + ".pick-pin{position:relative;background:#0b84ff;color:#fff;border:3px solid #fff;border-radius:22px;"
-                + "width:42px;height:42px;box-shadow:0 6px 18px rgba(0,0,0,.35);}"
-                + ".pick-pin:after{content:'';position:absolute;left:50%;bottom:-12px;transform:translateX(-50%);"
-                + "border-left:9px solid transparent;border-right:9px solid transparent;border-top:14px solid #fff;}"
-                + ".pick-pin:before{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);"
-                + "width:12px;height:12px;background:#fff;border-radius:50%;}"
-                + "</style></head><body><div id='map'></div><script>"
-                + "var map=L.map('map',{zoomControl:false,preferCanvas:true,scrollWheelZoom:true}).setView(["
-                + centerLat + "," + centerLng + "],15);"
-                + "L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:20,attribution:'&copy; OpenStreetMap &copy; CARTO'}).addTo(map);"
-                + "L.control.zoom({position:'bottomright'}).addTo(map);"
-                + "var icon=L.divIcon({className:'',html:'<div class=\"pick-pin\"></div>',iconSize:[42,56],iconAnchor:[21,54]});"
-                + "var marker=L.marker([" + centerLat + "," + centerLng + "],{icon:icon,draggable:true}).addTo(map);"
-                + "function send(latlng){HotelMap.pickLocation(latlng.lat,latlng.lng);}"
-                + "map.on('click',function(e){marker.setLatLng(e.latlng);send(e.latlng);});"
-                + "marker.on('dragend',function(){send(marker.getLatLng());});"
-                + "setTimeout(function(){map.invalidateSize();},150);"
+                + "html,body,#map{height:100%;margin:0;background:#d8e4ed;font-family:Arial,sans-serif;overflow:hidden;touch-action:none;}"
+                + "#tiles{position:absolute;inset:0;overflow:hidden;background:#d8e4ed;}"
+                + "#tiles img{position:absolute;width:256px;height:256px;user-select:none;-webkit-user-drag:none;}"
+                + ".map-shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(10,24,44,.08),rgba(10,24,44,0) 22%,rgba(10,24,44,.08));}"
+                + ".pick-pin{position:absolute;z-index:50;width:42px;height:42px;margin-left:-21px;margin-top:-54px;border-radius:50% 50% 50% 0;"
+                + "background:#0b84ff;border:4px solid #fff;transform:rotate(-45deg);box-shadow:0 8px 20px rgba(0,0,0,.32);}"
+                + ".pick-pin:after{content:'';position:absolute;width:12px;height:12px;left:11px;top:11px;background:#fff;border-radius:50%;}"
+                + ".coord{position:absolute;left:12px;bottom:12px;z-index:999;padding:8px 11px;border-radius:9px;background:rgba(255,255,255,.9);"
+                + "font-size:11px;font-weight:800;color:#102033;box-shadow:0 6px 18px rgba(0,0,0,.15);}"
+                + "</style></head><body><div id='map'><div id='tiles'></div><div class='map-shade'></div>"
+                + "<div id='pin' class='pick-pin'></div><div id='coord' class='coord'></div></div><script>"
+                + "var zoom=16,tileSize=256,tileCount=Math.pow(2,zoom),centerLat=" + centerLat + ",centerLng=" + centerLng + ";"
+                + "var map=document.getElementById('map'),tiles=document.getElementById('tiles'),pin=document.getElementById('pin'),coord=document.getElementById('coord');"
+                + "var centerWorld=project(centerLat,centerLng),picked={lat:centerLat,lng:centerLng},tileHost=0;"
+                + "function project(lat,lng){var sin=Math.sin(lat*Math.PI/180);sin=Math.min(Math.max(sin,-.9999),.9999);"
+                + "return{x:(lng+180)/360*tileCount*tileSize,y:(.5-Math.log((1+sin)/(1-sin))/(4*Math.PI))*tileCount*tileSize};}"
+                + "function unproject(x,y){var lng=x/(tileCount*tileSize)*360-180;var n=Math.PI-2*Math.PI*y/(tileCount*tileSize);"
+                + "var lat=180/Math.PI*Math.atan(.5*(Math.exp(n)-Math.exp(-n)));return{lat:lat,lng:lng};}"
+                + "function renderTiles(){var w=map.clientWidth,h=map.clientHeight,r=2,baseX=Math.floor(centerWorld.x/tileSize),baseY=Math.floor(centerWorld.y/tileSize);"
+                + "tiles.innerHTML='';for(var dx=-r;dx<=r;dx++){for(var dy=-r;dy<=r;dy++){var tx=baseX+dx,ty=baseY+dy;if(ty<0||ty>=tileCount)continue;"
+                + "var img=document.createElement('img');img.loading='eager';img.decoding='async';img.style.left=(tx*tileSize-centerWorld.x+w/2)+'px';"
+                + "img.style.top=(ty*tileSize-centerWorld.y+h/2)+'px';img.src='https://'+(['a','b','c'][tileHost++%3])+'.basemaps.cartocdn.com/rastertiles/voyager/'+zoom+'/'+tx+'/'+ty+'.png';tiles.appendChild(img);}}}"
+                + "function setPinFromLatLng(latlng,send){picked=latlng;var p=project(latlng.lat,latlng.lng);pin.style.left=(p.x-centerWorld.x+map.clientWidth/2)+'px';"
+                + "pin.style.top=(p.y-centerWorld.y+map.clientHeight/2)+'px';coord.textContent=latlng.lat.toFixed(6)+', '+latlng.lng.toFixed(6);"
+                + "if(send&&window.HotelMap){HotelMap.pickLocation(latlng.lat,latlng.lng);}}"
+                + "function choose(clientX,clientY,send){var r=map.getBoundingClientRect();var x=centerWorld.x+(clientX-r.left)-r.width/2;var y=centerWorld.y+(clientY-r.top)-r.height/2;setPinFromLatLng(unproject(x,y),send);}"
+                + "var dragging=false;map.addEventListener('touchstart',function(e){dragging=true;if(e.touches.length){choose(e.touches[0].clientX,e.touches[0].clientY,true);}e.preventDefault();},{passive:false});"
+                + "map.addEventListener('touchmove',function(e){if(dragging&&e.touches.length){choose(e.touches[0].clientX,e.touches[0].clientY,true);}e.preventDefault();},{passive:false});"
+                + "map.addEventListener('touchend',function(){dragging=false;});map.addEventListener('click',function(e){choose(e.clientX,e.clientY,true);});"
+                + "window.addEventListener('resize',function(){renderTiles();setPinFromLatLng(picked,false);});"
+                + "setTimeout(function(){renderTiles();setPinFromLatLng(picked,true);},30);"
                 + "</script></body></html>";
     }
 
@@ -387,8 +513,16 @@ public class HotelMapActivity extends AppCompatActivity {
         }
         Intent intent = new Intent(this, HotelDetailActivity.class);
         intent.putExtra(AppConstants.EXTRA_CABIN_ID, selectedCabin.getId());
-        intent.putExtra("checkIn", getIntent().getStringExtra("checkIn"));
-        intent.putExtra("checkOut", getIntent().getStringExtra("checkOut"));
+        if (selectedCabin.getMatchedRoomType() != null) {
+            intent.putExtra(AppConstants.EXTRA_ROOM_TYPE_ID, selectedCabin.getMatchedRoomType().getId());
+        }
+        intent.putExtra("destination", destination);
+        intent.putExtra("checkIn", checkIn);
+        intent.putExtra("checkOut", checkOut);
+        intent.putExtra("guests", Math.max(1, guests));
+        intent.putExtra("rooms", Math.max(1, rooms));
+        intent.putExtra("beds", Math.max(0, beds));
+        intent.putExtra("roomQuery", roomQuery);
         intent.putExtra("fromMap", true);
         startActivity(intent);
     }
@@ -516,7 +650,9 @@ public class HotelMapActivity extends AppCompatActivity {
     }
 
     private double price(Cabin cabin) {
-        return PriceUtils.priceAfterDiscount(cabin.getRegularPrice(), cabin.getDiscount());
+        return cabin.getMatchedRoomType() == null
+                ? PriceUtils.priceAfterDiscount(cabin.getRegularPrice(), cabin.getDiscount())
+                : cabin.getMatchedRoomType().getBasePrice();
     }
 
     private String normalizeCity(String value) {
@@ -540,6 +676,13 @@ public class HotelMapActivity extends AppCompatActivity {
     }
 
     private String buildSelectedMeta(Cabin cabin) {
+        RoomType roomType = cabin.getMatchedRoomType();
+        if (roomType != null) {
+            return roomType.displayName()
+                    + " - " + roomType.effectiveMaxAdults() + " người lớn"
+                    + " - " + roomType.effectiveBedCount() + " giường"
+                    + " - " + roomType.sizeLabel();
+        }
         String type = translatePropertyType(safe(cabin.getPropertyType(), "Hotel"));
         StringBuilder builder = new StringBuilder(type);
         if (cabin.getStarRating() > 0) {
@@ -553,6 +696,43 @@ public class HotelMapActivity extends AppCompatActivity {
         }
         builder.append(" - Tối đa ").append(cabin.getMaxCapacity()).append(" khách");
         return builder.toString();
+    }
+
+    private String buildMapSummary() {
+        StringBuilder builder = new StringBuilder(safe(destination, "Ho Chi Minh City"));
+        builder.append(" - ").append(compactDateRange());
+        if (guests > 0) {
+            builder.append(" - ").append(guests).append(" người lớn");
+        }
+        if (rooms > 1) {
+            builder.append(" - ").append(rooms).append(" phòng");
+        }
+        if (beds > 0) {
+            builder.append(" - ").append(beds).append(" giường");
+        }
+        return builder.toString();
+    }
+
+    private boolean hasComparableDateRange() {
+        try {
+            LocalDate start = LocalDate.parse(checkIn);
+            LocalDate end = LocalDate.parse(checkOut);
+            return end.isAfter(start);
+        } catch (Exception exception) {
+            return false;
+        }
+    }
+
+    private RoomType roomTypeById(Cabin cabin, String roomTypeId) {
+        if (roomTypeId == null || cabin.getRoomTypes() == null) {
+            return null;
+        }
+        for (RoomType roomType : cabin.getRoomTypes()) {
+            if (roomTypeId.equals(roomType.getId())) {
+                return roomType;
+            }
+        }
+        return null;
     }
 
     private String compactDateRange() {
@@ -613,6 +793,11 @@ public class HotelMapActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void pickLocation(double latitude, double longitude) {
+            long now = System.currentTimeMillis();
+            if (now - lastPickerUpdateAt < PICKER_UPDATE_INTERVAL_MS) {
+                return;
+            }
+            lastPickerUpdateAt = now;
             runOnUiThread(() -> {
                 pickedLatitude = latitude;
                 pickedLongitude = longitude;
