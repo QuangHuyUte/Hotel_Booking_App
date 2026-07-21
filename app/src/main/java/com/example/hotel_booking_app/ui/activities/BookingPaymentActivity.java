@@ -2,8 +2,6 @@ package com.example.hotel_booking_app.ui.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -11,33 +9,27 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.hotel_booking_app.R;
-import com.example.hotel_booking_app.data.models.AppNotification;
 import com.example.hotel_booking_app.data.models.Booking;
 import com.example.hotel_booking_app.data.models.Cabin;
 import com.example.hotel_booking_app.data.models.Payment;
 import com.example.hotel_booking_app.data.remote.SupabaseCallback;
 import com.example.hotel_booking_app.services.BookingService;
 import com.example.hotel_booking_app.services.CabinService;
-import com.example.hotel_booking_app.services.NotificationService;
 import com.example.hotel_booking_app.services.PaymentService;
 import com.example.hotel_booking_app.utils.AppConstants;
 import com.example.hotel_booking_app.utils.PriceUtils;
 import com.example.hotel_booking_app.utils.SessionManager;
 
 import java.util.List;
-import java.util.UUID;
 
 public class BookingPaymentActivity extends AppCompatActivity {
     private static final double CLEANING_FEE = 20.0;
-    private static final long MOCK_PAYMENT_DELAY_MS = 2500;
 
     private TextView summaryTextView;
     private TextView statusTextView;
     private BookingService bookingService;
     private PaymentService paymentService;
-    private NotificationService notificationService;
     private SessionManager sessionManager;
-    private Handler handler;
     private Button payButton;
     private Booking booking;
     private Payment payment;
@@ -60,9 +52,7 @@ public class BookingPaymentActivity extends AppCompatActivity {
 
         bookingService = new BookingService();
         paymentService = new PaymentService();
-        notificationService = new NotificationService();
         sessionManager = new SessionManager(this);
-        handler = new Handler(Looper.getMainLooper());
 
         backButton.setOnClickListener(view -> finish());
         backBottomButton.setOnClickListener(view -> finish());
@@ -154,13 +144,13 @@ public class BookingPaymentActivity extends AppCompatActivity {
             payButton.setEnabled(true);
             statusTextView.setText("Đơn này đã thanh toán. Bạn có thể xem hóa đơn.");
         } else if (isPending(payment)) {
-            payButton.setText("Hoàn tất thanh toán");
-            payButton.setEnabled(true);
-            statusTextView.setText("Đang có thanh toán chờ xử lý. Nhấn thanh toán để hoàn tất.");
+            payButton.setText("Đang chờ xác nhận");
+            payButton.setEnabled(false);
+            statusTextView.setText("Yêu cầu thanh toán đã gửi. Khách sạn sẽ xác nhận trong tab Pending của manager.");
         } else {
-            payButton.setText("Thanh toán ngay");
+            payButton.setText("Gửi yêu cầu thanh toán");
             payButton.setEnabled(true);
-            statusTextView.setText("Chọn thanh toán ngay hoặc trả khi nhận phòng.");
+            statusTextView.setText("Gửi yêu cầu thanh toán trong app hoặc chọn trả khi nhận phòng.");
         }
     }
 
@@ -204,7 +194,7 @@ public class BookingPaymentActivity extends AppCompatActivity {
             return;
         }
         if (isPending(payment)) {
-            startMockProcessing(payment);
+            statusTextView.setText("Yêu cầu thanh toán đang chờ khách sạn xác nhận.");
             return;
         }
         double amount = booking.getTotalPrice() + CLEANING_FEE;
@@ -213,7 +203,10 @@ public class BookingPaymentActivity extends AppCompatActivity {
             @Override
             public void onSuccess(Payment pendingPayment) {
                 payment = pendingPayment;
-                startMockProcessing(pendingPayment);
+                setProcessingUi(false);
+                Toast.makeText(BookingPaymentActivity.this, "Đã gửi yêu cầu thanh toán", Toast.LENGTH_SHORT).show();
+                statusTextView.setText("Đã gửi yêu cầu thanh toán. Khách sạn sẽ xác nhận trong tab Pending.");
+                renderSummary();
             }
 
             @Override
@@ -222,11 +215,6 @@ public class BookingPaymentActivity extends AppCompatActivity {
                 statusTextView.setText(message);
             }
         });
-    }
-
-    private void startMockProcessing(Payment pendingPayment) {
-        setProcessingUi(true);
-        handler.postDelayed(() -> markPaymentPaid(pendingPayment), MOCK_PAYMENT_DELAY_MS);
     }
 
     private void setProcessingUi(boolean processing) {
@@ -235,87 +223,6 @@ public class BookingPaymentActivity extends AppCompatActivity {
         if (processing) {
             statusTextView.setText("Đang xử lý thanh toán...");
         }
-    }
-
-    private void markPaymentPaid(Payment pendingPayment) {
-        String transactionId = "MOCK-" + UUID.randomUUID();
-        paymentService.markPaidNoReturn(pendingPayment, transactionId, new SupabaseCallback<Payment>() {
-            @Override
-            public void onSuccess(Payment paidPayment) {
-                payment = paidPayment;
-                bookingService.updateStatusNoReturn(booking.getId(), AppConstants.BOOKING_CONFIRMED, true, new SupabaseCallback<Boolean>() {
-                    @Override
-                    public void onSuccess(Boolean updated) {
-                        booking.setStatus(AppConstants.BOOKING_CONFIRMED);
-                        booking.setPaid(true);
-                        createPaymentNotifications();
-                        Toast.makeText(BookingPaymentActivity.this, "Thanh toán thành công", Toast.LENGTH_SHORT).show();
-                        setProcessingUi(false);
-                        renderSummary();
-                        openBookingDetailAndFinish();
-                    }
-
-                    @Override
-                    public void onError(String message) {
-                        setProcessingUi(false);
-                        statusTextView.setText("Đã thanh toán, nhưng trạng thái đặt phòng chưa cập nhật: " + message);
-                    }
-                });
-            }
-
-            @Override
-            public void onError(String message) {
-                setProcessingUi(false);
-                statusTextView.setText(message);
-            }
-        });
-    }
-
-    private void createPaymentNotifications() {
-        String userId = sessionManager.getUserId();
-        notificationService.createNotification(
-                userId,
-                "Thanh toán thành công",
-                "Thanh toán cho đặt phòng " + booking.getId() + " đã thành công.",
-                "payment",
-                new SupabaseCallback<AppNotification>() {
-                    @Override
-                    public void onSuccess(AppNotification data) {
-                        createBookingConfirmedNotification(userId);
-                    }
-
-                    @Override
-                    public void onError(String message) {
-                        createBookingConfirmedNotification(userId);
-                    }
-                }
-        );
-    }
-
-    private void openBookingDetailAndFinish() {
-        Intent intent = new Intent(this, BookingDetailsActivity.class);
-        intent.putExtra(AppConstants.EXTRA_BOOKING_ID, booking.getId());
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        startActivity(intent);
-        finish();
-    }
-
-    private void createBookingConfirmedNotification(String userId) {
-        notificationService.createNotification(
-                userId,
-                "Đặt phòng đã xác nhận",
-                "Đặt phòng " + booking.getId() + " đã được xác nhận.",
-                "booking",
-                new SupabaseCallback<AppNotification>() {
-                    @Override
-                    public void onSuccess(AppNotification data) {
-                    }
-
-                    @Override
-                    public void onError(String message) {
-                    }
-                }
-        );
     }
 
     private void openInvoice() {

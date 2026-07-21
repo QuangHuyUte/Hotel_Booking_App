@@ -2,10 +2,7 @@ package com.example.hotel_booking_app.ui.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -27,32 +24,26 @@ import com.example.hotel_booking_app.utils.SessionManager;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
+import java.util.Locale;
 import java.util.UUID;
 
 public class PaymentHistoryActivity extends AppCompatActivity {
-    private TextView statusTextView;
-    private LinearLayout hotelTabsContainer;
     private PaymentAdapter adapter;
     private PaymentService paymentService;
     private BookingService bookingService;
     private HostService hostService;
     private SessionManager sessionManager;
     private final List<Cabin> managerCabins = new ArrayList<>();
-    private final List<Button> paymentHotelTabButtons = new ArrayList<>();
-    private final List<String> paymentHotelTabCabinIds = new ArrayList<>();
+    private final List<Payment> allLoadedPayments = new ArrayList<>();
     private String selectedPaymentCabinId;
+    private String selectedPaymentStatus = AppConstants.PAYMENT_PENDING;
+    private String headerStatusMessage = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_payment_history);
 
-        statusTextView = findViewById(R.id.text_status);
-        hotelTabsContainer = findViewById(R.id.container_payment_hotel_tabs);
-        TextView titleTextView = findViewById(R.id.text_payment_title);
-        Button backButton = findViewById(R.id.button_back);
-        Button backBottomButton = findViewById(R.id.button_back_bottom);
         RecyclerView recyclerView = findViewById(R.id.recycler_payments);
         paymentService = new PaymentService();
         bookingService = new BookingService();
@@ -63,16 +54,15 @@ public class PaymentHistoryActivity extends AppCompatActivity {
             intent.putExtra(AppConstants.EXTRA_PAYMENT_ID, payment.getId());
             intent.putExtra(AppConstants.EXTRA_BOOKING_ID, payment.getBookingId());
             startActivity(intent);
-        });
+        }, this::acceptPayment, this::setPaymentStatusFilter, this::setCabinFilter, view -> finish());
+        adapter.setManagerMode(sessionManager.isHostOrAdmin());
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
-        backButton.setOnClickListener(view -> finish());
-        backBottomButton.setOnClickListener(view -> finish());
         if (sessionManager.isHostOrAdmin()) {
-            titleTextView.setText("Giao dịch khách sạn");
             ManagerNavigationHelper.bind(this, ManagerNavigationHelper.TAB_TRANSACTIONS);
         }
+        refreshHeader();
         loadPayments();
     }
 
@@ -81,39 +71,38 @@ public class PaymentHistoryActivity extends AppCompatActivity {
             loadManagerPayments();
             return;
         }
-        statusTextView.setText("Đang tải lịch sử thanh toán...");
-        paymentService.getPaymentsForUser(sessionManager.getUserId(), new SupabaseCallback<List<Payment>>() {
+        setHeaderStatusMessage("Đang tải lịch sử thanh toán của bạn...");
+        bookingService.getBookingsForUser(sessionManager.getUserId(), new SupabaseCallback<List<Booking>>() {
             @Override
-            public void onSuccess(List<Payment> payments) {
-                reconcilePaidPayments(payments);
+            public void onSuccess(List<Booking> bookings) {
+                collectPaymentsForBookings(bookings == null ? new ArrayList<>() : bookings);
             }
 
             @Override
             public void onError(String message) {
-                statusTextView.setText(message);
+                setHeaderStatusMessage(message);
             }
         });
     }
 
     private void loadManagerPayments() {
-        statusTextView.setText("Đang tải giao dịch từ các khách sạn bạn quản lý...");
+        setHeaderStatusMessage("Đang tải giao dịch từ các khách sạn bạn quản lý...");
         hostService.getCabinsForHost(sessionManager.getUserId(), new SupabaseCallback<List<Cabin>>() {
             @Override
             public void onSuccess(List<Cabin> cabins) {
                 if (cabins == null || cabins.isEmpty()) {
-                    adapter.submitList(new ArrayList<>());
-                    statusTextView.setText("Bạn chưa có khách sạn nào để kiểm tra giao dịch.");
+                    showLoadedPayments(new ArrayList<>());
+                    setHeaderStatusMessage("Bạn chưa có khách sạn nào để kiểm tra giao dịch.");
                     return;
                 }
                 managerCabins.clear();
                 managerCabins.addAll(cabins);
-                renderPaymentHotelTabs();
                 collectBookingsForCabins(filteredPaymentCabins());
             }
 
             @Override
             public void onError(String message) {
-                statusTextView.setText(message);
+                setHeaderStatusMessage(message);
             }
         });
     }
@@ -132,56 +121,10 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         return filtered;
     }
 
-    private void renderPaymentHotelTabs() {
-        int expectedTabs = managerCabins.size() + 1;
-        if (paymentHotelTabButtons.size() != expectedTabs) {
-            hotelTabsContainer.removeAllViews();
-            paymentHotelTabButtons.clear();
-            paymentHotelTabCabinIds.clear();
-            addPaymentHotelTab("Tất cả", null);
-            for (Cabin cabin : managerCabins) {
-                addPaymentHotelTab(shortHotelName(cabin), cabin.getId());
-            }
-        }
-        updatePaymentHotelTabStyles();
-    }
-
-    private void addPaymentHotelTab(String label, String cabinId) {
-        Button button = new Button(this);
-        button.setText(label);
-        button.setAllCaps(false);
-        button.setMinWidth(0);
-        button.setMinHeight(0);
-        button.setPadding(dp(14), 0, dp(14), 0);
-        button.setTextSize(13);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                dp(42)
-        );
-        params.setMargins(0, 0, dp(8), 0);
-        button.setLayoutParams(params);
-        button.setOnClickListener(view -> {
-            selectedPaymentCabinId = cabinId;
-            updatePaymentHotelTabStyles();
-            collectBookingsForCabins(filteredPaymentCabins());
-        });
-        paymentHotelTabButtons.add(button);
-        paymentHotelTabCabinIds.add(cabinId);
-        hotelTabsContainer.addView(button);
-    }
-
-    private void updatePaymentHotelTabStyles() {
-        for (int i = 0; i < paymentHotelTabButtons.size(); i++) {
-            Button button = paymentHotelTabButtons.get(i);
-            boolean selected = Objects.equals(paymentHotelTabCabinIds.get(i), selectedPaymentCabinId);
-            button.setTextColor(getColor(selected ? R.color.black : R.color.ink));
-            button.setBackgroundResource(selected ? R.drawable.bg_button_primary : R.drawable.bg_manager_search);
-        }
-    }
     private void collectBookingsForCabins(List<Cabin> cabins) {
         if (cabins.isEmpty()) {
-            adapter.submitList(new ArrayList<>());
-            statusTextView.setText("Chưa có khách sạn phù hợp để kiểm tra giao dịch.");
+            showLoadedPayments(new ArrayList<>());
+            setHeaderStatusMessage("Chưa có khách sạn phù hợp để kiểm tra giao dịch.");
             return;
         }
         List<Booking> allBookings = new ArrayList<>();
@@ -212,9 +155,11 @@ public class PaymentHistoryActivity extends AppCompatActivity {
     }
 
     private void collectPaymentsForBookings(List<Booking> bookings) {
-        if (bookings.isEmpty()) {
-            adapter.submitList(new ArrayList<>());
-            statusTextView.setText("Chưa có giao dịch nào từ khách sạn bạn quản lý.");
+        if (bookings == null || bookings.isEmpty()) {
+            showLoadedPayments(new ArrayList<>());
+            setHeaderStatusMessage(sessionManager.isHostOrAdmin()
+                    ? "Chưa có giao dịch nào từ khách sạn bạn quản lý."
+                    : "Bạn chưa có giao dịch đặt phòng nào.");
             return;
         }
         List<Payment> payments = new ArrayList<>();
@@ -266,8 +211,7 @@ public class PaymentHistoryActivity extends AppCompatActivity {
 
     private void reconcilePaidPayments(List<Payment> payments) {
         if (payments.isEmpty()) {
-            adapter.submitList(payments);
-            statusTextView.setText(buildStatusSummary(payments));
+            showLoadedPayments(payments);
             return;
         }
         final int[] remaining = {payments.size()};
@@ -283,19 +227,11 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                         payment.setStatus(AppConstants.PAYMENT_PAID);
                         String transactionId = payment.getTransactionId();
                         if (transactionId == null || transactionId.trim().isEmpty()) {
-                            transactionId = "MOCK-RECONCILED-" + UUID.randomUUID();
+                            transactionId = "MGR-RECONCILED-" + UUID.randomUUID();
                         }
-                        paymentService.markPaidNoReturn(payment, transactionId, new SupabaseCallback<Payment>() {
+                        persistPaidPayment(payment, transactionId, false, new Runnable() {
                             @Override
-                            public void onSuccess(Payment paidPayment) {
-                                payment.setStatus(AppConstants.PAYMENT_PAID);
-                                payment.setTransactionId(paidPayment.getTransactionId());
-                                payment.setPaidAt(paidPayment.getPaidAt());
-                                finishOneReconcile(payments, remaining);
-                            }
-
-                            @Override
-                            public void onError(String message) {
+                            public void run() {
                                 finishOneReconcile(payments, remaining);
                             }
                         });
@@ -315,12 +251,181 @@ public class PaymentHistoryActivity extends AppCompatActivity {
     private void finishOneReconcile(List<Payment> payments, int[] remaining) {
         remaining[0]--;
         if (remaining[0] == 0) {
-            adapter.submitList(payments);
-            statusTextView.setText(buildStatusSummary(payments));
+            showLoadedPayments(payments);
         }
     }
 
-    private String buildStatusSummary(List<Payment> payments) {
+    private void showLoadedPayments(List<Payment> payments) {
+        allLoadedPayments.clear();
+        if (payments != null) {
+            allLoadedPayments.addAll(payments);
+        }
+        applyPaymentStatusFilter();
+    }
+
+    private void setPaymentStatusFilter(String status) {
+        selectedPaymentStatus = AppConstants.PAYMENT_PENDING.equalsIgnoreCase(status)
+                ? AppConstants.PAYMENT_PENDING
+                : AppConstants.PAYMENT_PAID;
+        applyPaymentStatusFilter();
+    }
+
+    private void setCabinFilter(String cabinId) {
+        selectedPaymentCabinId = cabinId;
+        collectBookingsForCabins(filteredPaymentCabins());
+    }
+
+    private void applyPaymentStatusFilter() {
+        List<Payment> filtered = new ArrayList<>();
+        for (Payment payment : allLoadedPayments) {
+            if (matchesSelectedStatus(payment)) {
+                filtered.add(payment);
+            }
+        }
+        adapter.submitList(filtered);
+        setHeaderStatusMessage(buildStatusSummary(allLoadedPayments, filtered.size()));
+    }
+
+    private boolean matchesSelectedStatus(Payment payment) {
+        boolean pending = AppConstants.PAYMENT_PENDING.equalsIgnoreCase(payment.getStatus());
+        if (AppConstants.PAYMENT_PENDING.equalsIgnoreCase(selectedPaymentStatus)) {
+            return pending;
+        }
+        return !pending;
+    }
+
+    private int countPendingPayments() {
+        int pending = 0;
+        for (Payment payment : allLoadedPayments) {
+            if (AppConstants.PAYMENT_PENDING.equalsIgnoreCase(payment.getStatus())) {
+                pending++;
+            }
+        }
+        return pending;
+    }
+
+    private int countFinishedPayments() {
+        return Math.max(0, allLoadedPayments.size() - countPendingPayments());
+    }
+
+    private void setHeaderStatusMessage(String message) {
+        headerStatusMessage = message == null ? "" : message;
+        refreshHeader();
+    }
+
+    private void refreshHeader() {
+        if (adapter == null) {
+            return;
+        }
+        adapter.setHeaderState(
+                sessionManager != null && sessionManager.isHostOrAdmin() ? "Giao dịch khách sạn" : "Lịch sử giao dịch",
+                headerStatusMessage,
+                selectedPaymentStatus,
+                countPendingPayments(),
+                countFinishedPayments(),
+                managerCabins,
+                selectedPaymentCabinId
+        );
+    }
+
+    private void acceptPayment(Payment payment) {
+        if (!sessionManager.isHostOrAdmin()) {
+            return;
+        }
+        if (!AppConstants.PAYMENT_PENDING.equalsIgnoreCase(payment.getStatus())) {
+            Toast.makeText(this, "Giao dịch này đã xử lý.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        setHeaderStatusMessage("Đang xác nhận thanh toán...");
+        bookingService.getBookingById(payment.getBookingId(), new SupabaseCallback<Booking>() {
+            @Override
+            public void onSuccess(Booking booking) {
+                String nextStatus = AppConstants.BOOKING_PENDING.equalsIgnoreCase(booking.getStatus())
+                        ? AppConstants.BOOKING_CONFIRMED
+                        : booking.getStatus();
+                persistAcceptedPayment(payment, nextStatus);
+            }
+
+            @Override
+            public void onError(String message) {
+                persistAcceptedPayment(payment, AppConstants.BOOKING_CONFIRMED);
+            }
+        });
+    }
+
+    private void persistAcceptedPayment(Payment payment, String bookingStatus) {
+        String transactionId = "MGR-ACCEPT-" + UUID.randomUUID();
+        persistPaidPayment(payment, transactionId, true, new Runnable() {
+            @Override
+            public void run() {
+                bookingService.updateStatusNoReturn(payment.getBookingId(), bookingStatus, true, new SupabaseCallback<Boolean>() {
+                    @Override
+                    public void onSuccess(Boolean updated) {
+                        Toast.makeText(PaymentHistoryActivity.this, "Đã xác nhận thanh toán.", Toast.LENGTH_SHORT).show();
+                        loadPayments();
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        setHeaderStatusMessage("Payment đã xác nhận, nhưng booking chưa cập nhật: " + message);
+                        loadPayments();
+                    }
+                });
+            }
+        });
+    }
+
+    private void persistPaidPayment(Payment payment, String transactionId, boolean showErrors, Runnable onDone) {
+        if (isPlaceholderPayment(payment)) {
+            paymentService.createMockPayment(payment.getBookingId(), payment.getUserId(), payment.getAmount(), new SupabaseCallback<Payment>() {
+                @Override
+                public void onSuccess(Payment createdPayment) {
+                    markPaymentPaid(createdPayment, transactionId, showErrors, onDone);
+                }
+
+                @Override
+                public void onError(String message) {
+                    if (showErrors) {
+                        setHeaderStatusMessage(message);
+                        return;
+                    }
+                    onDone.run();
+                }
+            });
+            return;
+        }
+        markPaymentPaid(payment, transactionId, showErrors, onDone);
+    }
+
+    private void markPaymentPaid(Payment payment, String transactionId, boolean showErrors, Runnable onDone) {
+        paymentService.markPaidNoReturn(payment, transactionId, new SupabaseCallback<Payment>() {
+            @Override
+            public void onSuccess(Payment paidPayment) {
+                payment.setStatus(AppConstants.PAYMENT_PAID);
+                payment.setTransactionId(paidPayment.getTransactionId());
+                payment.setPaidAt(paidPayment.getPaidAt());
+                onDone.run();
+            }
+
+            @Override
+            public void onError(String message) {
+                if (showErrors) {
+                    setHeaderStatusMessage(message);
+                    return;
+                }
+                onDone.run();
+            }
+        });
+    }
+
+    private boolean isPlaceholderPayment(Payment payment) {
+        String paymentId = safe(payment.getId());
+        String bookingId = safe(payment.getBookingId());
+        String transactionId = safe(payment.getTransactionId());
+        return !bookingId.isEmpty() && paymentId.equals(bookingId) && transactionId.isEmpty();
+    }
+
+    private String buildStatusSummary(List<Payment> payments, int visibleCount) {
         int paid = 0;
         int pending = 0;
         int failed = 0;
@@ -336,23 +441,20 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                 failed++;
             }
         }
-        return "Giao dịch: " + payments.size()
+        String tabLabel = AppConstants.PAYMENT_PENDING.equalsIgnoreCase(selectedPaymentStatus) ? "Pending" : "Finished";
+        String roleHint = sessionManager.isHostOrAdmin()
+                ? "Pending là giao dịch cần bấm Xác nhận."
+                : "Pending là khoản đang chờ khách sạn xác nhận.";
+        return tabLabel + ": " + visibleCount
+                + " | Tổng: " + payments.size()
                 + " | Đã trả: " + paid
                 + " | Đang chờ: " + pending
                 + " | Thất bại: " + failed
-                + " | Doanh thu đã nhận: $" + String.format(java.util.Locale.US, "%.2f", paidAmount);
-    }
-
-    private String shortHotelName(Cabin cabin) {
-        String name = safe(cabin.getName());
-        return name.length() <= 22 ? name : name.substring(0, 21).trim() + "...";
-    }
-
-    private int dp(int value) {
-        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+                + " | Doanh thu đã nhận: $" + String.format(Locale.US, "%.2f", paidAmount)
+                + "\n" + roleHint;
     }
 
     private String safe(String value) {
-        return value == null ? "" : value;
+        return value == null ? "" : value.trim();
     }
 }

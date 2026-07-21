@@ -188,6 +188,10 @@ public class RoomTypeService {
     }
 
     public RoomType findBestRoomType(Cabin cabin, int guests, int requestedBeds, String sizeOrCategoryQuery) {
+        return findBestRoomType(cabin, guests, 0, requestedBeds, sizeOrCategoryQuery);
+    }
+
+    public RoomType findBestRoomType(Cabin cabin, int adults, int children, int requestedBeds, String sizeOrCategoryQuery) {
         if (cabin == null || cabin.getRoomTypes() == null || cabin.getRoomTypes().isEmpty()) {
             return null;
         }
@@ -197,7 +201,7 @@ public class RoomTypeService {
             if (!roomType.isActive()) {
                 continue;
             }
-            if (!fitsGuestsAndBeds(roomType, guests, requestedBeds)) {
+            if (!fitsOccupancyAndBeds(roomType, adults, children, requestedBeds)) {
                 continue;
             }
             if (!matchesSizeOrCategory(roomType, normalizedQuery)) {
@@ -211,14 +215,19 @@ public class RoomTypeService {
     }
 
     public boolean fitsGuestsAndBeds(RoomType roomType, int guests, int requestedBeds) {
+        return fitsOccupancyAndBeds(roomType, guests, 0, requestedBeds);
+    }
+
+    public boolean fitsOccupancyAndBeds(RoomType roomType, int adults, int children, int requestedBeds) {
         if (roomType == null) {
             return false;
         }
-        if (guests > 0
-                && (roomType.effectiveMaxAdults() < guests || roomType.effectiveSleepingCapacity() < guests)) {
+        int normalizedAdults = Math.max(1, adults);
+        int totalGuests = Math.max(normalizedAdults, normalizedAdults + Math.max(0, children));
+        if (roomType.effectiveMaxAdults() < normalizedAdults || roomType.effectiveSleepingCapacity() < totalGuests) {
             return false;
         }
-        if (guests > 0 && !roomType.fitsRoomSizeForGuests(guests)) {
+        if (!roomType.fitsRoomSizeForGuests(totalGuests)) {
             return false;
         }
         return requestedBeds <= 0 || roomType.effectiveBedCount() >= requestedBeds;

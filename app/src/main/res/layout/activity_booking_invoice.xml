@@ -90,16 +90,37 @@
                 android:textSize="16sp" />
         </LinearLayout>
 
-        <Button
-            android:id="@+id/button_back_bottom"
-            android:layout_width="116dp"
-            android:layout_height="48dp"
-            android:layout_gravity="center_horizontal"
+        <LinearLayout
+            android:id="@+id/container_manager_payment_actions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:background="@drawable/bg_button_secondary"
-            android:text="Quay lại"
-            android:textAllCaps="false"
-            android:textColor="@color/black"
-            android:textStyle="bold" />
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/button_decline_payment"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_button_secondary"
+                android:text="Decline"
+                android:textAllCaps="false"
+                android:textColor="@color/black"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/button_accept_payment"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_button_primary"
+                android:text="Accept"
+                android:textAllCaps="false"
+                android:textColor="@color/black"
+                android:textStyle="bold" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

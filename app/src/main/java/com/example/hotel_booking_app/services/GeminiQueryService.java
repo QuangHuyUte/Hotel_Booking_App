@@ -111,7 +111,7 @@ public class GeminiQueryService {
                 + "Allowed roomQuery: Standard, Superior, Deluxe, Suite, or empty string. "
                 + "Allowed amenities: WiFi, Breakfast, Parking, Pool, Sea view, Balcony, Air conditioning, Private bathroom. "
                 + "Use today's date " + LocalDate.now() + " to resolve relative dates. "
-                + "Schema: {\"destination\":\"\",\"adults\":2,\"rooms\":1,\"requestedBeds\":0,\"maxPricePerNight\":0,\"roomQuery\":\"\",\"amenities\":[],\"checkIn\":\"YYYY-MM-DD or empty\",\"checkOut\":\"YYYY-MM-DD or empty\"}. "
+                + "Schema: {\"destination\":\"\",\"adults\":2,\"children\":0,\"rooms\":1,\"requestedBeds\":0,\"maxPricePerNight\":0,\"roomQuery\":\"\",\"amenities\":[],\"checkIn\":\"YYYY-MM-DD or empty\",\"checkOut\":\"YYYY-MM-DD or empty\"}. "
                 + "User message: " + userMessage;
     }
 
@@ -140,6 +140,7 @@ public class GeminiQueryService {
         }
 
         query.setAdults(clamp(intValue(json, "adults", query.getAdults()), 1, 8));
+        query.setChildren(clamp(intValue(json, "children", query.getChildren()), 0, 6));
         query.setRooms(clamp(intValue(json, "rooms", query.getRooms()), 1, 4));
         query.setRequestedBeds(clamp(intValue(json, "requestedBeds", query.getRequestedBeds()), 0, 8));
         query.setMaxPricePerNight(Math.max(0, doubleValue(json, "maxPricePerNight", query.getMaxPricePerNight())));

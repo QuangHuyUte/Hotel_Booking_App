@@ -48,7 +48,7 @@ public class AiChatActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_chat_thread);
+        setContentView(R.layout.activity_ai_chat);
 
         aiAssistantService = new AiAssistantService();
         TextView titleTextView = findViewById(R.id.text_title);
@@ -81,6 +81,7 @@ public class AiChatActivity extends AppCompatActivity {
 
         quickSuggestionsBar = new LinearLayout(this);
         quickSuggestionsBar.setOrientation(LinearLayout.HORIZONTAL);
+        addFamilyBeachSuggestionPillWhenReady();
         scroller.addView(quickSuggestionsBar, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -165,6 +166,16 @@ public class AiChatActivity extends AppCompatActivity {
         if (!message.isEmpty()) {
             submitMessage(message);
         }
+    }
+
+    private void addFamilyBeachSuggestionPillWhenReady() {
+        if (quickSuggestionsBar != null) {
+            addSuggestionPill("Biá»ƒn Â· ban cÃ´ng Â· < $150", familyBeachPrompt());
+        }
+    }
+
+    private String familyBeachPrompt() {
+        return "2 ngÆ°á»i lá»›n, 1 bÃ©, gáº§n biá»ƒn, cÃ³ ban cÃ´ng, dÆ°á»›i 150$";
     }
 
     private void submitMessage(String message) {
@@ -261,7 +272,7 @@ public class AiChatActivity extends AppCompatActivity {
         return "Bộ lọc: " + destination
                 + dates
                 + " · " + query.getRooms() + " phòng"
-                + " · " + query.getAdults() + " người lớn"
+                + " · " + query.occupancyLabel()
                 + price;
     }
 
@@ -317,6 +328,13 @@ public class AiChatActivity extends AppCompatActivity {
         room.setMaxLines(2);
         content.addView(room);
 
+        TextView fit = makeText(roomType == null
+                ? "PhÃ¹ há»£p tá»‘i Ä‘a " + cabin.getMaxCapacity() + " khÃ¡ch"
+                : "Sá»©c chá»©a: " + roomType.effectiveMaxAdults() + " ngÆ°á»i lá»›n, ngá»§ tá»‘i Ä‘a " + roomType.effectiveSleepingCapacity() + " khÃ¡ch",
+                12, R.color.booking_muted, false);
+        fit.setMaxLines(2);
+        content.addView(fit);
+
         double nightlyPrice = roomType == null ? cabin.displayPrice() : roomType.getBasePrice();
         TextView price = makeText(PriceUtils.formatUsd(nightlyPrice) + " / đêm", 16, R.color.booking_blue, true);
         LinearLayout.LayoutParams priceParams = new LinearLayout.LayoutParams(
@@ -334,6 +352,10 @@ public class AiChatActivity extends AppCompatActivity {
         TextView reasons = makeText(join(recommendation.getReasons(), " · "), 12, R.color.booking_muted, false);
         reasons.setPadding(0, dp(8), 0, 0);
         card.addView(reasons);
+
+        card.setAlpha(0.92f);
+        card.setTranslationY(dp(8));
+        card.animate().alpha(1f).translationY(0).setDuration(220).start();
 
         Button button = new Button(this);
         button.setAllCaps(false);

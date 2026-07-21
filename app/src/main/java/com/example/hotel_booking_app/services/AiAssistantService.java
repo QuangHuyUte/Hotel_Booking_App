@@ -78,6 +78,7 @@ public class AiAssistantService {
         query.setOriginalMessage(original);
         query.setDestination(parseDestination(normalized));
         query.setAdults(Math.max(1, parseNumberBeforeUnit(normalized, "(nguoi lon|nguoi|khach|adult|adults)", 2)));
+        query.setChildren(Math.max(0, parseNumberBeforeUnit(normalized, "(be|tre em|em be|child|children|kid|kids)", 0)));
         query.setRooms(Math.max(1, parseNumberBeforeUnit(normalized, "(phong|room|rooms)", 1)));
         query.setRequestedBeds(Math.max(0, parseNumberBeforeUnit(normalized, "(giuong|bed|beds)", 0)));
         query.setMaxPricePerNight(parseMaxPrice(normalized));
@@ -96,11 +97,12 @@ public class AiAssistantService {
             RoomType roomType = roomTypeService.findBestRoomType(
                     cabin,
                     query.getAdults(),
+                    query.getChildren(),
                     query.getRequestedBeds(),
                     query.getRoomQuery()
             );
             if (roomType == null) {
-                if (cabin.getMaxCapacity() > 0 && cabin.getMaxCapacity() < query.getAdults()) {
+                if (cabin.getMaxCapacity() > 0 && cabin.getMaxCapacity() < query.getTotalGuests()) {
                     continue;
                 }
                 if (!query.getRoomQuery().isEmpty() || query.getRequestedBeds() > 0) {
@@ -214,6 +216,9 @@ public class AiAssistantService {
         if (roomType != null && roomType.effectiveMaxAdults() == query.getAdults()) {
             score += 4;
         }
+        if (roomType != null && roomType.effectiveSleepingCapacity() >= query.getTotalGuests()) {
+            score += 5;
+        }
         if (roomType != null && !query.getRoomQuery().isEmpty()
                 && normalize(roomType.getCategory()).contains(normalize(query.getRoomQuery()))) {
             score += 6;
@@ -226,10 +231,11 @@ public class AiAssistantService {
         if (!query.getDestination().isEmpty()) {
             reasons.add("Đúng khu vực " + query.getDestination());
         }
-        if (roomType != null && roomType.effectiveMaxAdults() >= query.getAdults()) {
-            reasons.add("Phù hợp " + query.getAdults() + " người lớn");
-        } else if (roomType == null && cabin.getMaxCapacity() >= query.getAdults()) {
-            reasons.add("Cabin phù hợp " + query.getAdults() + " khách");
+        if (roomType != null && roomType.effectiveMaxAdults() >= query.getAdults()
+                && roomType.effectiveSleepingCapacity() >= query.getTotalGuests()) {
+            reasons.add("Phù hợp " + query.occupancyLabel());
+        } else if (roomType == null && cabin.getMaxCapacity() >= query.getTotalGuests()) {
+            reasons.add("Cabin phù hợp " + query.getTotalGuests() + " khách");
         }
         if (roomType != null && query.getRequestedBeds() > 0
                 && roomType.effectiveBedCount() >= query.getRequestedBeds()) {
@@ -426,6 +432,7 @@ public class AiAssistantService {
         private String checkIn = "";
         private String checkOut = "";
         private int adults = 2;
+        private int children = 0;
         private int rooms = 1;
         private int requestedBeds = 0;
         private double maxPricePerNight = 0;
@@ -439,6 +446,7 @@ public class AiAssistantService {
             copy.checkIn = checkIn;
             copy.checkOut = checkOut;
             copy.adults = adults;
+            copy.children = children;
             copy.rooms = rooms;
             copy.requestedBeds = requestedBeds;
             copy.maxPricePerNight = maxPricePerNight;
@@ -485,6 +493,25 @@ public class AiAssistantService {
 
         public void setAdults(int adults) {
             this.adults = adults;
+        }
+
+        public int getChildren() {
+            return children;
+        }
+
+        public void setChildren(int children) {
+            this.children = Math.max(0, children);
+        }
+
+        public int getTotalGuests() {
+            return Math.max(1, adults) + Math.max(0, children);
+        }
+
+        public String occupancyLabel() {
+            if (children <= 0) {
+                return adults + " ngÆ°á»i lá»›n";
+            }
+            return adults + " ngÆ°á»i lá»›n + " + children + " tráº» em";
         }
 
         public int getRooms() {
