@@ -197,6 +197,24 @@ with check (true);
 grant select, insert, update, delete on table public.room_inventory to anon, authenticated;
 alter table public.bookings add column if not exists "roomTypeId" uuid references public.room_types(_id);
 alter table public.bookings add column if not exists "numRooms" integer not null default 1;
+alter table public.bookings enable row level security;
+drop policy if exists "bookings_demo_access" on public.bookings;
+create policy "bookings_demo_access"
+on public.bookings for all
+to anon, authenticated
+using (true)
+with check (true);
+grant select, insert, update, delete on table public.bookings to anon, authenticated;
+
+alter table public.payments enable row level security;
+drop policy if exists "payments_demo_access" on public.payments;
+create policy "payments_demo_access"
+on public.payments for all
+to anon, authenticated
+using (true)
+with check (true);
+grant select, insert, update, delete on table public.payments to anon, authenticated;
+
 alter table public.blocked_dates add column if not exists "roomTypeId" uuid references public.room_types(_id) on delete cascade;
 alter table public.blocked_dates add column if not exists "numRooms" integer not null default 1;
 alter table public.blocked_dates add column if not exists "roomUnitNumber" integer;

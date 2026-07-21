@@ -435,6 +435,10 @@ public class SupabaseClient {
         if (shouldRefreshToken(statusCode, body)) {
             return "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
         }
+        String lowerBody = body == null ? "" : body.toLowerCase();
+        if (lowerBody.contains("row-level security") || lowerBody.contains("\"code\":\"42501\"")) {
+            return "Database chưa mở policy RLS cho thao tác demo này. Hãy chạy lại supabase/database.sql hoặc supabase/seed.sql để đồng bộ quyền bookings/payments.";
+        }
         return "Lỗi Supabase " + statusCode + ": " + body;
     }
 

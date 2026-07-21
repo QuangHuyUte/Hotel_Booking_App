@@ -292,6 +292,15 @@ create table if not exists bookings (
   constraint bookings_status_check check (status in ('pending', 'confirmed', 'cancelled', 'checked-in', 'checked-out'))
 );
 
+alter table bookings enable row level security;
+drop policy if exists "bookings_demo_access" on bookings;
+create policy "bookings_demo_access"
+on bookings for all
+to anon, authenticated
+using (true)
+with check (true);
+grant select, insert, update, delete on table bookings to anon, authenticated;
+
 create table if not exists blocked_dates (
   _id uuid primary key default gen_random_uuid(),
   "cabinId" uuid not null references cabins(_id) on delete cascade,
@@ -323,6 +332,15 @@ create table if not exists payments (
   "updatedAt" timestamp without time zone default now(),
   constraint payments_status_check check (status in ('pending', 'paid', 'failed', 'refunded'))
 );
+
+alter table payments enable row level security;
+drop policy if exists "payments_demo_access" on payments;
+create policy "payments_demo_access"
+on payments for all
+to anon, authenticated
+using (true)
+with check (true);
+grant select, insert, update, delete on table payments to anon, authenticated;
 
 create table if not exists rates (
   _id uuid primary key default gen_random_uuid(),
@@ -486,6 +504,24 @@ alter table payments add column if not exists "updatedAt" timestamp without time
 alter table payments drop constraint if exists payments_status_check;
 alter table payments add constraint payments_status_check check (status in ('pending', 'paid', 'failed', 'refunded'));
 create index if not exists idx_payments_status on payments(status);
+
+alter table bookings enable row level security;
+drop policy if exists "bookings_demo_access" on bookings;
+create policy "bookings_demo_access"
+on bookings for all
+to anon, authenticated
+using (true)
+with check (true);
+grant select, insert, update, delete on table bookings to anon, authenticated;
+
+alter table payments enable row level security;
+drop policy if exists "payments_demo_access" on payments;
+create policy "payments_demo_access"
+on payments for all
+to anon, authenticated
+using (true)
+with check (true);
+grant select, insert, update, delete on table payments to anon, authenticated;
 
 insert into settings ("miniBookingLength", "maxBookingLength", "maxNumberOfGuests", "breakfastPrice")
 select 1, 30, 10, 15
