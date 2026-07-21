@@ -52,6 +52,7 @@ public class ProfileDetailsActivity extends AppCompatActivity {
         Button backBottomButton = findViewById(R.id.button_back_bottom);
         Button updateButton = findViewById(R.id.button_save_profile);
         Button passwordButton = findViewById(R.id.button_change_password);
+        Button logoutButton = findViewById(R.id.button_logout);
 
         backButton.setVisibility(View.GONE);
         backBottomButton.setVisibility(View.GONE);
@@ -63,6 +64,7 @@ public class ProfileDetailsActivity extends AppCompatActivity {
             intent.putExtra("show_password", true);
             startActivity(intent);
         });
+        logoutButton.setOnClickListener(view -> showLogoutConfirmation());
         if (sessionManager.isHostOrAdmin()) {
             ManagerNavigationHelper.bind(this, ManagerNavigationHelper.TAB_PROFILE);
         }
@@ -129,5 +131,20 @@ public class ProfileDetailsActivity extends AppCompatActivity {
         String first = parts[0].substring(0, 1);
         String last = parts.length > 1 ? parts[parts.length - 1].substring(0, 1) : "";
         return (first + last).toUpperCase();
+    }
+
+    private void showLogoutConfirmation() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Đăng xuất?")
+                .setMessage("Bạn có chắc muốn đăng xuất khỏi tài khoản này không?")
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Đăng xuất", (dialog, which) -> {
+                    sessionManager.logout();
+                    Intent intent = new Intent(this, SignInActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                    finish();
+                })
+                .show();
     }
 }

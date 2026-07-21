@@ -9,9 +9,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 public class PaymentService {
+    private static final DateTimeFormatter SUPABASE_TIMESTAMP_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final SupabaseClient supabaseClient;
 
     public PaymentService() {
@@ -62,18 +65,33 @@ public class PaymentService {
         Map<String, String> filters = new HashMap<>();
         filters.put("_id", paymentId);
 
+        String paidAt = currentTimestamp();
         Map<String, Object> payload = new HashMap<>();
         payload.put("status", AppConstants.PAYMENT_PAID);
         payload.put("transactionId", transactionId);
-        payload.put("paidAt", LocalDateTime.now().toString());
+        payload.put("paidAt", paidAt);
+        payload.put("updatedAt", paidAt);
         supabaseClient.update(AppConstants.TABLE_PAYMENTS, filters, payload, Payment[].class, callback);
     }
 
     public void markPaidNoReturn(Payment payment, String transactionId, SupabaseCallback<Payment> callback) {
-        markPaid(payment.getId(), transactionId, new SupabaseCallback<Payment>() {
+        Map<String, String> filters = new HashMap<>();
+        filters.put("_id", payment.getId());
+
+        String paidAt = currentTimestamp();
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("status", AppConstants.PAYMENT_PAID);
+        payload.put("transactionId", transactionId);
+        payload.put("paidAt", paidAt);
+        payload.put("updatedAt", paidAt);
+        supabaseClient.updateNoReturn(AppConstants.TABLE_PAYMENTS, filters, payload, new SupabaseCallback<Boolean>() {
             @Override
-            public void onSuccess(Payment updatedPayment) {
-                callback.onSuccess(updatedPayment);
+            public void onSuccess(Boolean updated) {
+                payment.setStatus(AppConstants.PAYMENT_PAID);
+                payment.setTransactionId(transactionId);
+                payment.setPaidAt(paidAt);
+                payment.setUpdatedAt(paidAt);
+                callback.onSuccess(payment);
             }
 
             @Override
@@ -89,6 +107,34 @@ public class PaymentService {
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("status", AppConstants.PAYMENT_FAILED);
+        payload.put("updatedAt", currentTimestamp());
         supabaseClient.update(AppConstants.TABLE_PAYMENTS, filters, payload, Payment[].class, callback);
+    }
+
+    public void markFailedNoReturn(Payment payment, SupabaseCallback<Payment> callback) {
+        Map<String, String> filters = new HashMap<>();
+        filters.put("_id", payment.getId());
+
+        String updatedAt = currentTimestamp();
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("status", AppConstants.PAYMENT_FAILED);
+        payload.put("updatedAt", updatedAt);
+        supabaseClient.updateNoReturn(AppConstants.TABLE_PAYMENTS, filters, payload, new SupabaseCallback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean updated) {
+                payment.setStatus(AppConstants.PAYMENT_FAILED);
+                payment.setUpdatedAt(updatedAt);
+                callback.onSuccess(payment);
+            }
+
+            @Override
+            public void onError(String message) {
+                callback.onError(message);
+            }
+        });
+    }
+
+    private String currentTimestamp() {
+        return LocalDateTime.now().format(SUPABASE_TIMESTAMP_FORMATTER);
     }
 }

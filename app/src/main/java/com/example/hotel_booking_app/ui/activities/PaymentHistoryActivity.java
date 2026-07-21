@@ -340,10 +340,7 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         bookingService.getBookingById(payment.getBookingId(), new SupabaseCallback<Booking>() {
             @Override
             public void onSuccess(Booking booking) {
-                String nextStatus = AppConstants.BOOKING_PENDING.equalsIgnoreCase(booking.getStatus())
-                        ? AppConstants.BOOKING_CONFIRMED
-                        : booking.getStatus();
-                persistAcceptedPayment(payment, nextStatus);
+                persistAcceptedPayment(payment, acceptedBookingStatus(booking));
             }
 
             @Override
@@ -351,6 +348,15 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                 persistAcceptedPayment(payment, AppConstants.BOOKING_CONFIRMED);
             }
         });
+    }
+
+    private String acceptedBookingStatus(Booking booking) {
+        String currentStatus = booking == null ? "" : safe(booking.getStatus());
+        if (AppConstants.BOOKING_CHECKED_IN.equalsIgnoreCase(currentStatus)
+                || AppConstants.BOOKING_CHECKED_OUT.equalsIgnoreCase(currentStatus)) {
+            return currentStatus;
+        }
+        return AppConstants.BOOKING_CONFIRMED;
     }
 
     private void persistAcceptedPayment(Payment payment, String bookingStatus) {

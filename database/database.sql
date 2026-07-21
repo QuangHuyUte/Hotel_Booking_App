@@ -476,6 +476,16 @@ alter table room_types add constraint room_types_valid_sleeping_capacity check (
 update users set role = 'manager' where role in ('cabinOwner', 'admin');
 alter table users drop constraint if exists users_role_check;
 alter table users add constraint users_role_check check (role in ('customer', 'manager'));
+alter table payments add column if not exists method varchar;
+alter table payments add column if not exists provider varchar;
+alter table payments add column if not exists "transactionId" text;
+alter table payments add column if not exists status varchar not null default 'pending';
+alter table payments add column if not exists "paidAt" timestamp without time zone;
+alter table payments add column if not exists "createdAt" timestamp without time zone default now();
+alter table payments add column if not exists "updatedAt" timestamp without time zone default now();
+alter table payments drop constraint if exists payments_status_check;
+alter table payments add constraint payments_status_check check (status in ('pending', 'paid', 'failed', 'refunded'));
+create index if not exists idx_payments_status on payments(status);
 
 insert into settings ("miniBookingLength", "maxBookingLength", "maxNumberOfGuests", "breakfastPrice")
 select 1, 30, 10, 15

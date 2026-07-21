@@ -204,12 +204,7 @@ public class BookingInvoiceActivity extends AppCompatActivity {
             return;
         }
         setProcessingAction(true, "Đang xác nhận thanh toán...");
-        String nextBookingStatus = currentBooking != null
-                && currentBooking.getStatus() != null
-                && !currentBooking.getStatus().trim().isEmpty()
-                && !AppConstants.BOOKING_PENDING.equalsIgnoreCase(currentBooking.getStatus())
-                ? currentBooking.getStatus()
-                : AppConstants.BOOKING_CONFIRMED;
+        String nextBookingStatus = acceptedBookingStatus(currentBooking);
         String bookingIdToUpdate = currentPayment.getBookingId();
         persistPaidPayment(currentPayment, "MGR-ACCEPT-" + UUID.randomUUID(), () ->
                 bookingService.updateStatusNoReturn(bookingIdToUpdate, nextBookingStatus, true, new SupabaseCallback<Boolean>() {
@@ -271,6 +266,15 @@ public class BookingInvoiceActivity extends AppCompatActivity {
                 && AppConstants.PAYMENT_PENDING.equalsIgnoreCase(currentPayment.getStatus());
     }
 
+    private String acceptedBookingStatus(Booking booking) {
+        String currentStatus = booking == null ? "" : safe(booking.getStatus());
+        if (AppConstants.BOOKING_CHECKED_IN.equalsIgnoreCase(currentStatus)
+                || AppConstants.BOOKING_CHECKED_OUT.equalsIgnoreCase(currentStatus)) {
+            return currentStatus;
+        }
+        return AppConstants.BOOKING_CONFIRMED;
+    }
+
     private void persistPaidPayment(Payment payment, String transactionId, Runnable onDone) {
         if (isPlaceholderPayment(payment)) {
             paymentService.createMockPayment(payment.getBookingId(), payment.getUserId(), payment.getAmount(), new SupabaseCallback<Payment>() {
@@ -323,7 +327,7 @@ public class BookingInvoiceActivity extends AppCompatActivity {
     }
 
     private void markPaymentFailed(Payment payment, Runnable onDone) {
-        paymentService.markFailed(payment.getId(), new SupabaseCallback<Payment>() {
+        paymentService.markFailedNoReturn(payment, new SupabaseCallback<Payment>() {
             @Override
             public void onSuccess(Payment failedPayment) {
                 currentPayment = failedPayment;
