@@ -264,14 +264,14 @@ insert into public.users (
   "_id", "fullName", email, password, phone, "nationalId", "dateOfBirth",
   gender, address, nationality, role, "createdAt", "updatedAt"
 ) values
-  ('10000000-0000-4000-8000-000000000001', 'Huy Gia Lai', 'huygialai2005@gmail.com', 'Password123!', '+84900000001', 'MGR000001', date '2005-08-20', 'male', 'Ho Chi Minh City, Vietnam', 'Vietnamese', 'manager', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('10000000-0000-4000-8000-000000000002', 'Cuong Manager', 'cuong72005@gmail.com', 'Password123!', '+84900000002', 'MGR000002', date '2005-07-20', 'male', 'Ho Chi Minh City, Vietnam', 'Vietnamese', 'manager', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('10000000-0000-4000-8000-000000000003', 'Tran Tuan Kha', 'trantuankha030205@gmail.com', 'Password123!', '+84900000003', 'MGR000003', date '2005-02-03', 'male', 'Vung Tau, Vietnam', 'Vietnamese', 'manager', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('10000000-0000-4000-8000-000000000101', 'Alice Nguyen', 'alice.nguyen@sereinstay.test', 'Password123!', '+84900000101', 'CUS000101', date '1995-03-20', 'female', 'Thu Duc, Ho Chi Minh City', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('10000000-0000-4000-8000-000000000102', 'Bao Tran', 'bao.tran@sereinstay.test', 'Password123!', '+84900000102', 'CUS000102', date '1992-08-12', 'male', 'Hai Chau, Da Nang', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('10000000-0000-4000-8000-000000000103', 'Chi Pham', 'chi.pham@sereinstay.test', 'Password123!', '+84900000103', 'CUS000103', date '1988-11-05', 'female', 'Hoan Kiem, Hanoi', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('10000000-0000-4000-8000-000000000104', 'David Le', 'david.le@sereinstay.test', 'Password123!', '+84900000104', 'CUS000104', date '1998-06-22', 'male', 'Nha Trang, Khanh Hoa', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('10000000-0000-4000-8000-000000000105', 'Eve Hoang', 'eve.hoang@sereinstay.test', 'Password123!', '+84900000105', 'CUS000105', date '1996-12-09', 'female', 'Hue City, Vietnam', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
+  ('10000000-0000-4000-8000-000000000001', 'Huy Gia Lai', 'huy.manager@sereinstay.test', '', '+84900000001', 'MGR000001', date '2005-08-20', 'male', 'Ho Chi Minh City, Vietnam', 'Vietnamese', 'manager', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('10000000-0000-4000-8000-000000000002', 'Cuong Manager', 'cuong.manager@sereinstay.test', '', '+84900000002', 'MGR000002', date '2005-07-20', 'male', 'Ho Chi Minh City, Vietnam', 'Vietnamese', 'manager', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('10000000-0000-4000-8000-000000000003', 'Tran Tuan Kha', 'kha.manager@sereinstay.test', '', '+84900000003', 'MGR000003', date '2005-02-03', 'male', 'Vung Tau, Vietnam', 'Vietnamese', 'manager', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('10000000-0000-4000-8000-000000000101', 'Alice Nguyen', 'alice.nguyen@sereinstay.test', '', '+84900000101', 'CUS000101', date '1995-03-20', 'female', 'Thu Duc, Ho Chi Minh City', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('10000000-0000-4000-8000-000000000102', 'Bao Tran', 'bao.tran@sereinstay.test', '', '+84900000102', 'CUS000102', date '1992-08-12', 'male', 'Hai Chau, Da Nang', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('10000000-0000-4000-8000-000000000103', 'Chi Pham', 'chi.pham@sereinstay.test', '', '+84900000103', 'CUS000103', date '1988-11-05', 'female', 'Hoan Kiem, Hanoi', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('10000000-0000-4000-8000-000000000104', 'David Le', 'david.le@sereinstay.test', '', '+84900000104', 'CUS000104', date '1998-06-22', 'male', 'Nha Trang, Khanh Hoa', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('10000000-0000-4000-8000-000000000105', 'Eve Hoang', 'eve.hoang@sereinstay.test', '', '+84900000105', 'CUS000105', date '1996-12-09', 'female', 'Hue City, Vietnam', 'Vietnamese', 'customer', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
 insert into public.amenities ("_id", name, icon, category, "createdAt", "updatedAt") values
   ('40000000-0000-4000-8000-000000000001', 'WiFi', 'wifi', 'Comfort', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
@@ -846,11 +846,7 @@ insert into public.notifications (
   ('86000000-0000-4000-8000-000000000001', 'Booking pending', '10000000-0000-4000-8000-000000000001', false, '{"bookingId":"80000000-0000-4000-8000-000000000001","status":"pending"}'::jsonb, timestamp '2026-07-20 08:00:00', 'booking', 'A guest booked Saigon Deluxe Balcony.'),
   ('86000000-0000-4000-8000-000000000002', 'Payment reminder', '10000000-0000-4000-8000-000000000102', false, '{"bookingId":"80000000-0000-4000-8000-000000000002","status":"confirmed"}'::jsonb, timestamp '2026-07-20 08:00:00', 'payment', 'Please finish payment for your Vung Tau suite.');
 
-insert into public.otps ("_id", email, otp, "expiresAt", "userId", "createdAt") values
-  ('87000000-0000-4000-8000-000000000001', 'alice.nguyen@sereinstay.test', '482159', timestamp '2026-07-20 08:20:00', '10000000-0000-4000-8000-000000000101', timestamp '2026-07-20 08:00:00'),
-  ('87000000-0000-4000-8000-000000000002', 'huygialai2005@gmail.com', '119844', timestamp '2026-07-20 08:20:00', '10000000-0000-4000-8000-000000000001', timestamp '2026-07-20 08:00:00'),
-  ('87000000-0000-4000-8000-000000000003', 'cuong72005@gmail.com', '720050', timestamp '2026-07-20 08:20:00', '10000000-0000-4000-8000-000000000002', timestamp '2026-07-20 08:00:00'),
-  ('87000000-0000-4000-8000-000000000004', 'trantuankha030205@gmail.com', '302050', timestamp '2026-07-20 08:20:00', '10000000-0000-4000-8000-000000000003', timestamp '2026-07-20 08:00:00');
+-- OTP rows are intentionally omitted from demo seed data.
 
 do $$
 declare
