@@ -1,6 +1,8 @@
 package com.example.hotel_booking_app.ui.activities;
 
 import android.content.Intent;
+import android.location.Address;
+import android.location.Geocoder;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -29,6 +31,7 @@ import com.example.hotel_booking_app.services.RoomTypeService;
 import com.example.hotel_booking_app.utils.SessionManager;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 
@@ -281,9 +284,76 @@ public class AdminHotelFormActivity extends AppCompatActivity {
             pickedLatitude = data.getDoubleExtra(HotelMapActivity.EXTRA_PICK_LATITUDE, 0);
             pickedLongitude = data.getDoubleExtra(HotelMapActivity.EXTRA_PICK_LONGITUDE, 0);
             pickedGoogleMapsUrl = data.getStringExtra(HotelMapActivity.EXTRA_PICK_GOOGLE_MAPS_URL);
+            applyPickedAddressFromCoordinates();
             renderPickedLocation();
-            statusTextView.setText("Da chon vi tri moi. Bam cap nhat khach san de luu vao database.");
         }
+    }
+
+    private void applyPickedAddressFromCoordinates() {
+        String resolvedAddress = reverseGeocodePickedAddress();
+        if (!resolvedAddress.isEmpty()) {
+            locationEditText.setText(resolvedAddress);
+            statusTextView.setText("Đã chọn vị trí và cập nhật địa chỉ. Bấm cập nhật khách sạn để lưu.");
+            return;
+        }
+        statusTextView.setText("Đã chọn vị trí mới. Chưa lấy được tên đường, bạn có thể chỉnh ô vị trí rồi lưu.");
+    }
+
+    private String reverseGeocodePickedAddress() {
+        if (pickedLatitude == 0 || pickedLongitude == 0 || !Geocoder.isPresent()) {
+            return "";
+        }
+        try {
+            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+            List<Address> addresses = geocoder.getFromLocation(pickedLatitude, pickedLongitude, 1);
+            if (addresses == null || addresses.isEmpty()) {
+                return "";
+            }
+            return formatAddress(addresses.get(0));
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private String formatAddress(Address address) {
+        if (address == null) {
+            return "";
+        }
+        LinkedHashSet<String> parts = new LinkedHashSet<>();
+        String street = joinAddressPart(address.getSubThoroughfare(), address.getThoroughfare());
+        if (street.isEmpty()) {
+            street = joinAddressPart(address.getFeatureName(), address.getThoroughfare());
+        }
+        addAddressPart(parts, street);
+        addAddressPart(parts, address.getSubLocality());
+        addAddressPart(parts, address.getLocality());
+        addAddressPart(parts, address.getSubAdminArea());
+        addAddressPart(parts, address.getAdminArea());
+        addAddressPart(parts, address.getCountryName());
+        String joined = String.join(", ", parts);
+        if (!joined.isEmpty()) {
+            return joined;
+        }
+        return address.getAddressLine(0) == null ? "" : address.getAddressLine(0).trim();
+    }
+
+    private void addAddressPart(LinkedHashSet<String> parts, String value) {
+        String clean = value == null ? "" : value.trim();
+        if (!clean.isEmpty() && !"-".equals(clean)) {
+            parts.add(clean);
+        }
+    }
+
+    private String joinAddressPart(String first, String second) {
+        String left = first == null ? "" : first.trim();
+        String right = second == null ? "" : second.trim();
+        if (left.isEmpty()) {
+            return right;
+        }
+        if (right.isEmpty() || left.equalsIgnoreCase(right)) {
+            return left;
+        }
+        return left + " " + right;
     }
 
     private void renderPickedLocation() {

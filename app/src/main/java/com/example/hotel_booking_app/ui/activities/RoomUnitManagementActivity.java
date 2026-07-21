@@ -1,11 +1,16 @@
 package com.example.hotel_booking_app.ui.activities;
 
+import android.app.Dialog;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.View;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -23,6 +28,8 @@ import com.example.hotel_booking_app.utils.AppConstants;
 import com.example.hotel_booking_app.utils.SessionManager;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +51,7 @@ public class RoomUnitManagementActivity extends AppCompatActivity {
     private EditText blockReasonEditText;
     private LinearLayout roomUnitsContainer;
     private LinearLayout roomCalendarContainer;
+    private LinearLayout blockSection;
     private Button refreshButton;
     private Button blockSelectedButton;
     private RoomTypeService roomTypeService;
@@ -82,6 +90,7 @@ public class RoomUnitManagementActivity extends AppCompatActivity {
         blockReasonEditText = findViewById(R.id.edit_block_reason);
         roomUnitsContainer = findViewById(R.id.container_room_units);
         roomCalendarContainer = findViewById(R.id.container_room_calendar);
+        blockSection = findViewById(R.id.section_block_selected_room);
         refreshButton = findViewById(R.id.button_refresh_units);
         blockSelectedButton = findViewById(R.id.button_block_selected_room);
         Button backButton = findViewById(R.id.button_back);
@@ -91,12 +100,202 @@ public class RoomUnitManagementActivity extends AppCompatActivity {
         rangeEndEditText.setText(today.plusDays(14).toString());
         blockStartEditText.setText(today.toString());
         blockEndEditText.setText(today.plusDays(1).toString());
+        setupDatePickers();
+        if (blockSection != null) {
+            blockSection.setVisibility(View.GONE);
+        }
 
         backButton.setOnClickListener(view -> finish());
         refreshButton.setOnClickListener(view -> loadRoomSchedule());
-        blockSelectedButton.setOnClickListener(view -> blockSelectedRoom());
+        blockSelectedButton.setOnClickListener(view -> {
+        });
 
         loadRoomType();
+    }
+
+    private void setupDatePickers() {
+        makeDateField(rangeStartEditText, true);
+        makeDateField(rangeEndEditText, false);
+    }
+
+    private void makeDateField(EditText field, boolean startField) {
+        field.setFocusable(false);
+        field.setCursorVisible(false);
+        field.setKeyListener(null);
+        field.setOnClickListener(view -> showRangeDatePicker(startField));
+    }
+
+    private void showRangeDatePicker(boolean startField) {
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundResource(R.drawable.bg_calendar_dialog);
+        root.setPadding(dp(14), dp(12), dp(14), dp(12));
+
+        TextView title = new TextView(this);
+        title.setText(startField ? "Chọn ngày bắt đầu" : "Chọn ngày kết thúc");
+        title.setTextColor(getColor(R.color.booking_blue));
+        title.setTextSize(17);
+        title.setGravity(Gravity.CENTER);
+        title.setTypeface(null, Typeface.BOLD);
+        root.addView(title, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(38)
+        ));
+
+        LinearLayout months = new LinearLayout(this);
+        months.setOrientation(LinearLayout.VERTICAL);
+        YearMonth initialMonth = resolveRangePickerMonth(startField);
+        addRangePickerMonth(months, initialMonth, startField, dialog);
+        addRangePickerMonth(months, initialMonth.plusMonths(1), startField, dialog);
+        root.addView(months, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        TextView helper = new TextView(this);
+        helper.setText(startField
+                ? "Chọn ngày bắt đầu, app sẽ mở tiếp ngày kết thúc."
+                : "Ngày kết thúc phải sau ngày bắt đầu.");
+        helper.setTextColor(getColor(R.color.booking_muted));
+        helper.setTextSize(12);
+        helper.setPadding(0, dp(10), 0, 0);
+        root.addView(helper);
+
+        dialog.setContentView(root);
+        dialog.show();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            window.setLayout(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private void handleRangeDateSelected(boolean startField, LocalDate date) {
+        LocalDate start = parseDateOrNull(rangeStartEditText.getText().toString());
+        LocalDate end = parseDateOrNull(rangeEndEditText.getText().toString());
+        if (startField) {
+            start = date;
+            if (end == null || !end.isAfter(start)) {
+                end = start.plusDays(1);
+            }
+        } else {
+            end = date;
+            if (start == null) {
+                start = LocalDate.now();
+            }
+            if (!end.isAfter(start)) {
+                end = start.plusDays(1);
+            }
+        }
+        rangeStartEditText.setText(start.toString());
+        rangeEndEditText.setText(end.toString());
+        loadRoomSchedule();
+    }
+
+    private YearMonth resolveRangePickerMonth(boolean startField) {
+        LocalDate selected = parseDateOrNull(startField
+                ? rangeStartEditText.getText().toString()
+                : rangeEndEditText.getText().toString());
+        if (selected == null && !startField) {
+            selected = parseDateOrNull(rangeStartEditText.getText().toString());
+        }
+        return selected == null ? YearMonth.now() : YearMonth.from(selected);
+    }
+
+    private void addRangePickerMonth(LinearLayout parent, YearMonth month, boolean startField, Dialog dialog) {
+        LinearLayout monthBox = new LinearLayout(this);
+        monthBox.setOrientation(LinearLayout.VERTICAL);
+        monthBox.setPadding(dp(4), 0, dp(4), 0);
+
+        TextView title = new TextView(this);
+        title.setText(month.format(DateTimeFormatter.ofPattern("MMMM yyyy", new Locale("vi", "VN"))));
+        title.setTextColor(getColor(R.color.booking_text));
+        title.setTextSize(15);
+        title.setGravity(Gravity.CENTER);
+        title.setTypeface(null, Typeface.BOLD);
+        monthBox.addView(title, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(34)
+        ));
+
+        GridLayout grid = new GridLayout(this);
+        grid.setColumnCount(7);
+        String[] days = {"T2", "T3", "T4", "T5", "T6", "T7", "CN"};
+        for (String day : days) {
+            TextView label = rangeCalendarCell(day);
+            label.setTextColor(getColor(R.color.booking_muted));
+            grid.addView(label);
+        }
+        int leadingBlanks = month.atDay(1).getDayOfWeek().getValue() - 1;
+        for (int i = 0; i < leadingBlanks; i++) {
+            grid.addView(rangeCalendarCell(""));
+        }
+        for (int day = 1; day <= month.lengthOfMonth(); day++) {
+            LocalDate date = month.atDay(day);
+            TextView cell = rangeCalendarCell(String.valueOf(day));
+            bindRangeCalendarDate(cell, date, startField, dialog);
+            grid.addView(cell);
+        }
+        monthBox.addView(grid);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.bottomMargin = dp(8);
+        parent.addView(monthBox, params);
+    }
+
+    private TextView rangeCalendarCell(String text) {
+        TextView cell = new TextView(this);
+        cell.setText(text);
+        cell.setGravity(Gravity.CENTER);
+        cell.setTextSize(13);
+        GridLayout.LayoutParams params = new GridLayout.LayoutParams();
+        params.width = dp(42);
+        params.height = dp(38);
+        cell.setLayoutParams(params);
+        return cell;
+    }
+
+    private void bindRangeCalendarDate(TextView cell, LocalDate date, boolean startField, Dialog dialog) {
+        boolean disabled = date.isBefore(LocalDate.now());
+        LocalDate start = parseDateOrNull(rangeStartEditText.getText().toString());
+        if (!startField && start != null && !date.isAfter(start)) {
+            disabled = true;
+        }
+        cell.setTextColor(disabled ? getColor(R.color.booking_border) : getColor(R.color.booking_text));
+        if (isRangeBoundary(date)) {
+            cell.setBackgroundResource(R.drawable.bg_calendar_selected);
+            cell.setTextColor(getColor(R.color.white));
+            cell.setTypeface(null, Typeface.BOLD);
+        } else if (isInsideRange(date)) {
+            cell.setBackgroundResource(R.drawable.bg_calendar_range);
+            cell.setTypeface(null, Typeface.BOLD);
+        }
+        if (disabled) {
+            return;
+        }
+        cell.setOnClickListener(view -> {
+            handleRangeDateSelected(startField, date);
+            dialog.dismiss();
+            if (startField) {
+                showRangeDatePicker(false);
+            }
+        });
+    }
+
+    private boolean isRangeBoundary(LocalDate date) {
+        return date.toString().equals(rangeStartEditText.getText().toString())
+                || date.toString().equals(rangeEndEditText.getText().toString());
+    }
+
+    private boolean isInsideRange(LocalDate date) {
+        LocalDate start = parseDateOrNull(rangeStartEditText.getText().toString());
+        LocalDate end = parseDateOrNull(rangeEndEditText.getText().toString());
+        return start != null && end != null && date.isAfter(start) && date.isBefore(end);
     }
 
     private void loadRoomType() {

@@ -141,7 +141,7 @@ public class AuthService {
                     callback.onError("Mật khẩu không đúng.");
                     return;
                 }
-                syncExistingPublicUserToSupabaseAuth(user, password, callback);
+                callback.onSuccess(user);
             }
 
             @Override

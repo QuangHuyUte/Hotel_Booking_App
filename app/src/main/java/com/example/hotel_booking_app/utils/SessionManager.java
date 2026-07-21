@@ -42,7 +42,8 @@ public class SessionManager {
     }
 
     public boolean isLoggedIn() {
-        return getUserId() != null && hasAuthSession();
+        String userId = getUserId();
+        return userId != null && !userId.trim().isEmpty();
     }
 
     public void logout() {

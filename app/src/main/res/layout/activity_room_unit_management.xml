@@ -117,7 +117,8 @@
             android:layout_marginTop="16dp"
             android:background="@drawable/bg_manager_panel"
             android:orientation="vertical"
-            android:padding="14dp">
+            android:padding="14dp"
+            android:visibility="gone">
 
             <TextView
                 android:id="@+id/text_block_title"

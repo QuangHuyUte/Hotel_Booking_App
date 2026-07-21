@@ -421,7 +421,7 @@ public class HotelMapActivity extends AppCompatActivity {
                 + "font-size:11px;font-weight:800;color:#102033;box-shadow:0 6px 18px rgba(0,0,0,.15);}"
                 + "</style></head><body><div id='map'><div id='tiles'></div><div class='map-shade'></div>"
                 + "<div id='pin' class='pick-pin'></div><div id='coord' class='coord'></div></div><script>"
-                + "var zoom=16,tileSize=256,tileCount=Math.pow(2,zoom),centerLat=" + centerLat + ",centerLng=" + centerLng + ";"
+                + "var zoom=18,tileSize=256,tileCount=Math.pow(2,zoom),centerLat=" + centerLat + ",centerLng=" + centerLng + ";"
                 + "var map=document.getElementById('map'),tiles=document.getElementById('tiles'),pin=document.getElementById('pin'),coord=document.getElementById('coord');"
                 + "var centerWorld=project(centerLat,centerLng),picked={lat:centerLat,lng:centerLng},tileHost=0;"
                 + "function project(lat,lng){var sin=Math.sin(lat*Math.PI/180);sin=Math.min(Math.max(sin,-.9999),.9999);"
