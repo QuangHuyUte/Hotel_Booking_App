@@ -521,7 +521,7 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
         if (selectedManagerCabinId == null) {
             startActivity(new Intent(this, AdminHotelFormActivity.class));
         } else {
-            openHotelManager(selectedManagerCabinId);
+            openRoomManager(selectedManagerCabinId, null);
         }
     }
 
@@ -534,7 +534,10 @@ public class HostHotelDashboardActivity extends AppCompatActivity {
     private void openRoomManager(String cabinId, String roomTypeId) {
         Intent intent = new Intent(this, AdminHotelFormActivity.class);
         intent.putExtra(AdminHotelFormActivity.EXTRA_CABIN_ID, cabinId);
-        intent.putExtra(AdminHotelFormActivity.EXTRA_ROOM_TYPE_ID, roomTypeId);
+        intent.putExtra(AdminHotelFormActivity.EXTRA_ROOM_MODE, true);
+        if (roomTypeId != null && !roomTypeId.trim().isEmpty()) {
+            intent.putExtra(AdminHotelFormActivity.EXTRA_ROOM_TYPE_ID, roomTypeId);
+        }
         startActivity(intent);
     }
 

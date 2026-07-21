@@ -38,6 +38,7 @@ import java.util.Locale;
 public class AdminHotelFormActivity extends AppCompatActivity {
     public static final String EXTRA_CABIN_ID = "extra_admin_cabin_id";
     public static final String EXTRA_ROOM_TYPE_ID = "extra_admin_room_type_id";
+    public static final String EXTRA_ROOM_MODE = "extra_admin_room_mode";
     private static final int REQUEST_PICK_IMAGE = 2001;
     private static final int REQUEST_PICK_LOCATION = 2002;
 
@@ -82,6 +83,7 @@ public class AdminHotelFormActivity extends AppCompatActivity {
     private RoomType editingRoomType;
     private String cabinId;
     private String pendingRoomTypeId;
+    private boolean roomMode;
     private final List<Amenity> allAmenities = new ArrayList<>();
     private final List<String> selectedAmenityIds = new ArrayList<>();
     private final List<String> selectedAmenityNames = new ArrayList<>();
@@ -101,6 +103,7 @@ public class AdminHotelFormActivity extends AppCompatActivity {
         sessionManager = new SessionManager(this);
         cabinId = getIntent().getStringExtra(EXTRA_CABIN_ID);
         pendingRoomTypeId = getIntent().getStringExtra(EXTRA_ROOM_TYPE_ID);
+        roomMode = getIntent().getBooleanExtra(EXTRA_ROOM_MODE, false);
 
         formTitleTextView = findViewById(R.id.text_form_title);
         statusTextView = findViewById(R.id.text_status);
@@ -190,7 +193,7 @@ public class AdminHotelFormActivity extends AppCompatActivity {
     }
 
     private boolean isRoomMode() {
-        return pendingRoomTypeId != null && !pendingRoomTypeId.trim().isEmpty();
+        return roomMode || (pendingRoomTypeId != null && !pendingRoomTypeId.trim().isEmpty());
     }
 
     private void openImagePicker() {
@@ -265,9 +268,13 @@ public class AdminHotelFormActivity extends AppCompatActivity {
         cabinService.getCabinById(cabinId, new SupabaseCallback<Cabin>() {
             @Override
             public void onSuccess(Cabin cabin) {
+                if (cabin == null) {
+                    statusTextView.setText("Không tìm thấy khách sạn để sửa. Quay lại danh sách và thử lại.");
+                    return;
+                }
                 editingCabin = cabin;
-                nameEditText.setText(cabin.getName());
-                locationEditText.setText(cabin.getLocation());
+                nameEditText.setText(safe(cabin.getName()));
+                locationEditText.setText(safe(cabin.getLocation()));
                 pickedLatitude = cabin.getLatitude();
                 pickedLongitude = cabin.getLongitude();
                 pickedGoogleMapsUrl = cabin.getGoogleMapsUrl();
@@ -275,11 +282,15 @@ public class AdminHotelFormActivity extends AppCompatActivity {
                 capacityEditText.setText(String.valueOf(cabin.getMaxCapacity()));
                 priceEditText.setText(String.valueOf(cabin.getRegularPrice()));
                 discountEditText.setText(String.valueOf(cabin.getDiscount()));
-                descriptionEditText.setText(cabin.getDescription());
-                imageEditText.setText(cabin.getImage());
+                descriptionEditText.setText(safe(cabin.getDescription()));
+                imageEditText.setText(safe(cabin.getImage()));
                 syncSelectedAmenitiesFromCabin();
                 renderAmenityCheckboxes();
-                loadRoomTypes();
+                if (isRoomMode()) {
+                    loadRoomTypes();
+                } else {
+                    renderHotelOnlyRoomNotice();
+                }
                 statusTextView.setText("Khách sạn đã sẵn sàng.");
             }
 
@@ -412,6 +423,13 @@ public class AdminHotelFormActivity extends AppCompatActivity {
             roomTypesContainer.addView(row, params);
         }
         selectPendingRoomType(loadedRoomTypes);
+    }
+
+    private void renderHotelOnlyRoomNotice() {
+        loadedRoomTypes.clear();
+        renderRoomFilters();
+        roomTypesContainer.removeAllViews();
+        roomTypesContainer.addView(roomHint("Đang sửa thông tin khách sạn. Muốn thêm hoặc sửa loại phòng, quay lại dashboard, chọn hotel rồi bấm + Phòng hoặc chạm vào một room."));
     }
 
     private void renderRoomFilters() {
