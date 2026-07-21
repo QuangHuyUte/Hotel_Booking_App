@@ -20,6 +20,7 @@ import com.example.hotel_booking_app.services.BookingService;
 import com.example.hotel_booking_app.services.CabinService;
 import com.example.hotel_booking_app.services.ChatService;
 import com.example.hotel_booking_app.services.RoomTypeService;
+import com.example.hotel_booking_app.ui.helpers.CustomerNavigationHelper;
 import com.example.hotel_booking_app.ui.helpers.ManagerNavigationHelper;
 import com.example.hotel_booking_app.utils.SessionManager;
 
@@ -43,10 +44,6 @@ public class ConversationListActivity extends AppCompatActivity {
         conversationsContainer = findViewById(R.id.container_conversations);
         Button backButton = findViewById(R.id.button_back);
         Button backBottomButton = findViewById(R.id.button_back_bottom);
-        LinearLayout searchTab = findViewById(R.id.nav_cabins);
-        LinearLayout bookingsTab = findViewById(R.id.nav_bookings);
-        LinearLayout wishlistTab = findViewById(R.id.nav_wishlist);
-        LinearLayout profileTab = findViewById(R.id.nav_personal);
         chatService = new ChatService();
         cabinService = new CabinService();
         bookingService = new BookingService();
@@ -69,10 +66,7 @@ public class ConversationListActivity extends AppCompatActivity {
             }
             ManagerNavigationHelper.bind(this, ManagerNavigationHelper.TAB_MESSAGES);
         } else {
-            searchTab.setOnClickListener(view -> startActivity(new Intent(this, HotelSearchActivity.class)));
-            bookingsTab.setOnClickListener(view -> startActivity(new Intent(this, GuestBookingsActivity.class)));
-            wishlistTab.setOnClickListener(view -> startActivity(new Intent(this, SavedHotelsActivity.class)));
-            profileTab.setOnClickListener(view -> startActivity(new Intent(this, AccountHubActivity.class)));
+            CustomerNavigationHelper.bind(this, CustomerNavigationHelper.TAB_MESSAGES);
         }
         loadConversations();
     }
@@ -218,7 +212,7 @@ public class ConversationListActivity extends AppCompatActivity {
             public void onSuccess(Cabin cabin) {
                 String roomText = "Room: khách đang hỏi tư vấn trước khi đặt";
                 updateConversationText(conversation, cabin, roomText, bookingStatusLabel(conversation));
-                if (hasText(conversation.getBookingId())) {
+                if (conversation.hasBooking()) {
                     loadBookingRoom(conversation, cabin);
                 } else {
                     loadSuggestedRoom(conversation, cabin);
@@ -358,7 +352,7 @@ public class ConversationListActivity extends AppCompatActivity {
     }
 
     private String bookingStatusLabel(Conversation conversation) {
-        if (conversation == null || !hasText(conversation.getBookingId())) {
+        if (conversation == null || !conversation.hasBooking()) {
             return "Chưa booking · tư vấn trước đặt phòng";
         }
         return "Đã booking · mã " + shortId(conversation.getBookingId());

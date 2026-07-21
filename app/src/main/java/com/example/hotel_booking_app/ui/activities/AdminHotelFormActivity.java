@@ -18,26 +18,32 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.hotel_booking_app.R;
 import com.example.hotel_booking_app.data.models.Amenity;
+import com.example.hotel_booking_app.data.models.BlockedDate;
 import com.example.hotel_booking_app.data.models.Cabin;
 import com.example.hotel_booking_app.data.models.CabinAmenity;
 import com.example.hotel_booking_app.data.models.RoomType;
 import com.example.hotel_booking_app.data.remote.SupabaseCallback;
 import com.example.hotel_booking_app.services.AmenityService;
+import com.example.hotel_booking_app.services.BlockedDateService;
 import com.example.hotel_booking_app.services.CabinService;
 import com.example.hotel_booking_app.services.RoomTypeService;
 import com.example.hotel_booking_app.utils.AppConstants;
 import com.example.hotel_booking_app.utils.SessionManager;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class AdminHotelFormActivity extends AppCompatActivity {
     public static final String EXTRA_CABIN_ID = "extra_admin_cabin_id";
     public static final String EXTRA_ROOM_TYPE_ID = "extra_admin_room_type_id";
     private static final int REQUEST_PICK_IMAGE = 2001;
+    private static final int REQUEST_PICK_LOCATION = 2002;
 
     private TextView formTitleTextView;
     private TextView statusTextView;
+    private TextView coordinatesTextView;
     private EditText nameEditText;
     private EditText locationEditText;
     private EditText capacityEditText;
@@ -51,6 +57,10 @@ public class AdminHotelFormActivity extends AppCompatActivity {
     private EditText roomSizeEditText;
     private EditText roomBedCountEditText;
     private EditText roomPriceEditText;
+    private EditText blockStartEditText;
+    private EditText blockEndEditText;
+    private EditText blockRoomsEditText;
+    private EditText blockReasonEditText;
     private Spinner roomCategorySpinner;
     private Spinner bedTypeSpinner;
     private LinearLayout amenitiesContainer;
@@ -61,9 +71,12 @@ public class AdminHotelFormActivity extends AppCompatActivity {
     private String selectedBedTypeFilter = "Tất cả";
     private Button saveButton;
     private Button saveRoomTypeButton;
+    private Button pickLocationButton;
+    private Button blockRoomButton;
     private CabinService cabinService;
     private AmenityService amenityService;
     private RoomTypeService roomTypeService;
+    private BlockedDateService blockedDateService;
     private SessionManager sessionManager;
     private Cabin editingCabin;
     private RoomType editingRoomType;
@@ -72,6 +85,9 @@ public class AdminHotelFormActivity extends AppCompatActivity {
     private final List<Amenity> allAmenities = new ArrayList<>();
     private final List<String> selectedAmenityIds = new ArrayList<>();
     private final List<String> selectedAmenityNames = new ArrayList<>();
+    private double pickedLatitude;
+    private double pickedLongitude;
+    private String pickedGoogleMapsUrl;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,12 +97,14 @@ public class AdminHotelFormActivity extends AppCompatActivity {
         cabinService = new CabinService();
         amenityService = new AmenityService();
         roomTypeService = new RoomTypeService();
+        blockedDateService = new BlockedDateService();
         sessionManager = new SessionManager(this);
         cabinId = getIntent().getStringExtra(EXTRA_CABIN_ID);
         pendingRoomTypeId = getIntent().getStringExtra(EXTRA_ROOM_TYPE_ID);
 
         formTitleTextView = findViewById(R.id.text_form_title);
         statusTextView = findViewById(R.id.text_status);
+        coordinatesTextView = findViewById(R.id.text_location_coordinates);
         nameEditText = findViewById(R.id.edit_cabin_name);
         locationEditText = findViewById(R.id.edit_location);
         capacityEditText = findViewById(R.id.edit_capacity);
@@ -100,6 +118,10 @@ public class AdminHotelFormActivity extends AppCompatActivity {
         roomSizeEditText = findViewById(R.id.edit_room_size);
         roomBedCountEditText = findViewById(R.id.edit_room_bed_count);
         roomPriceEditText = findViewById(R.id.edit_room_price);
+        blockStartEditText = findViewById(R.id.edit_block_start);
+        blockEndEditText = findViewById(R.id.edit_block_end);
+        blockRoomsEditText = findViewById(R.id.edit_block_rooms);
+        blockReasonEditText = findViewById(R.id.edit_block_reason);
         roomCategorySpinner = findViewById(R.id.spinner_room_category);
         bedTypeSpinner = findViewById(R.id.spinner_bed_type);
         amenitiesContainer = findViewById(R.id.container_amenities);
@@ -107,6 +129,8 @@ public class AdminHotelFormActivity extends AppCompatActivity {
         roomTypesContainer = findViewById(R.id.container_room_types);
         saveButton = findViewById(R.id.button_save_cabin);
         saveRoomTypeButton = findViewById(R.id.button_save_room_type);
+        pickLocationButton = findViewById(R.id.button_pick_location);
+        blockRoomButton = findViewById(R.id.button_block_room);
         Button pickImageButton = findViewById(R.id.button_pick_image);
         Button topBackButton = findViewById(R.id.button_back);
         Button bottomBackButton = findViewById(R.id.button_back_bottom);
@@ -116,8 +140,10 @@ public class AdminHotelFormActivity extends AppCompatActivity {
         saveButton.setText(editMode ? "Cập nhật khách sạn" : "Tạo khách sạn");
 
         pickImageButton.setOnClickListener(view -> openImagePicker());
+        pickLocationButton.setOnClickListener(view -> openLocationPicker());
         saveButton.setOnClickListener(view -> saveCabin());
         saveRoomTypeButton.setOnClickListener(view -> saveRoomType());
+        blockRoomButton.setOnClickListener(view -> blockSelectedRoomDates());
         topBackButton.setOnClickListener(view -> finish());
         bottomBackButton.setOnClickListener(view -> finish());
         setupRoomSpinners();
@@ -156,6 +182,9 @@ public class AdminHotelFormActivity extends AppCompatActivity {
         priceEditText.setEnabled(false);
         discountEditText.setEnabled(false);
         descriptionEditText.setEnabled(false);
+        if (pickLocationButton != null) {
+            pickLocationButton.setEnabled(false);
+        }
         amenitiesContainer.setVisibility(View.GONE);
         statusTextView.setText("Đang sửa loại phòng. Phần khách sạn đã khóa.");
     }
@@ -171,6 +200,17 @@ public class AdminHotelFormActivity extends AppCompatActivity {
         startActivityForResult(intent, REQUEST_PICK_IMAGE);
     }
 
+    private void openLocationPicker() {
+        Intent intent = new Intent(this, HotelMapActivity.class);
+        intent.putExtra(HotelMapActivity.EXTRA_PICK_LOCATION, true);
+        intent.putExtra(HotelMapActivity.EXTRA_PICK_LOCATION_LABEL, locationEditText.getText().toString().trim());
+        if (pickedLatitude != 0 && pickedLongitude != 0) {
+            intent.putExtra(HotelMapActivity.EXTRA_PICK_LATITUDE, pickedLatitude);
+            intent.putExtra(HotelMapActivity.EXTRA_PICK_LONGITUDE, pickedLongitude);
+        }
+        startActivityForResult(intent, REQUEST_PICK_LOCATION);
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -180,6 +220,27 @@ public class AdminHotelFormActivity extends AppCompatActivity {
             imageEditText.setText(imageUri.toString());
             statusTextView.setText("Đã chọn ảnh.");
         }
+        if (requestCode == REQUEST_PICK_LOCATION && resultCode == RESULT_OK && data != null) {
+            pickedLatitude = data.getDoubleExtra(HotelMapActivity.EXTRA_PICK_LATITUDE, 0);
+            pickedLongitude = data.getDoubleExtra(HotelMapActivity.EXTRA_PICK_LONGITUDE, 0);
+            pickedGoogleMapsUrl = data.getStringExtra(HotelMapActivity.EXTRA_PICK_GOOGLE_MAPS_URL);
+            renderPickedLocation();
+            statusTextView.setText("Da chon vi tri moi. Bam cap nhat khach san de luu vao database.");
+        }
+    }
+
+    private void renderPickedLocation() {
+        if (coordinatesTextView == null) {
+            return;
+        }
+        if (pickedLatitude == 0 || pickedLongitude == 0) {
+            coordinatesTextView.setText("Chua chon toa do ban do.");
+            return;
+        }
+        coordinatesTextView.setText(String.format(Locale.US,
+                "Toa do: %.6f, %.6f",
+                pickedLatitude,
+                pickedLongitude));
     }
 
     private void loadAmenities() {
@@ -207,6 +268,10 @@ public class AdminHotelFormActivity extends AppCompatActivity {
                 editingCabin = cabin;
                 nameEditText.setText(cabin.getName());
                 locationEditText.setText(cabin.getLocation());
+                pickedLatitude = cabin.getLatitude();
+                pickedLongitude = cabin.getLongitude();
+                pickedGoogleMapsUrl = cabin.getGoogleMapsUrl();
+                renderPickedLocation();
                 capacityEditText.setText(String.valueOf(cabin.getMaxCapacity()));
                 priceEditText.setText(String.valueOf(cabin.getRegularPrice()));
                 discountEditText.setText(String.valueOf(cabin.getDiscount()));
@@ -326,8 +391,17 @@ public class AdminHotelFormActivity extends AppCompatActivity {
             delete.setText("Xóa");
             delete.setAllCaps(false);
             delete.setOnClickListener(view -> deleteRoomType(roomType));
+            Button block = new Button(this);
+            block.setText("Chan lich");
+            block.setAllCaps(false);
+            block.setOnClickListener(view -> {
+                fillRoomForm(roomType);
+                blockReasonEditText.setText("");
+                statusTextView.setText("Nhap khoang ngay ban cho: " + roomType.titleLabel());
+            });
             actions.addView(edit, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
             actions.addView(delete, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            actions.addView(block, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
             row.addView(actions);
 
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
@@ -573,6 +647,73 @@ public class AdminHotelFormActivity extends AppCompatActivity {
         saveRoomTypeButton.setText("Cập nhật loại phòng");
     }
 
+    private void blockSelectedRoomDates() {
+        if (editingCabin == null || editingCabin.getId() == null) {
+            statusTextView.setText("Luu khach san truoc khi chan lich phong.");
+            return;
+        }
+        if (editingRoomType == null || editingRoomType.getId() == null) {
+            statusTextView.setText("Chon mot loai phong truoc khi chan lich.");
+            return;
+        }
+
+        LocalDate startDate;
+        LocalDate endDate;
+        try {
+            startDate = LocalDate.parse(blockStartEditText.getText().toString().trim());
+            endDate = LocalDate.parse(blockEndEditText.getText().toString().trim());
+        } catch (Exception exception) {
+            statusTextView.setText("Ngay ban phai dung dinh dang YYYY-MM-DD.");
+            return;
+        }
+        if (!endDate.isAfter(startDate)) {
+            statusTextView.setText("Ngay ket thuc phai sau ngay bat dau.");
+            return;
+        }
+        int blockedRooms;
+        try {
+            String roomsValue = blockRoomsEditText.getText().toString().trim();
+            blockedRooms = roomsValue.isEmpty() ? 1 : Integer.parseInt(roomsValue);
+        } catch (NumberFormatException exception) {
+            statusTextView.setText("So phong bi giu phai la so hop le.");
+            return;
+        }
+        if (blockedRooms <= 0 || blockedRooms > Math.max(1, editingRoomType.getTotalRooms())) {
+            statusTextView.setText("So phong bi giu phai tu 1 den " + Math.max(1, editingRoomType.getTotalRooms()) + ".");
+            return;
+        }
+
+        String reason = blockReasonEditText.getText().toString().trim();
+        if (reason.isEmpty()) {
+            reason = "External booking or manager block";
+        }
+        statusTextView.setText("Dang chan lich cho loai phong...");
+        blockedDateService.blockDates(
+                editingCabin.getId(),
+                editingRoomType.getId(),
+                sessionManager.getUserId(),
+                startDate.toString(),
+                endDate.toString(),
+                blockedRooms,
+                reason,
+                new SupabaseCallback<BlockedDate>() {
+                    @Override
+                    public void onSuccess(BlockedDate data) {
+                        blockStartEditText.setText("");
+                        blockEndEditText.setText("");
+                        blockRoomsEditText.setText("");
+                        blockReasonEditText.setText("");
+                        statusTextView.setText("Da chan lich. Booking qua app se thay phong nay khong kha dung trong khoang ngay do.");
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        statusTextView.setText(message);
+                    }
+                }
+        );
+    }
+
     private void saveRoomType() {
         if (editingCabin == null || editingCabin.getId() == null) {
             statusTextView.setText("Lưu khách sạn trước khi thêm loại phòng.");
@@ -644,7 +785,7 @@ public class AdminHotelFormActivity extends AppCompatActivity {
             public void onSuccess(Boolean data) {
                 clearRoomForm();
                 loadRoomTypes();
-                statusTextView.setText("Đã xóa loại phòng.");
+                statusTextView.setText("Đã ẩn loại phòng. Dữ liệu vẫn còn trong database.");
             }
 
             @Override
@@ -723,6 +864,14 @@ public class AdminHotelFormActivity extends AppCompatActivity {
         try {
             cabin.setName(nameEditText.getText().toString().trim());
             cabin.setLocation(locationEditText.getText().toString().trim());
+            cabin.setAddress(locationEditText.getText().toString().trim());
+            if (pickedLatitude != 0 && pickedLongitude != 0) {
+                cabin.setLatitude(pickedLatitude);
+                cabin.setLongitude(pickedLongitude);
+                cabin.setGoogleMapsUrl(pickedGoogleMapsUrl == null || pickedGoogleMapsUrl.trim().isEmpty()
+                        ? "https://www.google.com/maps/search/?api=1&query=" + pickedLatitude + "," + pickedLongitude
+                        : pickedGoogleMapsUrl);
+            }
             cabin.setMaxCapacity(Integer.parseInt(capacityEditText.getText().toString().trim()));
             cabin.setRegularPrice(Double.parseDouble(priceEditText.getText().toString().trim()));
             cabin.setDiscount(parseDoubleOrZero(discountEditText.getText().toString().trim()));

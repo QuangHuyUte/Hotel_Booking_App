@@ -28,6 +28,7 @@ public class Cabin {
     private String googleMapsUrl;
     private String amenities;
     private String hostId;
+    private boolean isActive = true;
     private String createdAt;
     private String updatedAt;
     private transient List<RoomType> roomTypes = new ArrayList<>();
@@ -101,40 +102,80 @@ public class Cabin {
         return latitude;
     }
 
+    public void setLatitude(double latitude) {
+        this.latitude = latitude;
+    }
+
     public double getLongitude() {
         return longitude;
+    }
+
+    public void setLongitude(double longitude) {
+        this.longitude = longitude;
     }
 
     public String getMapPlaceId() {
         return mapPlaceId;
     }
 
+    public void setMapPlaceId(String mapPlaceId) {
+        this.mapPlaceId = mapPlaceId;
+    }
+
     public String getAddress() {
         return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 
     public String getDistrict() {
         return district;
     }
 
+    public void setDistrict(String district) {
+        this.district = district;
+    }
+
     public String getPropertyType() {
         return propertyType;
+    }
+
+    public void setPropertyType(String propertyType) {
+        this.propertyType = propertyType;
     }
 
     public int getStarRating() {
         return starRating;
     }
 
+    public void setStarRating(int starRating) {
+        this.starRating = starRating;
+    }
+
     public double getReviewScore() {
         return reviewScore;
+    }
+
+    public void setReviewScore(double reviewScore) {
+        this.reviewScore = reviewScore;
     }
 
     public int getReviewCount() {
         return reviewCount;
     }
 
+    public void setReviewCount(int reviewCount) {
+        this.reviewCount = reviewCount;
+    }
+
     public String getGoogleMapsUrl() {
         return googleMapsUrl;
+    }
+
+    public void setGoogleMapsUrl(String googleMapsUrl) {
+        this.googleMapsUrl = googleMapsUrl;
     }
 
     public void setAmenities(String amenities) {
@@ -151,6 +192,14 @@ public class Cabin {
 
     public String getHostId() {
         return hostId;
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean active) {
+        isActive = active;
     }
 
     public String getCreatedAt() {
@@ -199,6 +248,7 @@ public class Cabin {
         copy.googleMapsUrl = googleMapsUrl;
         copy.amenities = amenities;
         copy.hostId = hostId;
+        copy.isActive = isActive;
         copy.createdAt = createdAt;
         copy.updatedAt = updatedAt;
         copy.roomTypes = roomTypes == null ? new ArrayList<>() : new ArrayList<>(roomTypes);

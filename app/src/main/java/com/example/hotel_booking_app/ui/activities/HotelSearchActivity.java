@@ -42,6 +42,7 @@ import com.example.hotel_booking_app.services.BookingService;
 import com.example.hotel_booking_app.services.CabinService;
 import com.example.hotel_booking_app.services.RoomTypeService;
 import com.example.hotel_booking_app.ui.adapters.CabinAdapter;
+import com.example.hotel_booking_app.ui.helpers.CustomerNavigationHelper;
 import com.example.hotel_booking_app.utils.AppConstants;
 import com.example.hotel_booking_app.utils.PriceUtils;
 import com.example.hotel_booking_app.utils.SessionManager;
@@ -179,10 +180,7 @@ public class HotelSearchActivity extends AppCompatActivity {
         TextView sortResultsButton = findViewById(R.id.button_sort_results);
         TextView filterResultsButton = findViewById(R.id.button_filter_results);
         TextView mapResultsButton = findViewById(R.id.button_result_map);
-        LinearLayout personalTab = findViewById(R.id.nav_personal);
-        LinearLayout bookingsTab = findViewById(R.id.nav_bookings);
-        LinearLayout wishlistTab = findViewById(R.id.nav_wishlist);
-        LinearLayout messagesTab = findViewById(R.id.nav_messages);
+        CustomerNavigationHelper.bind(this, CustomerNavigationHelper.TAB_SEARCH);
         recyclerView = findViewById(R.id.recycler_cabins);
 
         cabinService = new CabinService();
@@ -243,10 +241,6 @@ public class HotelSearchActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {
             }
         });
-        personalTab.setOnClickListener(view -> startActivity(new Intent(this, AccountHubActivity.class)));
-        bookingsTab.setOnClickListener(view -> openLoginRequired(GuestBookingsActivity.class));
-        wishlistTab.setOnClickListener(view -> openLoginRequired(SavedHotelsActivity.class));
-        messagesTab.setOnClickListener(view -> openLoginRequired(ConversationListActivity.class));
         showHome();
         loadCabins();
     }
@@ -381,18 +375,6 @@ public class HotelSearchActivity extends AppCompatActivity {
             destinationEditText.setSelection(destinationEditText.getText().length());
             showResults();
         });
-    }
-
-    private void openLoginRequired(Class<?> target) {
-        SessionManager sessionManager = new SessionManager(this);
-        if (!sessionManager.isLoggedIn()) {
-            startActivity(new Intent(this, SignInActivity.class));
-            return;
-        }
-        Class<?> resolvedTarget = sessionManager.isHostOrAdmin() && target == GuestBookingsActivity.class
-                ? AdminBookingManagementActivity.class
-                : target;
-        startActivity(new Intent(this, resolvedTarget));
     }
 
     private void showHome() {

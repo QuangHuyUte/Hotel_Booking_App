@@ -1063,6 +1063,13 @@ public class HotelDetailActivity extends AppCompatActivity {
         Cabin copy = new Cabin();
         copy.setName(currentCabin.getName() + " Copy");
         copy.setLocation(currentCabin.getLocation());
+        copy.setLatitude(currentCabin.getLatitude());
+        copy.setLongitude(currentCabin.getLongitude());
+        copy.setAddress(currentCabin.getAddress());
+        copy.setDistrict(currentCabin.getDistrict());
+        copy.setPropertyType(currentCabin.getPropertyType());
+        copy.setStarRating(currentCabin.getStarRating());
+        copy.setGoogleMapsUrl(currentCabin.getGoogleMapsUrl());
         copy.setRegularPrice(currentCabin.getRegularPrice());
         copy.setDiscount(currentCabin.getDiscount());
         copy.setMaxCapacity(currentCabin.getMaxCapacity());
@@ -1090,11 +1097,11 @@ public class HotelDetailActivity extends AppCompatActivity {
     }
 
     private void deleteCabin() {
-        statusTextView.setText("Đang xóa khách sạn...");
+        statusTextView.setText("Đang ẩn khách sạn...");
         cabinService.deleteCabin(cabinId, new SupabaseCallback<Boolean>() {
             @Override
             public void onSuccess(Boolean data) {
-                Toast.makeText(HotelDetailActivity.this, "Đã xóa khách sạn", Toast.LENGTH_SHORT).show();
+                Toast.makeText(HotelDetailActivity.this, "Đã ẩn khách sạn", Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(HotelDetailActivity.this, HostHotelDashboardActivity.class);
                 startActivity(intent);
                 finish();

@@ -49,6 +49,10 @@ public class Conversation {
         return bookingId;
     }
 
+    public boolean hasBooking() {
+        return bookingId != null && !bookingId.trim().isEmpty();
+    }
+
     public String getCreatedAt() {
         return createdAt;
     }

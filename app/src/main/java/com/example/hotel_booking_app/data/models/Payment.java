@@ -53,6 +53,14 @@ public class Payment {
         this.paidAt = paidAt;
     }
 
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public void setUpdatedAt(String updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
     public String getId() {
         return id;
     }

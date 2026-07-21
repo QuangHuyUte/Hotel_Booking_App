@@ -20,6 +20,8 @@ public class BookingInvoiceActivity extends AppCompatActivity {
     private TextView statusTextView;
     private PaymentService paymentService;
     private BookingService bookingService;
+    private String paymentId;
+    private String bookingId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,22 +40,45 @@ public class BookingInvoiceActivity extends AppCompatActivity {
     }
 
     private void loadInvoice() {
-        String paymentId = getIntent().getStringExtra(AppConstants.EXTRA_PAYMENT_ID);
+        paymentId = getIntent().getStringExtra(AppConstants.EXTRA_PAYMENT_ID);
+        bookingId = getIntent().getStringExtra(AppConstants.EXTRA_BOOKING_ID);
         statusTextView.setText("Đang chuẩn bị hóa đơn...");
-        paymentService.getPaymentById(paymentId, new SupabaseCallback<Payment>() {
-            @Override
-            public void onSuccess(Payment payment) {
-                bookingService.getBookingById(payment.getBookingId(), new SupabaseCallback<Booking>() {
-                    @Override
-                    public void onSuccess(Booking booking) {
-                        renderInvoice(payment, booking);
-                    }
+        if (paymentId != null && !paymentId.trim().isEmpty()) {
+            paymentService.getPaymentById(paymentId, new SupabaseCallback<Payment>() {
+                @Override
+                public void onSuccess(Payment payment) {
+                    bookingService.getBookingById(payment.getBookingId(), new SupabaseCallback<Booking>() {
+                        @Override
+                        public void onSuccess(Booking booking) {
+                            renderInvoice(payment, booking);
+                        }
 
-                    @Override
-                    public void onError(String message) {
-                        renderInvoice(payment, null);
-                    }
-                });
+                        @Override
+                        public void onError(String message) {
+                            renderInvoice(payment, null);
+                        }
+                    });
+                }
+
+                @Override
+                public void onError(String message) {
+                    loadBookingFallback(message);
+                }
+            });
+            return;
+        }
+        loadBookingFallback(null);
+    }
+
+    private void loadBookingFallback(String fallbackMessage) {
+        if (bookingId == null || bookingId.trim().isEmpty()) {
+            statusTextView.setText(fallbackMessage == null ? "Không thể mở hóa đơn." : fallbackMessage);
+            return;
+        }
+        bookingService.getBookingById(bookingId, new SupabaseCallback<Booking>() {
+            @Override
+            public void onSuccess(Booking booking) {
+                renderInvoiceFromBooking(booking);
             }
 
             @Override
@@ -72,12 +97,26 @@ public class BookingInvoiceActivity extends AppCompatActivity {
                         + "\n\nĐặt phòng\n" + bookingText
                         + "\n\nSố tiền\n" + PriceUtils.formatUsd(payment.getAmount())
                         + "\n\nTrạng thái\n" + translatePaymentStatus(payment.getStatus())
-                        + "\n\nHình thức\n" + safe(payment.getMethod())
-                        + "\n\nNhà cung cấp\n" + safe(payment.getProvider())
+                        + "\n\nHình thức\n" + translatePaymentMethod(payment.getMethod())
+                        + "\n\nNhà cung cấp\n" + translatePaymentProvider(payment.getProvider())
                         + "\n\nGiao dịch\n" + safe(payment.getTransactionId())
                         + "\n\nThanh toán lúc\n" + safe(payment.getPaidAt())
         );
         statusTextView.setText("Hóa đơn đã sẵn sàng.");
+    }
+
+    private void renderInvoiceFromBooking(Booking booking) {
+        invoiceTextView.setText(
+                "Mã thanh toán\n" + safe(booking.getId())
+                        + "\n\nĐặt phòng\n" + booking.getStartDate() + " -> " + booking.getEndDate()
+                        + "\n\nSố tiền\n" + PriceUtils.formatUsd(booking.getTotalPrice())
+                        + "\n\nTrạng thái\n" + translateBookingStatus(booking.getStatus())
+                        + "\n\nHình thức\n" + translatePaymentMethod(booking.isPaid() ? "card" : "app")
+                        + "\n\nNhà cung cấp\n" + translatePaymentProvider(booking.isPaid() ? "stripe" : "app")
+                        + "\n\nGiao dịch\n" + (booking.isPaid() ? "BOOKING-" + booking.getId() : "-")
+                        + "\n\nThanh toán lúc\n" + safe(booking.getCreatedAt())
+        );
+        statusTextView.setText("Hóa đơn đặt phòng đã sẵn sàng.");
     }
 
     private String safe(String value) {
@@ -98,5 +137,56 @@ public class BookingInvoiceActivity extends AppCompatActivity {
             return "Đã hoàn tiền";
         }
         return safe(status);
+    }
+
+    private String translateBookingStatus(String status) {
+        if (AppConstants.BOOKING_CONFIRMED.equalsIgnoreCase(status)) {
+            return "Đã xác nhận";
+        }
+        if (AppConstants.BOOKING_PENDING.equalsIgnoreCase(status)) {
+            return "Đang chờ";
+        }
+        if (AppConstants.BOOKING_CANCELLED.equalsIgnoreCase(status)) {
+            return "Đã hủy";
+        }
+        if (AppConstants.BOOKING_CHECKED_IN.equalsIgnoreCase(status)) {
+            return "Đã nhận phòng";
+        }
+        if (AppConstants.BOOKING_CHECKED_OUT.equalsIgnoreCase(status)) {
+            return "Đã trả phòng";
+        }
+        return safe(status);
+    }
+
+    private String translatePaymentMethod(String method) {
+        if (method == null || method.trim().isEmpty() || "-".equals(method)) {
+            return "-";
+        }
+        if ("app".equalsIgnoreCase(method)) {
+            return "Thanh toán trong app";
+        }
+        if ("card".equalsIgnoreCase(method)) {
+            return "Thẻ";
+        }
+        if ("bank_transfer".equalsIgnoreCase(method)) {
+            return "Chuyển khoản";
+        }
+        return method;
+    }
+
+    private String translatePaymentProvider(String provider) {
+        if (provider == null || provider.trim().isEmpty() || "-".equals(provider)) {
+            return "-";
+        }
+        if ("app".equalsIgnoreCase(provider) || "mock".equalsIgnoreCase(provider)) {
+            return "Hệ thống";
+        }
+        if ("stripe".equalsIgnoreCase(provider)) {
+            return "Stripe";
+        }
+        if ("manual".equalsIgnoreCase(provider)) {
+            return "Thủ công";
+        }
+        return provider;
     }
 }

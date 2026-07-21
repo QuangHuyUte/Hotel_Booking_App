@@ -15,14 +15,14 @@
 
         <Button
             android:id="@+id/button_back"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="@drawable/bg_detail_back"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_back_circle"
             android:drawableTop="@drawable/ic_back_chevron"
             android:elevation="3dp"
             android:minWidth="0dp"
             android:minHeight="0dp"
-            android:padding="0dp"
+            android:padding="8dp"
             android:text=""
             android:textAllCaps="false" />
 

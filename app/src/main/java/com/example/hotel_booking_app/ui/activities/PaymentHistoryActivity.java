@@ -27,6 +27,7 @@ import com.example.hotel_booking_app.utils.SessionManager;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 public class PaymentHistoryActivity extends AppCompatActivity {
@@ -38,6 +39,8 @@ public class PaymentHistoryActivity extends AppCompatActivity {
     private HostService hostService;
     private SessionManager sessionManager;
     private final List<Cabin> managerCabins = new ArrayList<>();
+    private final List<Button> paymentHotelTabButtons = new ArrayList<>();
+    private final List<String> paymentHotelTabCabinIds = new ArrayList<>();
     private String selectedPaymentCabinId;
 
     @Override
@@ -58,6 +61,7 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         adapter = new PaymentAdapter(payment -> {
             Intent intent = new Intent(this, BookingInvoiceActivity.class);
             intent.putExtra(AppConstants.EXTRA_PAYMENT_ID, payment.getId());
+            intent.putExtra(AppConstants.EXTRA_BOOKING_ID, payment.getBookingId());
             startActivity(intent);
         });
 
@@ -129,23 +133,27 @@ public class PaymentHistoryActivity extends AppCompatActivity {
     }
 
     private void renderPaymentHotelTabs() {
-        hotelTabsContainer.removeAllViews();
-        addPaymentHotelTab("Tất cả", null, selectedPaymentCabinId == null);
-        for (Cabin cabin : managerCabins) {
-            addPaymentHotelTab(shortHotelName(cabin), cabin.getId(), cabin.getId().equals(selectedPaymentCabinId));
+        int expectedTabs = managerCabins.size() + 1;
+        if (paymentHotelTabButtons.size() != expectedTabs) {
+            hotelTabsContainer.removeAllViews();
+            paymentHotelTabButtons.clear();
+            paymentHotelTabCabinIds.clear();
+            addPaymentHotelTab("Tất cả", null);
+            for (Cabin cabin : managerCabins) {
+                addPaymentHotelTab(shortHotelName(cabin), cabin.getId());
+            }
         }
+        updatePaymentHotelTabStyles();
     }
 
-    private void addPaymentHotelTab(String label, String cabinId, boolean selected) {
+    private void addPaymentHotelTab(String label, String cabinId) {
         Button button = new Button(this);
         button.setText(label);
         button.setAllCaps(false);
         button.setMinWidth(0);
         button.setMinHeight(0);
         button.setPadding(dp(14), 0, dp(14), 0);
-        button.setTextColor(getColor(selected ? R.color.black : R.color.ink));
         button.setTextSize(13);
-        button.setBackgroundResource(selected ? R.drawable.bg_button_primary : R.drawable.bg_manager_search);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 dp(42)
@@ -154,10 +162,21 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         button.setLayoutParams(params);
         button.setOnClickListener(view -> {
             selectedPaymentCabinId = cabinId;
-            renderPaymentHotelTabs();
+            updatePaymentHotelTabStyles();
             collectBookingsForCabins(filteredPaymentCabins());
         });
+        paymentHotelTabButtons.add(button);
+        paymentHotelTabCabinIds.add(cabinId);
         hotelTabsContainer.addView(button);
+    }
+
+    private void updatePaymentHotelTabStyles() {
+        for (int i = 0; i < paymentHotelTabButtons.size(); i++) {
+            Button button = paymentHotelTabButtons.get(i);
+            boolean selected = Objects.equals(paymentHotelTabCabinIds.get(i), selectedPaymentCabinId);
+            button.setTextColor(getColor(selected ? R.color.black : R.color.ink));
+            button.setBackgroundResource(selected ? R.drawable.bg_button_primary : R.drawable.bg_manager_search);
+        }
     }
     private void collectBookingsForCabins(List<Cabin> cabins) {
         if (cabins.isEmpty()) {
@@ -204,18 +223,37 @@ public class PaymentHistoryActivity extends AppCompatActivity {
             paymentService.getPaymentsForBooking(booking.getId(), new SupabaseCallback<List<Payment>>() {
                 @Override
                 public void onSuccess(List<Payment> bookingPayments) {
-                    if (bookingPayments != null) {
+                    if (bookingPayments != null && !bookingPayments.isEmpty()) {
                         payments.addAll(bookingPayments);
+                    } else {
+                        payments.add(buildPlaceholderPayment(booking));
                     }
                     finishOneBookingPaymentLoad(payments, remaining);
                 }
 
                 @Override
                 public void onError(String message) {
+                    payments.add(buildPlaceholderPayment(booking));
                     finishOneBookingPaymentLoad(payments, remaining);
                 }
             });
         }
+    }
+
+    private Payment buildPlaceholderPayment(Booking booking) {
+        Payment payment = new Payment();
+        payment.setId(booking.getId());
+        payment.setBookingId(booking.getId());
+        payment.setUserId(booking.getUserId());
+        payment.setAmount(booking.getTotalPrice());
+        payment.setMethod(booking.isPaid() ? "card" : "app");
+        payment.setProvider(booking.isPaid() ? "stripe" : "app");
+        payment.setStatus(booking.isPaid() ? AppConstants.PAYMENT_PAID : AppConstants.PAYMENT_PENDING);
+        payment.setTransactionId(booking.isPaid() ? "BOOKING-" + booking.getId() : "");
+        payment.setPaidAt(booking.isPaid() ? booking.getCreatedAt() : "");
+        payment.setCreatedAt(booking.getCreatedAt());
+        payment.setUpdatedAt(booking.getUpdatedAt());
+        return payment;
     }
 
     private void finishOneBookingPaymentLoad(List<Payment> payments, int[] remaining) {

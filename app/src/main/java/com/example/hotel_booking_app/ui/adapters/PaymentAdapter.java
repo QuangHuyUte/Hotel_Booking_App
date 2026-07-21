@@ -68,8 +68,8 @@ public class PaymentAdapter extends RecyclerView.Adapter<PaymentAdapter.PaymentV
         holder.imageView.setImageResource(R.drawable.ic_launcher_background);
         holder.detailTextView.setText(
                 "Đặt phòng\nĐang tải thông tin chỗ nghỉ..."
-                        + "\n\nHình thức\n" + safe(payment.getMethod())
-                        + "\n\nNhà cung cấp\n" + safe(payment.getProvider())
+                        + "\n\nHình thức\n" + translatePaymentMethod(payment.getMethod())
+                        + "\n\nNhà cung cấp\n" + translatePaymentProvider(payment.getProvider())
                         + "\n\nThanh toán lúc\n" + safe(payment.getPaidAt())
         );
         bindBooking(holder, payment);
@@ -97,8 +97,8 @@ public class PaymentAdapter extends RecyclerView.Adapter<PaymentAdapter.PaymentV
                 if (payment.getBookingId().equals(holder.boundBookingId)) {
                     holder.detailTextView.setText(
                             "Đặt phòng\nChưa có thông tin chỗ nghỉ"
-                                    + "\n\nHình thức\n" + safe(payment.getMethod())
-                                    + "\n\nNhà cung cấp\n" + safe(payment.getProvider())
+                                    + "\n\nHình thức\n" + translatePaymentMethod(payment.getMethod())
+                                    + "\n\nNhà cung cấp\n" + translatePaymentProvider(payment.getProvider())
                                     + "\n\nThanh toán lúc\n" + safe(payment.getPaidAt())
                     );
                 }
@@ -135,8 +135,8 @@ public class PaymentAdapter extends RecyclerView.Adapter<PaymentAdapter.PaymentV
     private void renderPaymentDetails(PaymentViewHolder holder, Payment payment, Booking booking, String cabinName) {
         holder.detailTextView.setText(
                 "Đặt phòng\n" + cabinName + "\n" + booking.getStartDate() + " -> " + booking.getEndDate()
-                        + "\n\nHình thức\n" + safe(payment.getMethod())
-                        + "\n\nNhà cung cấp\n" + safe(payment.getProvider())
+                        + "\n\nHình thức\n" + translatePaymentMethod(payment.getMethod())
+                        + "\n\nNhà cung cấp\n" + translatePaymentProvider(payment.getProvider())
                         + "\n\nThanh toán lúc\n" + safe(payment.getPaidAt())
         );
     }
@@ -186,6 +186,38 @@ public class PaymentAdapter extends RecyclerView.Adapter<PaymentAdapter.PaymentV
             return "ĐANG CHỜ";
         }
         return status.toUpperCase(Locale.US);
+    }
+
+    private String translatePaymentMethod(String method) {
+        if (method == null || method.trim().isEmpty() || "-".equals(method)) {
+            return "-";
+        }
+        if ("app".equalsIgnoreCase(method)) {
+            return "Thanh toán trong app";
+        }
+        if ("card".equalsIgnoreCase(method)) {
+            return "Thẻ";
+        }
+        if ("bank_transfer".equalsIgnoreCase(method)) {
+            return "Chuyển khoản";
+        }
+        return method;
+    }
+
+    private String translatePaymentProvider(String provider) {
+        if (provider == null || provider.trim().isEmpty() || "-".equals(provider)) {
+            return "-";
+        }
+        if ("app".equalsIgnoreCase(provider) || "mock".equalsIgnoreCase(provider)) {
+            return "Hệ thống";
+        }
+        if ("stripe".equalsIgnoreCase(provider)) {
+            return "Stripe";
+        }
+        if ("manual".equalsIgnoreCase(provider)) {
+            return "Thủ công";
+        }
+        return provider;
     }
 
     @Override

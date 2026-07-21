@@ -9,6 +9,7 @@ public class BlockedDate {
     private String cabinId;
     private String roomTypeId;
     private String hostId;
+    private int numRooms = 1;
     private String startDate;
     private String endDate;
     private String reason;
@@ -21,6 +22,10 @@ public class BlockedDate {
 
     public void setHostId(String hostId) {
         this.hostId = hostId;
+    }
+
+    public void setNumRooms(int numRooms) {
+        this.numRooms = Math.max(1, numRooms);
     }
 
     public void setRoomTypeId(String roomTypeId) {
@@ -49,6 +54,10 @@ public class BlockedDate {
 
     public String getHostId() {
         return hostId;
+    }
+
+    public int getNumRooms() {
+        return numRooms <= 0 ? 1 : numRooms;
     }
 
     public String getRoomTypeId() {

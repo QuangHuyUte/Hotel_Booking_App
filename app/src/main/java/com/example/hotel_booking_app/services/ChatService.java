@@ -39,6 +39,14 @@ public class ChatService {
         supabaseClient.getSingle(AppConstants.TABLE_CONVERSATIONS, filters, Conversation[].class, callback);
     }
 
+    public void createInquiryConversation(String guestId, String hostId, String cabinId, SupabaseCallback<Conversation> callback) {
+        createConversation(guestId, hostId, cabinId, null, callback);
+    }
+
+    public void createBookingConversation(String guestId, String hostId, String cabinId, String bookingId, SupabaseCallback<Conversation> callback) {
+        createConversation(guestId, hostId, cabinId, bookingId, callback);
+    }
+
     public void createConversation(String guestId, String hostId, String cabinId, String bookingId, SupabaseCallback<Conversation> callback) {
         Conversation conversation = new Conversation();
         conversation.setGuestId(guestId);

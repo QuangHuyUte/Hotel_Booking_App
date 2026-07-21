@@ -42,7 +42,7 @@ public class PaymentService {
         payment.setBookingId(bookingId);
         payment.setUserId(userId);
         payment.setAmount(amount);
-        payment.setMethod("mock");
+        payment.setMethod("app");
         payment.setProvider("app");
         payment.setStatus(AppConstants.PAYMENT_PENDING);
         supabaseClient.insertNoReturn(AppConstants.TABLE_PAYMENTS, payment, new SupabaseCallback<Boolean>() {

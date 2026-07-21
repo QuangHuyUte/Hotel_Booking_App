@@ -22,10 +22,26 @@ public class BlockedDateService {
         supabaseClient.getList(AppConstants.TABLE_BLOCKED_DATES, "*", null, "startDate.asc", filters, BlockedDate[].class, callback);
     }
 
+    public void getBlockedDatesForRoomType(String roomTypeId, SupabaseCallback<List<BlockedDate>> callback) {
+        Map<String, String> filters = new HashMap<>();
+        filters.put("roomTypeId", roomTypeId);
+        supabaseClient.getList(AppConstants.TABLE_BLOCKED_DATES, "*", null, "startDate.asc", filters, BlockedDate[].class, callback);
+    }
+
     public void blockDates(String cabinId, String hostId, String startDate, String endDate, String reason, SupabaseCallback<BlockedDate> callback) {
+        blockDates(cabinId, null, hostId, startDate, endDate, 1, reason, callback);
+    }
+
+    public void blockDates(String cabinId, String roomTypeId, String hostId, String startDate, String endDate, String reason, SupabaseCallback<BlockedDate> callback) {
+        blockDates(cabinId, roomTypeId, hostId, startDate, endDate, 1, reason, callback);
+    }
+
+    public void blockDates(String cabinId, String roomTypeId, String hostId, String startDate, String endDate, int numRooms, String reason, SupabaseCallback<BlockedDate> callback) {
         BlockedDate blockedDate = new BlockedDate();
         blockedDate.setCabinId(cabinId);
+        blockedDate.setRoomTypeId(roomTypeId);
         blockedDate.setHostId(hostId);
+        blockedDate.setNumRooms(numRooms);
         blockedDate.setStartDate(startDate);
         blockedDate.setEndDate(endDate);
         blockedDate.setReason(reason);

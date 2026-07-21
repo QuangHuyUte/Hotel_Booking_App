@@ -17,6 +17,7 @@ import com.example.hotel_booking_app.data.remote.SupabaseCallback;
 import com.example.hotel_booking_app.services.CabinService;
 import com.example.hotel_booking_app.services.WishlistService;
 import com.example.hotel_booking_app.ui.adapters.CabinAdapter;
+import com.example.hotel_booking_app.ui.helpers.CustomerNavigationHelper;
 import com.example.hotel_booking_app.utils.AppConstants;
 import com.example.hotel_booking_app.utils.SessionManager;
 
@@ -39,10 +40,7 @@ public class SavedHotelsActivity extends AppCompatActivity {
         statusTextView = findViewById(R.id.text_status);
         Button backButton = findViewById(R.id.button_back);
         Button bottomBackButton = findViewById(R.id.button_back_bottom);
-        LinearLayout searchTab = findViewById(R.id.nav_cabins);
-        LinearLayout bookingsTab = findViewById(R.id.nav_bookings);
-        LinearLayout messagesTab = findViewById(R.id.nav_messages);
-        LinearLayout profileTab = findViewById(R.id.nav_personal);
+        CustomerNavigationHelper.bind(this, CustomerNavigationHelper.TAB_SAVED);
         RecyclerView recyclerView = findViewById(R.id.recycler_wishlist);
         wishlistService = new WishlistService();
         cabinService = new CabinService();
@@ -62,10 +60,6 @@ public class SavedHotelsActivity extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
         backButton.setOnClickListener(view -> finish());
         bottomBackButton.setOnClickListener(view -> finish());
-        searchTab.setOnClickListener(view -> startActivity(new Intent(this, HotelSearchActivity.class)));
-        bookingsTab.setOnClickListener(view -> startActivity(new Intent(this, GuestBookingsActivity.class)));
-        messagesTab.setOnClickListener(view -> startActivity(new Intent(this, ConversationListActivity.class)));
-        profileTab.setOnClickListener(view -> startActivity(new Intent(this, AccountHubActivity.class)));
         loadWishlist();
     }
 

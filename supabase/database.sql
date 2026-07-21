@@ -67,6 +67,7 @@ create table if not exists cabins (
   "googleMapsUrl" text,
   amenities text,
   "hostId" uuid references users(_id),
+  "isActive" boolean default true,
   "createdAt" timestamp without time zone default now(),
   "updatedAt" timestamp without time zone default now()
 );
@@ -296,11 +297,13 @@ create table if not exists blocked_dates (
   "cabinId" uuid not null references cabins(_id) on delete cascade,
   "roomTypeId" uuid references room_types(_id) on delete cascade,
   "hostId" uuid references users(_id),
+  "numRooms" integer not null default 1,
   "startDate" date not null,
   "endDate" date not null,
   reason text,
   "createdAt" timestamp without time zone default now(),
   "updatedAt" timestamp without time zone default now(),
+  constraint blocked_dates_valid_rooms check ("numRooms" > 0),
   constraint blocked_dates_valid_dates check ("endDate" > "startDate")
 );
 
@@ -428,6 +431,7 @@ alter table cabins add column if not exists "starRating" integer default 3;
 alter table cabins add column if not exists "reviewScore" numeric default 8.6;
 alter table cabins add column if not exists "reviewCount" integer default 0;
 alter table cabins add column if not exists "googleMapsUrl" text;
+alter table cabins add column if not exists "isActive" boolean default true;
 alter table amenities add column if not exists category varchar default 'General';
 alter table destinations add column if not exists "imageUrl" text;
 alter table destinations add column if not exists "stayCount" integer not null default 0;
@@ -439,6 +443,9 @@ alter table destination_places add column if not exists longitude numeric;
 alter table bookings add column if not exists "roomTypeId" uuid references room_types(_id);
 alter table bookings add column if not exists "numRooms" integer not null default 1;
 alter table blocked_dates add column if not exists "roomTypeId" uuid references room_types(_id) on delete cascade;
+alter table blocked_dates add column if not exists "numRooms" integer not null default 1;
+alter table blocked_dates drop constraint if exists blocked_dates_valid_rooms;
+alter table blocked_dates add constraint blocked_dates_valid_rooms check ("numRooms" > 0);
 alter table room_types add column if not exists category varchar not null default 'Standard';
 alter table room_types add column if not exists "bedType" varchar default 'Queen';
 alter table room_types add column if not exists "maxAdults" integer not null default 2;

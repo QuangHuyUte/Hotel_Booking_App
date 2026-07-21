@@ -640,10 +640,6 @@ public class BookingService {
             }
 
             for (LocalDate day = start; day.isBefore(end); day = day.plusDays(1)) {
-                if (isRoomBlockedOn(day, roomType.getId(), blockedDates)) {
-                    return AvailabilityResult.notAvailable("Loại phòng đang bị chặn vào ngày " + day + ".");
-                }
-
                 int capacity = Math.max(0, roomType.getTotalRooms());
                 RoomInventory inventory = inventoryByDate.get(day.toString());
                 if (inventory != null) {
@@ -654,7 +650,8 @@ public class BookingService {
                 }
 
                 int bookedRooms = bookedRoomsOn(day, roomType.getId(), bookings);
-                int roomsLeft = capacity - bookedRooms;
+                int blockedRooms = blockedRoomsOn(day, roomType.getId(), blockedDates);
+                int roomsLeft = capacity - bookedRooms - blockedRooms;
                 if (roomsLeft < requestedRooms) {
                     return AvailabilityResult.notAvailable("Chỉ còn " + Math.max(0, roomsLeft)
                             + " phòng vào ngày " + day + ".");
@@ -679,7 +676,8 @@ public class BookingService {
         return total;
     }
 
-    private boolean isRoomBlockedOn(LocalDate day, String roomTypeId, List<BlockedDate> blockedDates) {
+    private int blockedRoomsOn(LocalDate day, String roomTypeId, List<BlockedDate> blockedDates) {
+        int total = 0;
         for (BlockedDate blockedDate : blockedDates) {
             String blockedRoomTypeId = blockedDate.getRoomTypeId();
             if (blockedRoomTypeId != null && !blockedRoomTypeId.trim().isEmpty()
@@ -687,10 +685,10 @@ public class BookingService {
                 continue;
             }
             if (overlapsDay(day, blockedDate.getStartDate(), blockedDate.getEndDate())) {
-                return true;
+                total += Math.max(1, blockedDate.getNumRooms());
             }
         }
-        return false;
+        return total;
     }
 
     private boolean overlapsDay(LocalDate day, String startDate, String endDate) {

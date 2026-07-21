@@ -99,7 +99,7 @@ public class ChatThreadActivity extends AppCompatActivity {
     }
 
     private void createConversationWithHost(String hostId, String cabinId) {
-        chatService.createConversation(sessionManager.getUserId(), hostId, cabinId, null, new SupabaseCallback<Conversation>() {
+        chatService.createInquiryConversation(sessionManager.getUserId(), hostId, cabinId, new SupabaseCallback<Conversation>() {
             @Override
             public void onSuccess(Conversation conversation) {
                 conversationId = conversation.getId();
@@ -166,7 +166,7 @@ public class ChatThreadActivity extends AppCompatActivity {
                     titleTextView.setText(cabin.getName());
                 }
                 String base = guestName + " · " + cabin.getName();
-                if (hasText(conversation.getBookingId())) {
+                if (conversation.hasBooking()) {
                     loadBookedRoomContext(conversation, base);
                 } else {
                     loadSuggestedRoomContext(cabin, base);
@@ -176,7 +176,7 @@ public class ChatThreadActivity extends AppCompatActivity {
             @Override
             public void onError(String message) {
                 contextTextView.setText(guestName + " · chưa tải được hotel · "
-                        + (hasText(conversation.getBookingId()) ? "đã booking" : "chưa booking"));
+                        + (conversation.hasBooking() ? "đã booking" : "hỏi trước đặt"));
             }
         });
     }

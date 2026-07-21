@@ -53,42 +53,11 @@
                 android:textColor="@color/muted"
                 android:textSize="13sp" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/text_cabin_price"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textColor="@color/primary"
-                    android:textSize="17sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/text_discount_badge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_booking_badge_warm"
-                    android:paddingLeft="10dp"
-                    android:paddingTop="6dp"
-                    android:paddingRight="10dp"
-                    android:paddingBottom="6dp"
-                    android:textColor="@color/white"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:visibility="gone" />
-            </LinearLayout>
-
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Chạm thẻ để xem trang khách sạn"
+                android:text="Sửa hoặc xóa thông tin khách sạn tại đây"
                 android:textColor="@color/muted"
                 android:textSize="12sp" />
         </LinearLayout>
@@ -105,23 +74,9 @@
             android:layout_width="0dp"
             android:layout_height="44dp"
             android:layout_marginEnd="6dp"
-            android:layout_weight="1.15"
-            android:background="@drawable/bg_button_secondary"
-            android:text="Sửa hotel"
-            android:textAllCaps="false"
-            android:textColor="@color/black"
-            android:textSize="13sp"
-            android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/button_duplicate"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_marginEnd="6dp"
             android:layout_weight="1"
             android:background="@drawable/bg_button_secondary"
-            android:singleLine="true"
-            android:text="Nhân bản"
+            android:text="Sửa hotel"
             android:textAllCaps="false"
             android:textColor="@color/black"
             android:textSize="13sp"
@@ -131,7 +86,7 @@
             android:id="@+id/button_delete"
             android:layout_width="0dp"
             android:layout_height="44dp"
-            android:layout_weight="0.8"
+            android:layout_weight="1"
             android:background="@drawable/bg_button_danger"
             android:text="Xóa"
             android:textAllCaps="false"

@@ -237,7 +237,9 @@ public class RoomTypeService {
     public void deleteRoomType(String roomTypeId, SupabaseCallback<Boolean> callback) {
         Map<String, String> filters = new HashMap<>();
         filters.put("_id", roomTypeId);
-        supabaseClient.delete(AppConstants.TABLE_ROOM_TYPES, filters, callback);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("isActive", false);
+        supabaseClient.updateNoReturn(AppConstants.TABLE_ROOM_TYPES, filters, payload, callback);
     }
 
     private void complete(List<Cabin> cabins, int[] completed, SupabaseCallback<List<Cabin>> callback) {

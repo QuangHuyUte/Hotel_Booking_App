@@ -13,6 +13,7 @@ import com.example.hotel_booking_app.R;
 import com.example.hotel_booking_app.data.models.Booking;
 import com.example.hotel_booking_app.data.remote.SupabaseCallback;
 import com.example.hotel_booking_app.services.BookingService;
+import com.example.hotel_booking_app.ui.helpers.CustomerNavigationHelper;
 import com.example.hotel_booking_app.utils.SessionManager;
 import com.example.hotel_booking_app.utils.AppConstants;
 
@@ -44,10 +45,7 @@ public class AccountHubActivity extends AppCompatActivity {
         geniusDescriptionTextView = findViewById(R.id.text_genius_description);
         geniusProgressTextView = findViewById(R.id.text_genius_progress);
 
-        LinearLayout cabinsTab = findViewById(R.id.nav_cabins);
-        LinearLayout bookingsTab = findViewById(R.id.nav_bookings);
-        LinearLayout wishlistTab = findViewById(R.id.nav_wishlist);
-        LinearLayout messagesTab = findViewById(R.id.nav_messages);
+        CustomerNavigationHelper.bind(this, CustomerNavigationHelper.TAB_PROFILE);
         Button loginButton = findViewById(R.id.button_login);
         Button signupButton = findViewById(R.id.button_signup);
         TextView forgotButton = findViewById(R.id.text_forgot_password);
@@ -61,10 +59,6 @@ public class AccountHubActivity extends AppCompatActivity {
         Button adminSettingsButton = findViewById(R.id.button_admin_settings);
         Button logoutButton = findViewById(R.id.button_logout);
 
-        cabinsTab.setOnClickListener(view -> openCabinsForRole());
-        bookingsTab.setOnClickListener(view -> openLoginRequired(GuestBookingsActivity.class));
-        wishlistTab.setOnClickListener(view -> openLoginRequired(SavedHotelsActivity.class));
-        messagesTab.setOnClickListener(view -> openLoginRequired(ConversationListActivity.class));
         loginButton.setOnClickListener(view -> startActivity(new Intent(this, SignInActivity.class)));
         signupButton.setOnClickListener(view -> startActivity(new Intent(this, SignUpActivity.class)));
         forgotButton.setOnClickListener(view -> startActivity(new Intent(this, PasswordResetActivity.class)));
@@ -181,28 +175,12 @@ public class AccountHubActivity extends AppCompatActivity {
         return "Còn " + remaining + " đặt phòng để lên Genius cấp " + (geniusLevel + 1);
     }
 
-    private void openCabinsForRole() {
-        Class<?> target = sessionManager.isHostOrAdmin() ? HostHotelDashboardActivity.class : HotelSearchActivity.class;
-        startActivity(new Intent(this, target));
-    }
-
     private String displayName() {
         String name = sessionManager.getFullName();
         if (name == null || name.trim().isEmpty()) {
             return sessionManager.isHostOrAdmin() ? "Quản lý" : "bạn";
         }
         return name.trim();
-    }
-
-    private void openLoginRequired(Class<?> target) {
-        if (!sessionManager.isLoggedIn()) {
-            startActivity(new Intent(this, SignInActivity.class));
-            return;
-        }
-        Class<?> resolvedTarget = sessionManager.isHostOrAdmin() && target == GuestBookingsActivity.class
-                ? AdminBookingManagementActivity.class
-                : target;
-        startActivity(new Intent(this, resolvedTarget));
     }
 
     private void showLogoutConfirmation() {

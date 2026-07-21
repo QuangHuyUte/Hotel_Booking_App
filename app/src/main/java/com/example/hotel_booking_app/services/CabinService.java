@@ -21,13 +21,13 @@ public class CabinService {
     }
 
     public void getCabins(SupabaseCallback<List<Cabin>> callback) {
-        supabaseClient.getList(AppConstants.TABLE_CABINS, "*", null, "createdAt.desc", null, Cabin[].class, callback);
+        supabaseClient.getList(AppConstants.TABLE_CABINS, "*", null, "createdAt.desc", null, Cabin[].class, activeCabinsCallback(callback));
     }
 
     public void getCabinsForHost(String hostId, SupabaseCallback<List<Cabin>> callback) {
         Map<String, String> filters = new HashMap<>();
         filters.put("hostId", hostId);
-        supabaseClient.getList(AppConstants.TABLE_CABINS, "*", null, "createdAt.desc", filters, Cabin[].class, callback);
+        supabaseClient.getList(AppConstants.TABLE_CABINS, "*", null, "createdAt.desc", filters, Cabin[].class, activeCabinsCallback(callback));
     }
 
     public void searchCabins(String locationKeyword, int guests, SupabaseCallback<List<Cabin>> callback) {
@@ -87,6 +87,7 @@ public class CabinService {
     }
 
     public void createCabin(Cabin cabin, SupabaseCallback<Cabin> callback) {
+        cabin.setActive(true);
         supabaseClient.insert(AppConstants.TABLE_CABINS, cabin, Cabin[].class, callback);
     }
 
@@ -99,7 +100,9 @@ public class CabinService {
     public void deleteCabin(String cabinId, SupabaseCallback<Boolean> callback) {
         Map<String, String> filters = new HashMap<>();
         filters.put("_id", cabinId);
-        supabaseClient.delete(AppConstants.TABLE_CABINS, filters, callback);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("isActive", false);
+        supabaseClient.updateNoReturn(AppConstants.TABLE_CABINS, filters, payload, callback);
     }
 
     public void testConnection(SupabaseCallback<List<Cabin>> callback) {
@@ -108,5 +111,22 @@ public class CabinService {
 
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private SupabaseCallback<List<Cabin>> activeCabinsCallback(SupabaseCallback<List<Cabin>> callback) {
+        return new SupabaseCallback<List<Cabin>>() {
+            @Override
+            public void onSuccess(List<Cabin> cabins) {
+                List<Cabin> active = cabins == null
+                        ? java.util.Collections.emptyList()
+                        : cabins.stream().filter(Cabin::isActive).collect(Collectors.toList());
+                callback.onSuccess(active);
+            }
+
+            @Override
+            public void onError(String message) {
+                callback.onError(message);
+            }
+        };
     }
 }

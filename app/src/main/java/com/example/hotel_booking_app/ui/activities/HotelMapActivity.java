@@ -35,6 +35,12 @@ import java.util.Locale;
 import java.util.Set;
 
 public class HotelMapActivity extends AppCompatActivity {
+    public static final String EXTRA_PICK_LOCATION = "extra_pick_location";
+    public static final String EXTRA_PICK_LATITUDE = "extra_pick_latitude";
+    public static final String EXTRA_PICK_LONGITUDE = "extra_pick_longitude";
+    public static final String EXTRA_PICK_LOCATION_LABEL = "extra_pick_location_label";
+    public static final String EXTRA_PICK_GOOGLE_MAPS_URL = "extra_pick_google_maps_url";
+
     private WebView mapWebView;
     private TextView statusTextView;
     private TextView summaryTextView;
@@ -53,6 +59,10 @@ public class HotelMapActivity extends AppCompatActivity {
     private Cabin selectedCabin;
     private WishlistService wishlistService;
     private SessionManager sessionManager;
+    private boolean pickLocationMode;
+    private double pickedLatitude;
+    private double pickedLongitude;
+    private Button directionsButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +71,9 @@ public class HotelMapActivity extends AppCompatActivity {
 
         destination = getIntent().getStringExtra("destination");
         focusCabinId = getIntent().getStringExtra(AppConstants.EXTRA_CABIN_ID);
+        pickLocationMode = getIntent().getBooleanExtra(EXTRA_PICK_LOCATION, false);
+        pickedLatitude = getIntent().getDoubleExtra(EXTRA_PICK_LATITUDE, 0);
+        pickedLongitude = getIntent().getDoubleExtra(EXTRA_PICK_LONGITUDE, 0);
         mapWebView = findViewById(R.id.web_map);
         statusTextView = findViewById(R.id.text_map_status);
         summaryTextView = findViewById(R.id.text_map_summary);
@@ -76,23 +89,36 @@ public class HotelMapActivity extends AppCompatActivity {
         sessionManager = new SessionManager(this);
 
         Button backButton = findViewById(R.id.button_back);
-        Button directionsButton = findViewById(R.id.button_directions);
+        directionsButton = findViewById(R.id.button_directions);
         Button openDetailButton = findViewById(R.id.button_open_detail);
 
         backButton.setOnClickListener(view -> finish());
-        directionsButton.setOnClickListener(view -> openSelectedInGoogleMaps());
+        directionsButton.setOnClickListener(view -> {
+            if (pickLocationMode) {
+                acceptPickedLocation();
+            } else {
+                openSelectedInGoogleMaps();
+            }
+        });
         openDetailButton.setOnClickListener(view -> openSelectedDetail());
         favoriteButton.setOnClickListener(view -> toggleSelectedFavorite());
         selectedCard.setOnClickListener(view -> openSelectedDetail());
 
-        summaryTextView.setText(safe(destination, "Ho Chi Minh City") + " - " + compactDateRange());
         setupWebView();
-        loadMarkers();
+        if (pickLocationMode) {
+            setupLocationPicker();
+        } else {
+            summaryTextView.setText(safe(destination, "Ho Chi Minh City") + " - " + compactDateRange());
+            loadMarkers();
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        if (pickLocationMode) {
+            return;
+        }
         if (!visibleCabins.isEmpty()) {
             loadFavoriteState();
         }
@@ -192,7 +218,23 @@ public class HotelMapActivity extends AppCompatActivity {
         );
     }
 
+    private void setupLocationPicker() {
+        selectedCard.setVisibility(View.GONE);
+        directionsButton.setText("Lưu");
+        destination = safe(getIntent().getStringExtra(EXTRA_PICK_LOCATION_LABEL), destination);
+        if (pickedLatitude == 0 || pickedLongitude == 0) {
+            pickedLatitude = fallbackLat();
+            pickedLongitude = fallbackLng();
+        }
+        summaryTextView.setText("Chọn vị trí khách sạn");
+        updatePickerStatus();
+        loadMapHtml();
+    }
+
     private String buildMapHtml() {
+        if (pickLocationMode) {
+            return buildPickerMapHtml();
+        }
         double centerLat = selectedCabin != null ? selectedCabin.getLatitude() : fallbackLat();
         double centerLng = selectedCabin != null ? selectedCabin.getLongitude() : fallbackLng();
         StringBuilder markers = new StringBuilder();
@@ -242,6 +284,37 @@ public class HotelMapActivity extends AppCompatActivity {
                 + "});"
                 + "setTimeout(function(){map.invalidateSize();var active=stays.find(function(s){return s.id===selected;});"
                 + "if(active){map.setView([active.lat,active.lng],selectedZoom);}else if(bounds.length>1){map.fitBounds(bounds,{padding:[58,58],maxZoom:cityZoom});}},150);"
+                + "</script></body></html>";
+    }
+
+    private String buildPickerMapHtml() {
+        double centerLat = pickedLatitude == 0 ? fallbackLat() : pickedLatitude;
+        double centerLng = pickedLongitude == 0 ? fallbackLng() : pickedLongitude;
+        return "<!doctype html><html><head>"
+                + "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+                + "<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>"
+                + "<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>"
+                + "<style>"
+                + "html,body,#map{height:100%;margin:0;background:#d8e4ed;font-family:Arial,sans-serif;}"
+                + ".leaflet-control-attribution{font-size:10px;}"
+                + ".leaflet-control-zoom a{background:#202020;color:#fff;border-color:#444;}"
+                + ".pick-pin{position:relative;background:#0b84ff;color:#fff;border:3px solid #fff;border-radius:22px;"
+                + "width:42px;height:42px;box-shadow:0 6px 18px rgba(0,0,0,.35);}"
+                + ".pick-pin:after{content:'';position:absolute;left:50%;bottom:-12px;transform:translateX(-50%);"
+                + "border-left:9px solid transparent;border-right:9px solid transparent;border-top:14px solid #fff;}"
+                + ".pick-pin:before{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);"
+                + "width:12px;height:12px;background:#fff;border-radius:50%;}"
+                + "</style></head><body><div id='map'></div><script>"
+                + "var map=L.map('map',{zoomControl:false,preferCanvas:true,scrollWheelZoom:true}).setView(["
+                + centerLat + "," + centerLng + "],15);"
+                + "L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:20,attribution:'&copy; OpenStreetMap &copy; CARTO'}).addTo(map);"
+                + "L.control.zoom({position:'bottomright'}).addTo(map);"
+                + "var icon=L.divIcon({className:'',html:'<div class=\"pick-pin\"></div>',iconSize:[42,56],iconAnchor:[21,54]});"
+                + "var marker=L.marker([" + centerLat + "," + centerLng + "],{icon:icon,draggable:true}).addTo(map);"
+                + "function send(latlng){HotelMap.pickLocation(latlng.lat,latlng.lng);}"
+                + "map.on('click',function(e){marker.setLatLng(e.latlng);send(e.latlng);});"
+                + "marker.on('dragend',function(){send(marker.getLatLng());});"
+                + "setTimeout(function(){map.invalidateSize();},150);"
                 + "</script></body></html>";
     }
 
@@ -333,6 +406,29 @@ public class HotelMapActivity extends AppCompatActivity {
                     + selectedCabin.getLatitude() + "," + selectedCabin.getLongitude()));
         }
         startActivity(intent);
+    }
+
+    private void acceptPickedLocation() {
+        if (!pickLocationMode) {
+            return;
+        }
+        Intent result = new Intent();
+        result.putExtra(EXTRA_PICK_LATITUDE, pickedLatitude);
+        result.putExtra(EXTRA_PICK_LONGITUDE, pickedLongitude);
+        result.putExtra(EXTRA_PICK_GOOGLE_MAPS_URL, googleMapsUrl(pickedLatitude, pickedLongitude));
+        setResult(RESULT_OK, result);
+        finish();
+    }
+
+    private void updatePickerStatus() {
+        statusTextView.setText(String.format(Locale.US,
+                "Đã chọn: %.6f, %.6f. Chạm hoặc kéo pin để đổi vị trí.",
+                pickedLatitude,
+                pickedLongitude));
+    }
+
+    private String googleMapsUrl(double latitude, double longitude) {
+        return "https://www.google.com/maps/search/?api=1&query=" + latitude + "," + longitude;
     }
 
     private void loadFavoriteState() {
@@ -512,6 +608,15 @@ public class HotelMapActivity extends AppCompatActivity {
                         return;
                     }
                 }
+            });
+        }
+
+        @JavascriptInterface
+        public void pickLocation(double latitude, double longitude) {
+            runOnUiThread(() -> {
+                pickedLatitude = latitude;
+                pickedLongitude = longitude;
+                updatePickerStatus();
             });
         }
     }

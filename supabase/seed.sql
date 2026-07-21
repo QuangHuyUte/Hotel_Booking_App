@@ -37,6 +37,7 @@ alter table public.cabins add column if not exists "starRating" integer default 
 alter table public.cabins add column if not exists "reviewScore" numeric default 8.6;
 alter table public.cabins add column if not exists "reviewCount" integer default 0;
 alter table public.cabins add column if not exists "googleMapsUrl" text;
+alter table public.cabins add column if not exists "isActive" boolean default true;
 
 create table if not exists public.room_types (
   _id uuid primary key default gen_random_uuid(),
@@ -197,6 +198,9 @@ grant select, insert, update, delete on table public.room_inventory to anon, aut
 alter table public.bookings add column if not exists "roomTypeId" uuid references public.room_types(_id);
 alter table public.bookings add column if not exists "numRooms" integer not null default 1;
 alter table public.blocked_dates add column if not exists "roomTypeId" uuid references public.room_types(_id) on delete cascade;
+alter table public.blocked_dates add column if not exists "numRooms" integer not null default 1;
+alter table public.blocked_dates drop constraint if exists blocked_dates_valid_rooms;
+alter table public.blocked_dates add constraint blocked_dates_valid_rooms check ("numRooms" > 0);
 
 create table if not exists public.destinations (
   _id uuid primary key default gen_random_uuid(),
@@ -585,11 +589,11 @@ insert into public.promotions (
   ('71000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000004', 10, date '2026-07-20', date '2026-08-31', true, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
 insert into public.blocked_dates (
-  "_id", "cabinId", "roomTypeId", "hostId", "startDate", "endDate", reason, "createdAt", "updatedAt"
+  "_id", "cabinId", "roomTypeId", "hostId", "numRooms", "startDate", "endDate", reason, "createdAt", "updatedAt"
 ) values
-  ('88000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000003', date '2026-08-12', date '2026-08-15', 'Room refresh and deep cleaning', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('88000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000004', '30000000-0000-4000-8000-000000000013', '10000000-0000-4000-8000-000000000002', date '2026-08-20', date '2026-08-22', 'Suite maintenance', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('88000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', date '2026-07-25', date '2026-07-26', 'Demo booking: Standard Queen sold out for this night', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
+  ('88000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000003', 2, date '2026-08-12', date '2026-08-15', 'External OTA booking hold', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('88000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000004', '30000000-0000-4000-8000-000000000013', '10000000-0000-4000-8000-000000000002', 1, date '2026-08-20', date '2026-08-22', 'Suite maintenance', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
+  ('88000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 11, date '2026-07-25', date '2026-07-26', 'Demo booking: Standard Queen nearly sold out for this night', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
 
 insert into public.bookings (
   "_id", "userId", "cabinId", "roomTypeId", "numRooms", "startDate", "endDate", "numNights",
@@ -601,18 +605,6 @@ insert into public.bookings (
   ('80000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000103', '20000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000009', 1, date '2026-07-24', date '2026-07-26', 2, 2, 184.00, 48.00, 232.00, 'checked-in', true, true, 'Weekend in the Old Quarter', null, 0.00, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
   ('80000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000104', '20000000-0000-4000-8000-000000000004', '30000000-0000-4000-8000-000000000012', 1, date '2026-07-05', date '2026-07-08', 3, 3, 414.00, 0.00, 414.00, 'checked-out', false, true, 'Ocean room was clean', null, 0.00, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
   ('80000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000105', '20000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', 1, date '2026-07-25', date '2026-07-26', 1, 2, 84.00, 0.00, 84.00, 'confirmed', false, true, 'Demo booking for Standard Queen sold-out test', null, 0.00, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00');
-
-insert into public.payments (
-  "_id", "bookingId", "userId", amount, method, provider, "transactionId", status, "paidAt", "createdAt", "updatedAt"
-) values
-  ('81000000-0000-4000-8000-000000000001', '80000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', 426.00, 'app', 'mock', 'TXN-0001', 'pending', null, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('81000000-0000-4000-8000-000000000002', '80000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000102', 539.00, 'app', 'mock', 'TXN-0002', 'pending', null, timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('81000000-0000-4000-8000-000000000003', '80000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000103', 232.00, 'card', 'stripe', 'TXN-0003', 'paid', timestamp '2026-07-24 09:00:00', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('81000000-0000-4000-8000-000000000004', '80000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000104', 414.00, 'card', 'stripe', 'TXN-0004', 'paid', timestamp '2026-07-08 09:00:00', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('81000000-0000-4000-8000-000000000005', '80000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000105', 84.00, 'card', 'stripe', 'TXN-0005', 'paid', timestamp '2026-07-25 09:00:00', timestamp '2026-07-20 08:00:00', timestamp '2026-07-20 08:00:00'),
-  ('81000000-0000-4000-8000-000000000006', '80000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', 214.00, 'bank_transfer', 'manual', 'TXN-0006', 'paid', timestamp '2026-07-18 14:00:00', timestamp '2026-07-18 13:50:00', timestamp '2026-07-20 08:00:00'),
-  ('81000000-0000-4000-8000-000000000007', '80000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000102', 289.00, 'card', 'stripe', 'TXN-0007', 'paid', timestamp '2026-07-19 10:30:00', timestamp '2026-07-19 10:25:00', timestamp '2026-07-20 08:00:00'),
-  ('81000000-0000-4000-8000-000000000008', '80000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000103', 156.00, 'app', 'mock', 'TXN-0008', 'pending', null, timestamp '2026-07-19 16:15:00', timestamp '2026-07-20 08:00:00');
 
 with manager_booking_source as (
   select
@@ -688,22 +680,24 @@ inserted_manager_bookings as (
   from generated_manager_bookings
   returning "_id", "userId", "totalPrice", "isPaid", "createdAt"
 )
+select count(*) from inserted_manager_bookings;
+
 insert into public.payments (
   "_id", "bookingId", "userId", amount, method, provider, "transactionId", status, "paidAt", "createdAt", "updatedAt"
 )
 select
   gen_random_uuid(),
-  "_id",
-  "userId",
-  "totalPrice",
-  case when "isPaid" then 'card' else 'app' end,
-  case when "isPaid" then 'stripe' else 'mock' end,
-  case when "isPaid" then 'HCM-MGR-' || lpad(row_number() over (order by "createdAt")::text, 4, '0') else null end,
-  case when "isPaid" then 'paid' else 'pending' end,
-  case when "isPaid" then "createdAt" + interval '1 hour' else null end,
-  "createdAt",
-  timestamp '2026-07-20 09:00:00'
-from inserted_manager_bookings;
+  b."_id",
+  b."userId",
+  b."totalPrice",
+  case when b."isPaid" then 'card' else 'app' end,
+  case when b."isPaid" then 'stripe' else 'app' end,
+  case when b."isPaid" then 'HCM-MGR-' || lpad(row_number() over (order by b."createdAt", b."_id")::text, 4, '0') else null end,
+  case when b."isPaid" then 'paid' else 'pending' end,
+  case when b."isPaid" then b."createdAt" + interval '1 hour' else null end,
+  b."createdAt",
+  b."createdAt"
+from public.bookings b;
 
 insert into public.rates (
   "_id", "userId", "cabinId", "bookingId", rating, comment, "createdAt", "updatedAt"
@@ -787,6 +781,23 @@ insert into public.messages (
 ) values
   ('85000000-0000-4000-8000-000000000001', '84000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000101', 'Hi, is the Deluxe Balcony room available for August 4?', true, timestamp '2026-07-20 08:00:00'),
   ('85000000-0000-4000-8000-000000000002', '84000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'Yes, the room is available and breakfast can be added.', false, timestamp '2026-07-20 08:05:00');
+
+insert into public.conversations (
+  "_id", "guestId", "hostId", "cabinId", "bookingId", "createdAt", "updatedAt"
+) values
+  ('84000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000102', '10000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000002', null, timestamp '2026-07-20 08:12:00', timestamp '2026-07-20 08:12:00'),
+  ('84000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000103', '10000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000004', null, timestamp '2026-07-20 08:15:00', timestamp '2026-07-20 08:15:00'),
+  ('84000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000105', '10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', null, timestamp '2026-07-20 08:18:00', timestamp '2026-07-20 08:18:00');
+
+insert into public.messages (
+  "_id", "conversationId", "senderId", message, "isRead", "createdAt"
+) values
+  ('85000000-0000-4000-8000-000000000003', '84000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000102', 'Mình chưa book, muốn hỏi phòng sea view cho 2 người thì còn không?', true, timestamp '2026-07-20 08:13:00'),
+  ('85000000-0000-4000-8000-000000000004', '84000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000003', 'Còn nhé, phòng Deluxe Sea View đang trống và có thể giữ giá ưu đãi.', false, timestamp '2026-07-20 08:16:00'),
+  ('85000000-0000-4000-8000-000000000005', '84000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000103', 'Em đang hỏi trước, phòng Family Suite ở Đà Nẵng có phù hợp 4 người lớn không?', true, timestamp '2026-07-20 08:16:00'),
+  ('85000000-0000-4000-8000-000000000006', '84000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000002', 'Phù hợp ạ. Suite đó cho tối đa 5 khách và có khu sinh hoạt riêng.', false, timestamp '2026-07-20 08:20:00'),
+  ('85000000-0000-4000-8000-000000000007', '84000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000105', 'Chưa đặt phòng mà nhắn trước thì bên mình có hỗ trợ tư vấn thêm bữa sáng không?', true, timestamp '2026-07-20 08:19:00'),
+  ('85000000-0000-4000-8000-000000000008', '84000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000001', 'Có nhé, em có thể xem phòng và thêm breakfast sau khi chốt lịch.', false, timestamp '2026-07-20 08:22:00');
 
 with generated_conversation_source as (
   select

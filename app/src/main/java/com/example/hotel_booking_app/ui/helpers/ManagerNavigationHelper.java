@@ -2,6 +2,7 @@ package com.example.hotel_booking_app.ui.helpers;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -72,15 +73,26 @@ public final class ManagerNavigationHelper {
         icon.setBackgroundResource(active ? R.drawable.bg_manager_icon_active : R.drawable.bg_manager_icon_idle);
         icon.setColorFilter(textColor);
         label.setTextColor(textColor);
-        label.setTypeface(null, active ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+        label.setTypeface(null, active ? Typeface.BOLD : Typeface.NORMAL);
         container.setAlpha(active ? 1f : 0.82f);
+        container.setScaleX(active ? 1.03f : 1f);
+        container.setScaleY(active ? 1.03f : 1f);
         container.setOnClickListener(view -> {
             if (active) {
                 return;
             }
-            Intent intent = new Intent(activity, target);
-            intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-            activity.startActivity(intent);
+            view.animate()
+                    .scaleX(0.96f)
+                    .scaleY(0.96f)
+                    .setDuration(70)
+                    .withEndAction(() -> {
+                        view.animate().scaleX(1f).scaleY(1f).setDuration(110).start();
+                        Intent intent = new Intent(activity, target);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                        activity.startActivity(intent);
+                        activity.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+                    })
+                    .start();
         });
     }
 }
